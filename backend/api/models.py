@@ -56,37 +56,37 @@ class Vendor(models.Model):
 # 2. PROCUREMENT FLOW
 # ==========================================
 
-class PurchaseRequisition(models.Model):
-    class PriorityChoices(models.TextChoices):
-        LOW = 'low', 'Low'
-        MEDIUM = 'medium', 'Medium'
-        HIGH = 'high', 'High'
+# class PurchaseRequisition(models.Model):
+#     class PriorityChoices(models.TextChoices):
+#         LOW = 'low', 'Low'
+#         MEDIUM = 'medium', 'Medium'
+#         HIGH = 'high', 'High'
 
-    class StatusChoices(models.TextChoices):
-        DRAFT = 'draft', 'Draft'
-        PENDING_APPROVAL = 'pending_approval', 'Pending Approval'
-        APPROVED = 'approved', 'Approved'
-        REJECTED = 'rejected', 'Rejected'
+#     class StatusChoices(models.TextChoices):
+#         DRAFT = 'draft', 'Draft'
+#         
+#         
+#         
 
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    requisition_number = models.CharField(max_length=20, unique=True)
-    item_name = models.CharField(max_length=200)
-    category = models.CharField(max_length=100)
-    quantity = models.IntegerField()
-    department = models.ForeignKey(Department, on_delete=models.CASCADE, related_name='requisitions')
-    justification = models.TextField()
-    priority = models.CharField(max_length=10, choices=PriorityChoices.choices, default=PriorityChoices.MEDIUM)
-    required_by_date = models.DateField()
-    status = models.CharField(max_length=20, choices=StatusChoices.choices, default=StatusChoices.DRAFT)
-    manager_remarks = models.TextField(null=True, blank=True)
-    created_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='created_requisitions')
-    submitted_at = models.DateTimeField(null=True, blank=True)
-    decided_at = models.DateTimeField(null=True, blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+#     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+#     requisition_number = models.CharField(max_length=20, unique=True)
+#     item_name = models.CharField(max_length=200)
+#     category = models.CharField(max_length=100)
+#     quantity = models.IntegerField()
+#     department = models.ForeignKey(Department, on_delete=models.CASCADE, related_name='requisitions')
+#     justification = models.TextField()
+#     
+#     
+#     status = models.CharField(max_length=20, choices=StatusChoices.choices, default=StatusChoices.DRAFT)
+#     
+#     created_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='created_requisitions')
+#     submitted_at = models.DateTimeField(null=True, blank=True)
+#     decided_at = models.DateTimeField(null=True, blank=True)
+#     created_at = models.DateTimeField(auto_now_add=True)
+#     updated_at = models.DateTimeField(auto_now=True)
 
-    def __str__(self):
-        return f"{self.requisition_number} - {self.item_name}"
+#     def __str__(self):
+#         return f"{self.requisition_number} - {self.item_name}"
 
 
 class RFQ(models.Model):
@@ -94,17 +94,28 @@ class RFQ(models.Model):
         DRAFT = 'draft', 'Draft'
         OPEN = 'open', 'Open'
         CLOSED = 'closed', 'Closed'
+        PENDING_APPROVAL = 'pending_approval', 'Pending Approval'
+        APPROVED = 'approved', 'Approved'
+        REJECTED = 'rejected', 'Rejected'
+    class PriorityChoices(models.TextChoices):
 
+        LOW = 'low', 'Low'
+        MEDIUM = 'medium', 'Medium'
+        HIGH = 'high', 'High'
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     rfq_number = models.CharField(max_length=20, unique=True)
     title = models.CharField(max_length=200)
     description = models.TextField()
-    requisition = models.ForeignKey(PurchaseRequisition, on_delete=models.CASCADE, related_name='rfqs')
+    department = models.ForeignKey(Department, on_delete=models.CASCADE, related_name='RFQ',null=True, blank=True)
+    priority = models.CharField(max_length=10, choices=PriorityChoices.choices, default=PriorityChoices.MEDIUM)
+    manager_remarks = models.TextField(null=True, blank=True)
+    # requisition = models.ForeignKey(PurchaseRequisition, on_delete=models.CASCADE, related_name='rfqs')
     quantity = models.IntegerField()
     deadline = models.DateField()
     specs_file_url = models.CharField(max_length=500, null=True, blank=True)
-    status = models.CharField(max_length=10, choices=StatusChoices.choices, default=StatusChoices.DRAFT)
+    status = models.CharField(max_length=20, choices=StatusChoices.choices, default=StatusChoices.DRAFT)
     created_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='created_rfqs')
+    required_by_date = models.DateField(default=2023-5-26)
     published_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -172,7 +183,7 @@ class VendorSelection(models.Model):
 
 class Approval(models.Model):
     class ApprovalTypeChoices(models.TextChoices):
-        REQUISITION = 'requisition', 'Requisition'
+        RFQ='rfq','RFQ'
         VENDOR_SELECTION = 'vendor_selection', 'Vendor Selection'
 
     class StatusChoices(models.TextChoices):
