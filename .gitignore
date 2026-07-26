@@ -1,0 +1,35 @@
+# Python & Virtual Environments
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/
+env/
+ENV/
+
+# Django
+db.sqlite3
+db.sqlite3-journal
+media/
+staticfiles/
+*.log
+
+# Environment Variables & Secrets
+.env
+.env.local
+.env.*.local
+
+# Node / React Frontend
+node_modules/
+frontend/node_modules/
+frontend/dist/
+frontend/build/
+.eslintcache
+
+# IDEs & System files
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
