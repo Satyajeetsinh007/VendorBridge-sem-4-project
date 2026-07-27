@@ -2,11 +2,7 @@ import React from 'react'
 import ProcurementDashboard from './components/ProcurementDashboard'
 
 function App() {
-  return (
-    <div className="App">
-      <ProcurementDashboard />
-    </div>
-  )
+  return <ProcurementDashboard />
 }
 
 export default App
