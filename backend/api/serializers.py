@@ -1,6 +1,6 @@
 import random
 from rest_framework import serializers
-from .models import Department, User, RFQ
+from .models import Department, User, RFQ, Approval
 
 class DepartmentSerializer(serializers.ModelSerializer):
     class Meta:
@@ -49,4 +49,23 @@ class RFQSerializer(serializers.ModelSerializer):
             # Auto-generate RFQ number like RFQ-2026-XXXX
             rand_num = random.randint(1000, 9999)
             validated_data['rfq_number'] = f"RFQ-2026-{rand_num}"
+        return super().create(validated_data)
+
+
+class ApprovalSerializer(serializers.ModelSerializer):
+    approver_details = UserSerializer(source='approver', read_only=True)
+
+    class Meta:
+        model = Approval
+        fields = [
+            'id', 'approval_number', 'approval_type', 'reference_id',
+            'reference_type', 'approver', 'approver_details', 'status',
+            'remarks', 'submitted_at', 'decided_at'
+        ]
+        read_only_fields = ['approval_number', 'submitted_at']
+
+    def create(self, validated_data):
+        if not validated_data.get('approval_number'):
+            rand_num = random.randint(1000, 9999)
+            validated_data['approval_number'] = f"APR-2026-{rand_num}"
         return super().create(validated_data)

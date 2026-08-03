@@ -54,4 +54,34 @@ export const api = {
     if (!res.ok) throw new Error('Failed to update RFQ status');
     return res.json();
   },
+
+  patchRFQ: async (rfqId, data) => {
+    const res = await fetch(`${API_BASE_URL}/rfqs/${rfqId}/`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error('Failed to patch RFQ details');
+    return res.json();
+  },
+
+  getApprovals: async () => {
+    const res = await fetch(`${API_BASE_URL}/approvals/`);
+    if (!res.ok) throw new Error('Failed to fetch approvals');
+    return res.json();
+  },
+
+  createApproval: async (approvalData) => {
+    const res = await fetch(`${API_BASE_URL}/approvals/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(approvalData),
+    });
+    if (!res.ok) throw new Error('Failed to log approval decision');
+    return res.json();
+  },
 };

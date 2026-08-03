@@ -1,8 +1,8 @@
 from rest_framework import viewsets, status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
-from .models import Department, User, RFQ
-from .serializers import DepartmentSerializer, UserSerializer, RFQSerializer
+from .models import Department, User, RFQ, Approval
+from .serializers import DepartmentSerializer, UserSerializer, RFQSerializer, ApprovalSerializer
 
 class DepartmentViewSet(viewsets.ModelViewSet):
     queryset = Department.objects.all()
@@ -19,11 +19,16 @@ class RFQViewSet(viewsets.ModelViewSet):
     serializer_class = RFQSerializer
 
 
+class ApprovalViewSet(viewsets.ModelViewSet):
+    queryset = Approval.objects.all().order_by('-submitted_at')
+    serializer_class = ApprovalSerializer
+
+
 @api_view(['POST'])
 def seed_data(request):
     """
-    Utility endpoint to populate initial sample Departments and Procurement Officers
-    so the frontend can immediately be tested without manual DB seeding.
+    Utility endpoint to populate initial sample Departments, Procurement Officers,
+    and Managers so the frontend can immediately be tested without manual DB seeding.
     """
     depts = [
         {'name': 'Engineering & Operations', 'code': 'ENG'},
@@ -47,9 +52,29 @@ def seed_data(request):
         }
     )
 
+    # Seed Sample Manager User
+    manager, _ = User.objects.get_or_create(
+        email='manager@vendorbridge.com',
+        defaults={
+            'name': 'Jane Doe',
+            'role': User.RoleChoices.MANAGER,
+            'department': eng_dept
+        }
+    )
+
     return Response({
         'message': 'Sample seed data created successfully!',
         'departments_count': len(created_depts),
-        'officer_email': officer.email,
-        'officer_id': officer.id
+        'officer': {
+            'id': officer.id,
+            'email': officer.email,
+            'name': officer.name,
+            'role': officer.role
+        },
+        'manager': {
+            'id': manager.id,
+            'email': manager.email,
+            'name': manager.name,
+            'role': manager.role
+        }
     }, status=status.HTTP_200_OK)

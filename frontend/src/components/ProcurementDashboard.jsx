@@ -51,7 +51,7 @@ const Icons = {
   ),
 };
 
-export default function ProcurementDashboard() {
+export default function ProcurementDashboard({ onToggleRole }) {
   const [rfqs, setRfqs] = useState([]);
   const [departments, setDepartments] = useState([]);
   const [users, setUsers] = useState([]);
@@ -66,6 +66,10 @@ export default function ProcurementDashboard() {
     quantity: 100, deadline: '', required_by_date: '', specs_file_url: '',
     status: 'draft', created_by: '',
   });
+
+  // Detail/Edit modal state
+  const [selectedRfq, setSelectedRfq] = useState(null);
+  const [editData, setEditData] = useState(null);
 
   const fetchData = async () => {
     setLoading(true);
@@ -134,6 +138,64 @@ export default function ProcurementDashboard() {
     setLoading(true);
     try { await api.seedData(); await fetchData(); }
     catch (err) { alert(`Seed failed: ${err.message}`); setLoading(false); }
+  };
+
+  // Open detail/edit modal
+  const openRfqDetail = (rfq) => {
+    setSelectedRfq(rfq);
+    const canEdit = rfq.status === 'draft' || rfq.status === 'rejected';
+    if (canEdit) {
+      setEditData({
+        title: rfq.title || '',
+        description: rfq.description || '',
+        department: rfq.department || '',
+        priority: rfq.priority || 'medium',
+        quantity: rfq.quantity || 100,
+        deadline: rfq.deadline || '',
+        required_by_date: rfq.required_by_date || '',
+        specs_file_url: rfq.specs_file_url || '',
+      });
+    } else {
+      setEditData(null);
+    }
+  };
+
+  const closeRfqDetail = () => {
+    setSelectedRfq(null);
+    setEditData(null);
+  };
+
+  const handleEditChange = (e) => {
+    const { name, value } = e.target;
+    setEditData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleSaveEdit = async (e) => {
+    e.preventDefault();
+    setSubmitting(true);
+    try {
+      await api.patchRFQ(selectedRfq.id, editData);
+      closeRfqDetail();
+      await fetchData();
+    } catch (err) {
+      alert(`Save failed: ${err.message}`);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleEditAndResubmit = async (e) => {
+    e.preventDefault();
+    setSubmitting(true);
+    try {
+      await api.patchRFQ(selectedRfq.id, { ...editData, status: 'pending_approval' });
+      closeRfqDetail();
+      await fetchData();
+    } catch (err) {
+      alert(`Resubmit failed: ${err.message}`);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const filteredRfqs = rfqs.filter(rfq => {
@@ -205,6 +267,10 @@ export default function ProcurementDashboard() {
             <span className="breadcrumb">Procurement &nbsp;/&nbsp; Requests for Quotation</span>
           </div>
           <div className="topbar-right">
+            <button className="btn-secondary" onClick={onToggleRole} style={{ borderStyle: 'dashed', color: 'var(--accent)' }}>
+              ⇄ Switch to Manager Portal
+            </button>
+            <div className="topbar-divider" />
             <button className="icon-btn" title="Notifications">
               <Icons.Bell />
               <span className="notif-dot" />
@@ -307,7 +373,7 @@ export default function ProcurementDashboard() {
                       </tr>
                     ) : (
                       filteredRfqs.map(rfq => (
-                        <tr key={rfq.id}>
+                        <tr key={rfq.id} onClick={() => openRfqDetail(rfq)} style={{ cursor: 'pointer' }}>
                           <td>
                             <span className="mono-text">{rfq.rfq_number}</span>
                             <span className="cell-sub">{new Date(rfq.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
@@ -323,17 +389,20 @@ export default function ProcurementDashboard() {
                           <td><span className={`badge badge-status-${rfq.status}`}>{statusLabel(rfq.status)}</span></td>
                           <td className="actions-cell">
                             {rfq.status === 'draft' && (
-                              <button className="btn-action btn-publish" onClick={() => handleStatusUpdate(rfq.id, 'open')}>
-                                <Icons.ArrowUp /> Publish
-                              </button>
-                            )}
-                            {rfq.status === 'open' && (
-                              <button className="btn-action btn-submit" onClick={() => handleStatusUpdate(rfq.id, 'pending_approval')}>
-                                <Icons.Send /> Submit
+                              <button className="btn-action btn-submit" onClick={(e) => { e.stopPropagation(); handleStatusUpdate(rfq.id, 'pending_approval'); }}>
+                                <Icons.Send /> Submit to Manager
                               </button>
                             )}
                             {rfq.status === 'pending_approval' && (
-                              <span className="awaiting-text">Awaiting</span>
+                              <span className="awaiting-text">Awaiting Approval</span>
+                            )}
+                            {rfq.status === 'open' && (
+                              <span style={{ color: 'var(--success)', fontWeight: '600', fontSize: '12px' }}>✓ Approved & Live</span>
+                            )}
+                            {rfq.status === 'rejected' && (
+                              <button className="btn-action btn-publish" onClick={(e) => { e.stopPropagation(); openRfqDetail(rfq); }}>
+                                ↻ Edit & Resubmit
+                              </button>
                             )}
                           </td>
                         </tr>
@@ -418,6 +487,174 @@ export default function ProcurementDashboard() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── RFQ Detail / Edit Modal ── */}
+      {selectedRfq && (
+        <div className="modal-overlay" onClick={closeRfqDetail}>
+          <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '680px' }}>
+            <div className="modal-head">
+              <div>
+                <h2 className="modal-title">
+                  {editData ? (selectedRfq.status === 'rejected' ? 'Edit & Resubmit RFQ' : 'Edit Draft RFQ') : 'RFQ Details'}
+                </h2>
+                <p className="modal-subtitle">
+                  <span className="mono-text" style={{ fontSize: '13px' }}>{selectedRfq.rfq_number}</span>
+                  &nbsp;·&nbsp;
+                  <span className={`badge badge-status-${selectedRfq.status}`} style={{ fontSize: '11px' }}>
+                    {statusLabel(selectedRfq.status)}
+                  </span>
+                </p>
+              </div>
+              <button className="modal-close" onClick={closeRfqDetail}><Icons.X /></button>
+            </div>
+
+            {/* Manager Remarks Banner (for rejected or approved) */}
+            {selectedRfq.manager_remarks && (
+              <div style={{
+                margin: '0 24px',
+                padding: '12px 16px',
+                borderRadius: 'var(--radius-sm)',
+                background: selectedRfq.status === 'rejected'
+                  ? 'rgba(239, 68, 68, 0.08)'
+                  : 'rgba(34, 197, 94, 0.08)',
+                border: `1px solid ${selectedRfq.status === 'rejected'
+                  ? 'rgba(239, 68, 68, 0.2)'
+                  : 'rgba(34, 197, 94, 0.2)'}`,
+              }}>
+                <span style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', color: selectedRfq.status === 'rejected' ? '#f87171' : '#4ade80', display: 'block', marginBottom: '4px' }}>
+                  Manager Remarks
+                </span>
+                <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.5 }}>
+                  {selectedRfq.manager_remarks}
+                </p>
+              </div>
+            )}
+
+            {/* Editable Form (draft / rejected) */}
+            {editData ? (
+              <form onSubmit={selectedRfq.status === 'rejected' ? handleEditAndResubmit : handleSaveEdit} className="modal-body">
+                <div className="field full">
+                  <label>Title <span className="req">*</span></label>
+                  <input type="text" name="title" required value={editData.title} onChange={handleEditChange} />
+                </div>
+
+                <div className="field-row">
+                  <div className="field">
+                    <label>Department <span className="req">*</span></label>
+                    <select name="department" value={editData.department} onChange={handleEditChange} required>
+                      {departments.map(d => (
+                        <option key={d.id} value={d.id}>{d.name} ({d.code})</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="field">
+                    <label>Priority</label>
+                    <select name="priority" value={editData.priority} onChange={handleEditChange}>
+                      <option value="low">Low</option>
+                      <option value="medium">Medium</option>
+                      <option value="high">High</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="field-row">
+                  <div className="field">
+                    <label>Quantity <span className="req">*</span></label>
+                    <input type="number" name="quantity" min="1" required value={editData.quantity} onChange={handleEditChange} />
+                  </div>
+                  <div className="field">
+                    <label>Deadline <span className="req">*</span></label>
+                    <input type="date" name="deadline" required value={editData.deadline} onChange={handleEditChange} />
+                  </div>
+                </div>
+
+                <div className="field-row">
+                  <div className="field">
+                    <label>Required By Date</label>
+                    <input type="date" name="required_by_date" value={editData.required_by_date} onChange={handleEditChange} />
+                  </div>
+                  <div className="field">
+                    <label>Specs URL</label>
+                    <input type="url" name="specs_file_url" placeholder="https://…" value={editData.specs_file_url} onChange={handleEditChange} />
+                  </div>
+                </div>
+
+                <div className="field full">
+                  <label>Description <span className="req">*</span></label>
+                  <textarea name="description" rows="4" required value={editData.description} onChange={handleEditChange} />
+                </div>
+
+                <div className="modal-actions">
+                  <button type="button" className="btn-secondary" onClick={closeRfqDetail}>Cancel</button>
+                  {selectedRfq.status === 'rejected' ? (
+                    <button type="submit" className="btn-primary" disabled={submitting}>
+                      {submitting ? 'Resubmitting…' : '↻ Save & Resubmit to Manager'}
+                    </button>
+                  ) : (
+                    <button type="submit" className="btn-primary" disabled={submitting}>
+                      {submitting ? 'Saving…' : 'Save Changes'}
+                    </button>
+                  )}
+                </div>
+              </form>
+            ) : (
+              /* Read-only view (pending_approval / open / closed) */
+              <div className="modal-body">
+                <div className="field-row">
+                  <div className="field">
+                    <label>Title</label>
+                    <p style={{ fontSize: '13px', color: 'var(--text-primary)', fontWeight: 500 }}>{selectedRfq.title}</p>
+                  </div>
+                  <div className="field">
+                    <label>Department</label>
+                    <p style={{ fontSize: '13px', color: 'var(--text-primary)' }}>{selectedRfq.department_details?.name || '—'}</p>
+                  </div>
+                </div>
+
+                <div className="field-row">
+                  <div className="field">
+                    <label>Priority</label>
+                    <span className={`badge badge-priority-${selectedRfq.priority}`}>{selectedRfq.priority}</span>
+                  </div>
+                  <div className="field">
+                    <label>Quantity</label>
+                    <p style={{ fontSize: '13px', color: 'var(--text-primary)' }}>{selectedRfq.quantity?.toLocaleString()} units</p>
+                  </div>
+                </div>
+
+                <div className="field-row">
+                  <div className="field">
+                    <label>Deadline</label>
+                    <p style={{ fontSize: '13px', color: 'var(--text-primary)' }}>{selectedRfq.deadline || '—'}</p>
+                  </div>
+                  <div className="field">
+                    <label>Required By</label>
+                    <p style={{ fontSize: '13px', color: 'var(--text-primary)' }}>{selectedRfq.required_by_date || '—'}</p>
+                  </div>
+                </div>
+
+                <div className="field full">
+                  <label>Description</label>
+                  <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.6, background: 'rgba(255,255,255,0.02)', padding: '12px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)' }}>
+                    {selectedRfq.description}
+                  </p>
+                </div>
+
+                <div className="field full">
+                  <label>Created By</label>
+                  <p style={{ fontSize: '13px', color: 'var(--text-primary)' }}>
+                    {selectedRfq.created_by_details?.name || '—'} ({selectedRfq.created_by_details?.email || '—'})
+                  </p>
+                </div>
+
+                <div className="modal-actions">
+                  <button type="button" className="btn-secondary" onClick={closeRfqDetail}>Close</button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
