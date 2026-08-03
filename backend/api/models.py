@@ -35,14 +35,19 @@ class User(models.Model):
 class Vendor(models.Model):
     class StatusChoices(models.TextChoices):
         ACTIVE = 'active', 'Active'
+        VERIFIED = 'verified', 'Verified'
         INACTIVE = 'inactive', 'Inactive'
         BLACKLISTED = 'blacklisted', 'Blacklisted'
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     vendor_code = models.CharField(max_length=20, unique=True)
     name = models.CharField(max_length=150)
+    category = models.CharField(max_length=100, null=True, blank=True)
+    contact_person = models.CharField(max_length=100, null=True, blank=True)
     email = models.EmailField(max_length=150)
     phone = models.CharField(max_length=30)
+    gst_number = models.CharField(max_length=30, null=True, blank=True)
+    website = models.URLField(max_length=200, null=True, blank=True)
     address = models.TextField()
     rating = models.DecimalField(max_digits=3, decimal_places=2, default=0.00)
     status = models.CharField(max_length=20, choices=StatusChoices.choices, default=StatusChoices.ACTIVE)
@@ -50,6 +55,7 @@ class Vendor(models.Model):
 
     def __str__(self):
         return f"{self.name} ({self.vendor_code})"
+
 
 
 # ==========================================

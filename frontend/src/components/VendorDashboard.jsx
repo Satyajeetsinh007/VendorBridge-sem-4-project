@@ -75,7 +75,7 @@ export default function VendorDashboard({ onToggleRole }) {
         api.getQuotations().catch(() => []),
       ]);
 
-      if (vendorsData.length === 0) {
+      if (vendorsData.length < 6) {
         await api.seedData().catch(() => {});
         vendorsData = await api.getVendors().catch(() => []);
         rfqsData = await api.getRFQs().catch(() => []);
@@ -189,20 +189,50 @@ export default function VendorDashboard({ onToggleRole }) {
               {currentView === 'profile' && 'Company Profile'}
               {currentView === 'rfq-detail' && 'RFQ Details & Quotation'}
             </h1>
-            <span className="breadcrumb">Vendor &nbsp;/&nbsp; {currentVendor?.name || 'Apex Technologies'}</span>
+            <span className="breadcrumb">Vendor &nbsp;/&nbsp; {currentVendor?.name || 'Dell Technologies'}</span>
           </div>
+
           <div className="topbar-right">
+            {/* Vendor Switcher Dropdown */}
+            {vendors.length > 0 && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--bg-surface)', padding: '4px 10px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-subtle)' }}>
+                <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>Vendor:</span>
+                <select
+                  value={currentVendor?.id || ''}
+                  onChange={e => {
+                    const found = vendors.find(v => v.id === e.target.value);
+                    if (found) setCurrentVendor(found);
+                  }}
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    color: 'var(--text-primary)',
+                    fontWeight: 600,
+                    fontSize: '13px',
+                    cursor: 'pointer',
+                    outline: 'none',
+                  }}
+                >
+                  {vendors.map(v => (
+                    <option key={v.id} value={v.id} style={{ background: '#1e293b', color: '#fff' }}>
+                      {v.name} ({v.category || 'Vendor'})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
             <button className="btn-secondary" onClick={onToggleRole} style={{ borderStyle: 'dashed', color: 'var(--accent)' }}>
               ⇄ Switch Portal
             </button>
             <div className="topbar-divider" />
             <div className="user-chip">
               <div className="user-avatar" style={{ background: 'linear-gradient(135deg, #0ea5e9, #06b6d4)' }}>
-                {(currentVendor?.name || 'A')[0]}
+                {(currentVendor?.name || 'D')[0]}
               </div>
               <div className="user-meta">
-                <span className="user-name">{currentVendor?.name || 'Apex Technologies'}</span>
-                <span className="user-role">{currentVendor?.vendor_code || 'VND-001'}</span>
+                <span className="user-name">{currentVendor?.name || 'Dell Technologies'}</span>
+                <span className="user-role">{currentVendor?.vendor_code || 'VND-DELL'}</span>
               </div>
             </div>
           </div>
@@ -224,6 +254,27 @@ export default function VendorDashboard({ onToggleRole }) {
               {/* Dashboard */}
               {currentView === 'dashboard' && (
                 <div>
+                  {/* Vendor Switcher Bar */}
+                  {vendors.length > 0 && (
+                    <div className="vendor-switcher" style={{ marginBottom: '20px' }}>
+                      <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-muted)', alignSelf: 'center', padding: '0 8px' }}>
+                        Active Vendor:
+                      </span>
+                      {vendors.map(v => (
+                        <button
+                          key={v.id}
+                          className={`vendor-switch-btn ${v.id === currentVendor?.id ? 'active' : ''}`}
+                          onClick={() => setCurrentVendor(v)}
+                        >
+                          <div className="vsw-logo" style={{ background: v.vendor_code === 'VND-DELL' ? '#0076CE' : v.vendor_code === 'VND-HP' ? '#0096D6' : v.vendor_code === 'VND-LNV' ? '#E2231A' : v.vendor_code === 'VND-GDJ' ? '#7C3AED' : v.vendor_code === 'VND-DRN' ? '#D97706' : '#10B981' }}>
+                            {v.name.substring(0, 2).toUpperCase()}
+                          </div>
+                          <span>{v.name}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
                   <section className="stats-row">
                     <div className="stat-card stat-blue">
                       <div className="stat-header">
@@ -415,7 +466,11 @@ export default function VendorDashboard({ onToggleRole }) {
 
               {/* Profile */}
               {currentView === 'profile' && (
-                <VendorProfile vendor={currentVendor} />
+                <VendorProfile
+                  vendor={currentVendor}
+                  vendors={vendors}
+                  onVendorSwitch={(v) => setCurrentVendor(v)}
+                />
               )}
 
               {/* RFQ Detail + Quotation Form */}
