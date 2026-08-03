@@ -1,6 +1,6 @@
 import random
 from rest_framework import serializers
-from .models import Department, User, RFQ, Approval
+from .models import Department, User, RFQ, Approval, Vendor, Quotation
 
 class DepartmentSerializer(serializers.ModelSerializer):
     class Meta:
@@ -69,3 +69,31 @@ class ApprovalSerializer(serializers.ModelSerializer):
             rand_num = random.randint(1000, 9999)
             validated_data['approval_number'] = f"APR-2026-{rand_num}"
         return super().create(validated_data)
+
+
+class VendorSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Vendor
+        fields = '__all__'
+
+
+class QuotationSerializer(serializers.ModelSerializer):
+    vendor_details = VendorSerializer(source='vendor', read_only=True)
+    rfq_details = RFQSerializer(source='rfq', read_only=True)
+
+    class Meta:
+        model = Quotation
+        fields = [
+            'id', 'quotation_number', 'rfq', 'rfq_details',
+            'vendor', 'vendor_details', 'unit_price', 'total_price',
+            'delivery_days', 'payment_terms', 'notes', 'rating',
+            'status', 'submitted_at', 'created_at'
+        ]
+        read_only_fields = ['quotation_number', 'created_at']
+
+    def create(self, validated_data):
+        if not validated_data.get('quotation_number'):
+            rand_num = random.randint(1000, 9999)
+            validated_data['quotation_number'] = f"QTN-2026-{rand_num}"
+        return super().create(validated_data)
+

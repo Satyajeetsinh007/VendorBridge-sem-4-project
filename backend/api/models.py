@@ -139,6 +139,7 @@ class RFQVendor(models.Model):
 
 class Quotation(models.Model):
     class StatusChoices(models.TextChoices):
+        DRAFT = 'draft', 'Draft'
         SUBMITTED = 'submitted', 'Submitted'
         UNDER_REVIEW = 'under_review', 'Under Review'
         SELECTED = 'selected', 'Selected'
@@ -151,14 +152,16 @@ class Quotation(models.Model):
     unit_price = models.DecimalField(max_digits=12, decimal_places=2)
     total_price = models.DecimalField(max_digits=12, decimal_places=2)
     delivery_days = models.IntegerField()
+    payment_terms = models.CharField(max_length=200, null=True, blank=True)
     notes = models.TextField(null=True, blank=True)
     rating = models.DecimalField(max_digits=3, decimal_places=2, null=True, blank=True)
-    status = models.CharField(max_length=20, choices=StatusChoices.choices, default=StatusChoices.SUBMITTED)
-    submitted_at = models.DateTimeField(auto_now_add=True)
+    status = models.CharField(max_length=20, choices=StatusChoices.choices, default=StatusChoices.DRAFT)
+    submitted_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return f"{self.quotation_number} - {self.vendor.name}"
+
 
 
 # ==========================================

@@ -84,4 +84,51 @@ export const api = {
     if (!res.ok) throw new Error('Failed to log approval decision');
     return res.json();
   },
+
+  // Vendors
+  getVendors: async () => {
+    const res = await fetch(`${API_BASE_URL}/vendors/`);
+    if (!res.ok) throw new Error('Failed to fetch vendors');
+    return res.json();
+  },
+
+  patchVendor: async (vendorId, data) => {
+    const res = await fetch(`${API_BASE_URL}/vendors/${vendorId}/`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error('Failed to update vendor');
+    return res.json();
+  },
+
+  // Quotations
+  getQuotations: async () => {
+    const res = await fetch(`${API_BASE_URL}/quotations/`);
+    if (!res.ok) throw new Error('Failed to fetch quotations');
+    return res.json();
+  },
+
+  createQuotation: async (data) => {
+    const res = await fetch(`${API_BASE_URL}/quotations/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(JSON.stringify(errData) || 'Failed to create quotation');
+    }
+    return res.json();
+  },
+
+  patchQuotation: async (quotationId, data) => {
+    const res = await fetch(`${API_BASE_URL}/quotations/${quotationId}/`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error('Failed to update quotation');
+    return res.json();
+  },
 };
