@@ -1,5 +1,34 @@
 const API_BASE_URL = 'http://localhost:8000/api';
 
+const handleResponse = async (res) => {
+  const text = await res.text();
+  let json = {};
+  try {
+    json = text ? JSON.parse(text) : {};
+  } catch (e) {
+    if (res.status === 404) {
+      throw new Error(`Endpoint not found (404). Please ensure Django server is running on http://localhost:8000.`);
+    }
+    if (res.status >= 500) {
+      throw new Error(`Server Error (${res.status}). Check Django server console for exception log.`);
+    }
+    throw new Error(`Backend server returned an HTML response (${res.status}). Please check if Django server is running on http://localhost:8000.`);
+  }
+
+  if (res.status === 403) {
+    const err = new Error(json.message || json.error || 'Access denied');
+    err.code = json.error;   // 'pending' | 'rejected'
+    err.reason = json.reason || null;
+    throw err;
+  }
+
+  if (!res.ok) {
+    throw new Error(json.error || json.message || `Request failed with status ${res.status}`);
+  }
+
+  return json;
+};
+
 export const api = {
   // ── Auth ──────────────────────────────────────────
   signupUser: async (data) => {
@@ -8,9 +37,7 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
     });
-    const json = await res.json();
-    if (!res.ok) throw new Error(json.error || 'Signup failed');
-    return json;
+    return handleResponse(res);
   },
 
   signupVendor: async (data) => {
@@ -19,9 +46,7 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
     });
-    const json = await res.json();
-    if (!res.ok) throw new Error(json.error || 'Vendor signup failed');
-    return json;
+    return handleResponse(res);
   },
 
   login: async (email, password) => {
@@ -30,16 +55,7 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password }),
     });
-    const json = await res.json();
-    // 403 = verification gate (pending or rejected)
-    if (res.status === 403) {
-      const err = new Error(json.message || 'Access denied');
-      err.code = json.error;   // 'pending' | 'rejected'
-      err.reason = json.reason || null;
-      throw err;
-    }
-    if (!res.ok) throw new Error(json.error || 'Login failed');
-    return json;
+    return handleResponse(res);
   },
 
   // ── Admin ──────────────────────────────────────────
@@ -121,6 +137,14 @@ export const api = {
       throw new Error(JSON.stringify(errData) || 'Failed to create RFQ');
     }
     return res.json();
+  },
+
+  deleteRFQ: async (rfqId) => {
+    const res = await fetch(`${API_BASE_URL}/rfqs/${rfqId}/`, {
+      method: 'DELETE',
+    });
+    if (!res.ok) throw new Error('Failed to delete RFQ');
+    return true;
   },
 
   updateRFQStatus: async (rfqId, status) => {

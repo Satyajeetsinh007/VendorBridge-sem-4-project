@@ -21,56 +21,59 @@ def signup_user(request):
     Rejected users may re-apply — their record resets to pending.
     Department required for all roles except manager.
     """
-    data = request.data
-    name = data.get('name', '').strip()
-    email = data.get('email', '').strip().lower()
-    password = data.get('password', '').strip()
-    role = data.get('role', '').strip()
-    department_id = data.get('department', None)
+    try:
+        data = request.data
+        name = data.get('name', '').strip()
+        email = data.get('email', '').strip().lower()
+        password = data.get('password', '').strip()
+        role = data.get('role', '').strip()
+        department_id = data.get('department', None)
 
-    if not all([name, email, password, role]):
-        return Response({'error': 'Name, email, password, and role are required.'}, status=status.HTTP_400_BAD_REQUEST)
+        if not all([name, email, password, role]):
+            return Response({'error': 'Name, email, password, and role are required.'}, status=status.HTTP_400_BAD_REQUEST)
 
-    valid_roles = [r[0] for r in User.RoleChoices.choices]
-    if role not in valid_roles:
-        return Response({'error': f'Invalid role. Choose from: {valid_roles}'}, status=status.HTTP_400_BAD_REQUEST)
+        valid_roles = [r[0] for r in User.RoleChoices.choices]
+        if role not in valid_roles:
+            return Response({'error': f'Invalid role. Choose from: {valid_roles}'}, status=status.HTTP_400_BAD_REQUEST)
 
-    if role != 'manager' and not department_id:
-        return Response({'error': 'Department is required for this role.'}, status=status.HTTP_400_BAD_REQUEST)
+        if role != 'manager' and not department_id:
+            return Response({'error': 'Department is required for this role.'}, status=status.HTTP_400_BAD_REQUEST)
 
-    department = None
-    if department_id:
-        try:
-            department = Department.objects.get(id=department_id)
-        except Department.DoesNotExist:
-            return Response({'error': 'Department not found.'}, status=status.HTTP_404_NOT_FOUND)
+        department = None
+        if department_id:
+            try:
+                department = Department.objects.get(id=department_id)
+            except Exception:
+                return Response({'error': 'Selected department is invalid or not found.'}, status=status.HTTP_400_BAD_REQUEST)
 
-    existing = User.objects.filter(email=email).first()
-    if existing:
-        if existing.verification_status == 'rejected':
-            # Re-application: reset to pending with updated info
-            existing.name = name
-            existing.password = password
-            existing.role = role
-            existing.department = department
-            existing.verification_status = 'pending'
-            existing.rejection_reason = None
-            existing.save()
-            return Response({'message': 'Re-application submitted for admin review.', 'status': 'pending'}, status=status.HTTP_200_OK)
-        elif existing.verification_status == 'pending':
-            return Response({'error': 'An application with this email is already pending admin review.'}, status=status.HTTP_409_CONFLICT)
-        else:
-            return Response({'error': 'An account with this email already exists.'}, status=status.HTTP_409_CONFLICT)
+        existing = User.objects.filter(email=email).first()
+        if existing:
+            if existing.verification_status == 'rejected':
+                # Re-application: reset to pending with updated info
+                existing.name = name
+                existing.password = password
+                existing.role = role
+                existing.department = department
+                existing.verification_status = 'pending'
+                existing.rejection_reason = None
+                existing.save()
+                return Response({'message': 'Re-application submitted for admin review.', 'status': 'pending'}, status=status.HTTP_200_OK)
+            elif existing.verification_status == 'pending':
+                return Response({'error': 'An application with this email is already pending admin review.'}, status=status.HTTP_409_CONFLICT)
+            else:
+                return Response({'error': 'An account with this email already exists.'}, status=status.HTTP_409_CONFLICT)
 
-    user = User.objects.create(
-        name=name, email=email, password=password,
-        role=role, department=department, verification_status='pending',
-    )
-    return Response({
-        'message': 'Application submitted! Awaiting admin approval.',
-        'status': 'pending',
-        'user': {'id': str(user.id), 'name': user.name, 'email': user.email, 'role': user.role}
-    }, status=status.HTTP_201_CREATED)
+        user = User.objects.create(
+            name=name, email=email, password=password,
+            role=role, department=department, verification_status='pending',
+        )
+        return Response({
+            'message': 'Application submitted! Awaiting admin approval.',
+            'status': 'pending',
+            'user': {'id': str(user.id), 'name': user.name, 'email': user.email, 'role': user.role}
+        }, status=status.HTTP_201_CREATED)
+    except Exception as e:
+        return Response({'error': f'Server error: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 @api_view(['POST'])
@@ -79,61 +82,64 @@ def signup_vendor(request):
     Register a new vendor company. Account starts as 'pending'.
     Rejected vendors may re-apply with the same email.
     """
-    data = request.data
-    name = data.get('name', '').strip()
-    email = data.get('email', '').strip().lower()
-    password = data.get('password', '').strip()
-    contact_person = data.get('contact_person', '').strip()
-    phone = data.get('phone', '').strip()
-    address = data.get('address', '').strip()
-    category = data.get('category', '').strip()
-    gst_number = data.get('gst_number', '').strip()
-    website = data.get('website', '').strip()
+    try:
+        data = request.data
+        name = data.get('name', '').strip()
+        email = data.get('email', '').strip().lower()
+        password = data.get('password', '').strip()
+        contact_person = data.get('contact_person', '').strip()
+        phone = data.get('phone', '').strip()
+        address = data.get('address', '').strip()
+        category = data.get('category', '').strip()
+        gst_number = data.get('gst_number', '').strip()
+        website = data.get('website', '').strip()
 
-    if not all([name, email, password, phone, address]):
-        return Response({'error': 'Company name, email, password, phone, and address are required.'}, status=status.HTTP_400_BAD_REQUEST)
+        if not all([name, email, password, phone, address]):
+            return Response({'error': 'Company name, email, password, phone, and address are required.'}, status=status.HTTP_400_BAD_REQUEST)
 
-    if User.objects.filter(email=email).exists():
-        return Response({'error': 'An internal user account with this email already exists.'}, status=status.HTTP_409_CONFLICT)
+        if User.objects.filter(email=email).exists():
+            return Response({'error': 'An internal user account with this email already exists.'}, status=status.HTTP_409_CONFLICT)
 
-    existing = Vendor.objects.filter(email=email).first()
-    if existing:
-        if existing.verification_status == 'rejected':
-            existing.name = name
-            existing.password = password
-            existing.contact_person = contact_person or None
-            existing.phone = phone
-            existing.address = address
-            existing.category = category or None
-            existing.gst_number = gst_number or None
-            existing.website = website or None
-            existing.verification_status = 'pending'
-            existing.rejection_reason = None
-            existing.save()
-            return Response({'message': 'Re-application submitted for admin review.', 'status': 'pending'}, status=status.HTTP_200_OK)
-        elif existing.verification_status == 'pending':
-            return Response({'error': 'A vendor application with this email is already pending.'}, status=status.HTTP_409_CONFLICT)
-        else:
-            return Response({'error': 'A vendor account with this email already exists.'}, status=status.HTTP_409_CONFLICT)
+        existing = Vendor.objects.filter(email=email).first()
+        if existing:
+            if existing.verification_status == 'rejected':
+                existing.name = name
+                existing.password = password
+                existing.contact_person = contact_person or None
+                existing.phone = phone
+                existing.address = address
+                existing.category = category or None
+                existing.gst_number = gst_number or None
+                existing.website = website or None
+                existing.verification_status = 'pending'
+                existing.rejection_reason = None
+                existing.save()
+                return Response({'message': 'Re-application submitted for admin review.', 'status': 'pending'}, status=status.HTTP_200_OK)
+            elif existing.verification_status == 'pending':
+                return Response({'error': 'A vendor application with this email is already pending.'}, status=status.HTTP_409_CONFLICT)
+            else:
+                return Response({'error': 'A vendor account with this email already exists.'}, status=status.HTTP_409_CONFLICT)
 
-    rand_num = random.randint(1000, 9999)
-    vendor_code = f'VND-{rand_num}'
-    while Vendor.objects.filter(vendor_code=vendor_code).exists():
         rand_num = random.randint(1000, 9999)
         vendor_code = f'VND-{rand_num}'
+        while Vendor.objects.filter(vendor_code=vendor_code).exists():
+            rand_num = random.randint(1000, 9999)
+            vendor_code = f'VND-{rand_num}'
 
-    vendor = Vendor.objects.create(
-        vendor_code=vendor_code, name=name, email=email, password=password,
-        contact_person=contact_person or None, phone=phone, address=address,
-        category=category or None, gst_number=gst_number or None,
-        website=website or None, status=Vendor.StatusChoices.ACTIVE,
-        verification_status='pending',
-    )
-    return Response({
-        'message': 'Vendor application submitted! Awaiting admin approval.',
-        'status': 'pending',
-        'vendor': {'id': str(vendor.id), 'vendor_code': vendor.vendor_code, 'name': vendor.name, 'email': vendor.email}
-    }, status=status.HTTP_201_CREATED)
+        vendor = Vendor.objects.create(
+            vendor_code=vendor_code, name=name, email=email, password=password,
+            contact_person=contact_person or None, phone=phone, address=address,
+            category=category or None, gst_number=gst_number or None,
+            website=website or None, status=Vendor.StatusChoices.ACTIVE,
+            verification_status='pending',
+        )
+        return Response({
+            'message': 'Vendor application submitted! Awaiting admin approval.',
+            'status': 'pending',
+            'vendor': {'id': str(vendor.id), 'vendor_code': vendor.vendor_code, 'name': vendor.name, 'email': vendor.email}
+        }, status=status.HTTP_201_CREATED)
+    except Exception as e:
+        return Response({'error': f'Server error: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 @api_view(['POST'])

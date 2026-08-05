@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../services/api';
 
-export default function PurchaseOrderDetail({ po, rfq, quotation, vendor, onBack, onUpdated }) {
+export default function PurchaseOrderDetail({ po, rfq, quotation, vendor, currentUser, onBack, onUpdated }) {
   const [poStatus, setPoStatus] = useState(po?.status || 'draft');
 
   useEffect(() => {
@@ -9,6 +9,18 @@ export default function PurchaseOrderDetail({ po, rfq, quotation, vendor, onBack
       setPoStatus(po.status);
     }
   }, [po?.status]);
+
+  // Helper to check ownership
+  const isOwnRfq = (obj) => {
+    if (!currentUser) return true;
+    const creatorId = typeof obj?.created_by === 'object' ? obj?.created_by?.id : obj?.created_by;
+    if (creatorId && creatorId === currentUser.id) return true;
+    if (obj?.created_by_details && (obj.created_by_details.id === currentUser.id || obj.created_by_details.email === currentUser.email)) return true;
+    if (obj?.created_by_name && currentUser.name && obj.created_by_name.toLowerCase() === currentUser.name.toLowerCase()) return true;
+    return false;
+  };
+  const isOwn = isOwnRfq(po) || isOwnRfq(rfq);
+
   const [saving, setSaving] = useState(false);
   const [issuing, setIssuing] = useState(false);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
@@ -25,7 +37,7 @@ export default function PurchaseOrderDetail({ po, rfq, quotation, vendor, onBack
     discount_amount: po?.discount_amount || 0,
   });
 
-  const isIssued = poStatus === 'issued' || poStatus === 'acknowledged' || poStatus === 'in_progress' || poStatus === 'delivered' || poStatus === 'invoiced';
+  const isIssued = !isOwn || poStatus === 'issued' || poStatus === 'acknowledged' || poStatus === 'in_progress' || poStatus === 'delivered' || poStatus === 'invoiced';
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -140,6 +152,21 @@ export default function PurchaseOrderDetail({ po, rfq, quotation, vendor, onBack
           )}
         </div>
       </div>
+
+      {/* ── View-Only Banner for another Officer's PO ── */}
+      {!isOwn && (
+        <div className="state-banner info" style={{ marginBottom: '20px', padding: '14px 18px', background: 'rgba(59, 130, 246, 0.08)', border: '1px solid rgba(59, 130, 246, 0.25)' }}>
+          <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '4px' }}>
+            ℹ This Purchase Order was created by <span style={{ color: 'var(--accent)' }}>{po?.officer_name || rfq?.created_by_details?.name || rfq?.created_by_name || 'Priya Shah'}</span>
+          </div>
+          <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
+            Department: <strong>{rfq?.department_details?.name || rfq?.department_details?.code || 'Human Resources'}</strong>
+          </div>
+          <div style={{ fontSize: '12px', color: '#94a3b8', fontStyle: 'italic', marginTop: '6px' }}>
+            You have view-only access. Modifying or issuing this Purchase Order is restricted to the creator.
+          </div>
+        </div>
+      )}
 
       {/* ── Success Alert Banner ── */}
       {successBanner && (

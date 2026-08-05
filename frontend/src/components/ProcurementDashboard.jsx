@@ -53,7 +53,7 @@ const Icons = {
   ),
 };
 
-export default function ProcurementDashboard({ onLogout, currentUser }) {
+export default function ProcurementDashboard({ onLogout, currentUser, onToggleRole }) {
   const [rfqs, setRfqs] = useState([]);
   const [departments, setDepartments] = useState([]);
   const [users, setUsers] = useState([]);
@@ -61,6 +61,7 @@ export default function ProcurementDashboard({ onLogout, currentUser }) {
   const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
+  const [ownershipFilter, setOwnershipFilter] = useState('ALL'); // 'ALL' | 'MY'
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [formData, setFormData] = useState({
@@ -106,12 +107,18 @@ export default function ProcurementDashboard({ onLogout, currentUser }) {
       setQuotations(quotationsData);
       setVendors(vendorsData);
       setPurchaseOrders(posData);
-      if (deptsData.length > 0 && !formData.department)
-        setFormData(prev => ({ ...prev, department: deptsData[0].id }));
-      if (currentUser?.id) {
-        setFormData(prev => ({ ...prev, created_by: currentUser.id }));
-      } else if (usersData.length > 0 && !formData.created_by) {
-        setFormData(prev => ({ ...prev, created_by: usersData[0].id }));
+
+      // Auto-set department to officer's department
+      const userInDb = usersData.find(u => u.id === currentUser?.id || u.email === currentUser?.email);
+      const officerDept = currentUser?.department || userInDb?.department;
+      const matchedDept = deptsData.find(d => d.id === officerDept || d.code === officerDept || d.name?.toLowerCase() === currentUser?.department_name?.toLowerCase());
+
+      if (deptsData.length > 0) {
+        setFormData(prev => ({
+          ...prev,
+          department: matchedDept ? matchedDept.id : deptsData[0].id,
+          created_by: currentUser?.id || userInDb?.id || usersData[0]?.id || '',
+        }));
       }
     } catch (err) {
       setError(err.message || 'Failed to connect to backend');
@@ -120,8 +127,47 @@ export default function ProcurementDashboard({ onLogout, currentUser }) {
     }
   };
 
-
   useEffect(() => { fetchData(); }, []);
+
+  // Helper to get officer's department ID
+  const getOfficerDepartmentId = () => {
+    if (!currentUser && departments.length > 0) return departments[0].id;
+    if (currentUser?.department) {
+      const deptId = typeof currentUser.department === 'object' ? currentUser.department.id : currentUser.department;
+      const found = departments.find(d => d.id === deptId || d.code === deptId);
+      if (found) return found.id;
+    }
+    if (currentUser?.department_name) {
+      const found = departments.find(d => d.name?.toLowerCase() === currentUser.department_name?.toLowerCase() || d.code?.toLowerCase() === currentUser.department_name?.toLowerCase());
+      if (found) return found.id;
+    }
+    const userInDb = users.find(u => u.id === currentUser?.id || u.email === currentUser?.email);
+    if (userInDb?.department) {
+      const found = departments.find(d => d.id === userInDb.department || d.code === userInDb.department);
+      if (found) return found.id;
+    }
+    return departments[0]?.id || '';
+  };
+
+  const handleOpenCreateModal = () => {
+    const officerDeptId = getOfficerDepartmentId();
+    setFormData(prev => ({
+      ...prev,
+      department: officerDeptId || departments[0]?.id || '',
+      created_by: currentUser?.id || users[0]?.id || '',
+    }));
+    setIsModalOpen(true);
+  };
+
+  // Helper to check if logged-in user created the RFQ
+  const isOwnRfq = (rfq) => {
+    if (!currentUser) return true;
+    const creatorId = typeof rfq.created_by === 'object' ? rfq.created_by?.id : rfq.created_by;
+    if (creatorId && creatorId === currentUser.id) return true;
+    if (rfq.created_by_details && (rfq.created_by_details.id === currentUser.id || rfq.created_by_details.email === currentUser.email)) return true;
+    if (rfq.created_by_name && currentUser.name && rfq.created_by_name.toLowerCase() === currentUser.name.toLowerCase()) return true;
+    return false;
+  };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -134,10 +180,11 @@ export default function ProcurementDashboard({ onLogout, currentUser }) {
     try {
       await api.createRFQ(formData);
       setIsModalOpen(false);
+      const officerDeptId = getOfficerDepartmentId();
       setFormData({
-        title: '', description: '', department: departments[0]?.id || '',
+        title: '', description: '', department: officerDeptId || departments[0]?.id || '',
         priority: 'medium', quantity: 100, deadline: '', required_by_date: '',
-        specs_file_url: '', status: 'draft', created_by: users[0]?.id || '',
+        specs_file_url: '', status: 'draft', created_by: currentUser?.id || users[0]?.id || '',
       });
       await fetchData();
     } catch (err) {
@@ -156,6 +203,16 @@ export default function ProcurementDashboard({ onLogout, currentUser }) {
     }
   };
 
+  const handleDeleteRFQ = async (rfqId) => {
+    if (!window.confirm('Are you sure you want to delete this draft RFQ?')) return;
+    try {
+      await api.deleteRFQ(rfqId);
+      await fetchData();
+    } catch (err) {
+      alert(`Delete failed: ${err.message}`);
+    }
+  };
+
   const handleSeedClick = async () => {
     setLoading(true);
     try { await api.seedData(); await fetchData(); }
@@ -165,7 +222,8 @@ export default function ProcurementDashboard({ onLogout, currentUser }) {
   // Open detail/edit modal
   const openRfqDetail = (rfq) => {
     setSelectedRfq(rfq);
-    const canEdit = rfq.status === 'draft' || rfq.status === 'rejected';
+    const isOwn = isOwnRfq(rfq);
+    const canEdit = isOwn && (rfq.status === 'draft' || rfq.status === 'rejected');
     if (canEdit) {
       setEditData({
         title: rfq.title || '',
@@ -220,18 +278,31 @@ export default function ProcurementDashboard({ onLogout, currentUser }) {
     }
   };
 
+  // Filtering by search, status, and ownership (All RFQs vs My RFQs)
   const filteredRfqs = rfqs.filter(rfq => {
     const q = searchQuery.toLowerCase();
-    const matchesSearch = !q || rfq.title?.toLowerCase().includes(q) ||
-      rfq.rfq_number?.toLowerCase().includes(q) || rfq.description?.toLowerCase().includes(q);
+    const creatorName = rfq.created_by_details?.name || rfq.created_by_name || '';
+    const deptName = rfq.department_details?.name || rfq.department_details?.code || '';
+    
+    const matchesSearch = !q ||
+      rfq.title?.toLowerCase().includes(q) ||
+      rfq.rfq_number?.toLowerCase().includes(q) ||
+      rfq.description?.toLowerCase().includes(q) ||
+      deptName.toLowerCase().includes(q) ||
+      creatorName.toLowerCase().includes(q);
+
     const matchesStatus = statusFilter === 'ALL' || rfq.status === statusFilter.toLowerCase();
-    return matchesSearch && matchesStatus;
+    const matchesOwnership = ownershipFilter === 'ALL' || (ownershipFilter === 'MY' && isOwnRfq(rfq));
+
+    return matchesSearch && matchesStatus && matchesOwnership;
   });
 
-  const totalCount = rfqs.length;
-  const draftCount = rfqs.filter(r => r.status === 'draft').length;
-  const openCount = rfqs.filter(r => r.status === 'open' || r.status === 'under_review').length;
+  // Updated Dashboard Metrics
+  const myRfqsCount = rfqs.filter(r => isOwnRfq(r)).length;
+  const companyRfqsCount = rfqs.length;
   const pendingCount = rfqs.filter(r => r.status === 'pending_approval').length;
+  const openCount = rfqs.filter(r => r.status === 'open' || r.status === 'under_review').length;
+  const draftCount = rfqs.filter(r => r.status === 'draft').length;
 
   // RFQs that have at least one submitted quotation
   const rfqIdsWithQuotations = new Set(
@@ -308,8 +379,8 @@ export default function ProcurementDashboard({ onLogout, currentUser }) {
         {/* Header */}
         <header className="topbar">
           <div className="topbar-left">
-            <h1 className="page-title">
-              {activePOInfo ? 'Purchase Order Review' :
+            <h1 className="topbar-title">
+              {activePOInfo ? 'Purchase Order Details' :
                comparisonRfq ? 'Quotation Comparison' :
                currentView === 'rfq-management' ? 'RFQ Management' :
                currentView === 'quotations' ? 'Quotations' :
@@ -330,10 +401,11 @@ export default function ProcurementDashboard({ onLogout, currentUser }) {
             </span>
           </div>
           <div className="topbar-right">
-            {/* Sign Out Button */}
-            <button className="btn-secondary" onClick={onLogout} style={{ color: 'var(--text-secondary)' }}>
-              Sign Out
-            </button>
+            {onToggleRole && (
+              <button className="btn-secondary" onClick={onToggleRole} style={{ borderStyle: 'dashed', color: 'var(--accent)' }}>
+                ⇄ Switch to Manager Portal
+              </button>
+            )}
             <div className="topbar-divider" />
             <button className="icon-btn" title="Notifications">
               <Icons.Bell />
@@ -341,15 +413,18 @@ export default function ProcurementDashboard({ onLogout, currentUser }) {
             </button>
             <div className="topbar-divider" />
             <div className="user-chip">
-              <div className="user-avatar">{(currentUser?.name || 'P')[0]}</div>
+              <div className="user-avatar">{((currentUser?.name || users[0]?.name || 'Alex Mercer'))[0]}</div>
               <div className="user-meta">
-                <span className="user-name">{currentUser?.name || 'Procurement User'}</span>
+                <span className="user-name">{currentUser?.name || users[0]?.name || 'Alex Mercer'}</span>
                 <span className="user-role">Procurement Officer</span>
               </div>
-              <Icons.ChevronDown />
+              {onLogout && (
+                <button onClick={onLogout} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', marginLeft: '8px', cursor: 'pointer', fontSize: '12px' }}>
+                  Logout
+                </button>
+              )}
             </div>
           </div>
-
         </header>
 
         {/* Content */}
@@ -360,6 +435,7 @@ export default function ProcurementDashboard({ onLogout, currentUser }) {
               rfq={activePOInfo.rfq}
               quotation={activePOInfo.quotation}
               vendor={activePOInfo.vendor}
+              currentUser={currentUser}
               onBack={() => setActivePOInfo(null)}
               onUpdated={async () => { await fetchData(); }}
             />
@@ -368,6 +444,7 @@ export default function ProcurementDashboard({ onLogout, currentUser }) {
               rfq={comparisonRfq}
               quotations={quotations}
               vendors={vendors}
+              currentUser={currentUser}
               onBack={() => { setComparisonRfq(null); }}
               onRefresh={async () => { setComparisonRfq(null); await fetchData(); }}
               onViewPO={(po, rfq, quotation, vendor) => {
@@ -378,10 +455,51 @@ export default function ProcurementDashboard({ onLogout, currentUser }) {
           ) : currentView === 'purchase-orders' ? (
             /* ── Purchase Orders View ── */
             <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                <div className="search-input" style={{ flex: 1, maxWidth: '440px' }}>
+                  <Icons.Search />
+                  <input
+                    type="text"
+                    placeholder="Search POs by PO #, vendor, title, officer..."
+                    value={searchQuery}
+                    onChange={e => setSearchQuery(e.target.value)}
+                  />
+                </div>
+                <div style={{ display: 'flex', background: 'rgba(255, 255, 255, 0.05)', padding: '4px', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
+                  <button
+                    className={`btn-ghost ${ownershipFilter === 'ALL' ? 'btn-primary' : ''}`}
+                    style={{ padding: '6px 16px', fontSize: '13px', borderRadius: '6px', cursor: 'pointer' }}
+                    onClick={() => setOwnershipFilter('ALL')}
+                  >
+                    🏢 All Purchase Orders ({purchaseOrders.length})
+                  </button>
+                  <button
+                    className={`btn-ghost ${ownershipFilter === 'MY' ? 'btn-primary' : ''}`}
+                    style={{ padding: '6px 16px', fontSize: '13px', borderRadius: '6px', cursor: 'pointer' }}
+                    onClick={() => setOwnershipFilter('MY')}
+                  >
+                    👤 My Purchase Orders ({purchaseOrders.filter(p => {
+                      const rfqObj = rfqs.find(r => r.id === p.rfq) || p.rfq_details;
+                      return isOwnRfq(p) || isOwnRfq(rfqObj);
+                    }).length})
+                  </button>
+                </div>
+              </div>
+
               <section className="table-card">
                 <div className="table-header-bar">
                   <span className="table-title">Issued & Generated Purchase Orders</span>
-                  <span className="table-count">{purchaseOrders.length} POs</span>
+                  <span className="table-count">
+                    {purchaseOrders.filter(po => {
+                      const rfqObj = rfqs.find(r => r.id === po.rfq) || po.rfq_details;
+                      const vendorObj = vendors.find(v => v.id === po.vendor) || po.vendor_details;
+                      const creatorName = rfqObj?.created_by_details?.name || rfqObj?.created_by_name || '';
+                      const q = searchQuery.toLowerCase();
+                      const matchesSearch = !q || po.po_number?.toLowerCase().includes(q) || vendorObj?.name?.toLowerCase().includes(q) || rfqObj?.title?.toLowerCase().includes(q) || creatorName.toLowerCase().includes(q);
+                      const matchesOwn = ownershipFilter === 'ALL' || isOwnRfq(po) || isOwnRfq(rfqObj);
+                      return matchesSearch && matchesOwn;
+                    }).length} POs
+                  </span>
                 </div>
                 <div className="table-scroll">
                   <table className="data-table">
@@ -390,6 +508,7 @@ export default function ProcurementDashboard({ onLogout, currentUser }) {
                         <th>PO #</th>
                         <th>Vendor</th>
                         <th>RFQ Title</th>
+                        <th>Created By</th>
                         <th>Grand Total (₹)</th>
                         <th>Delivery Date</th>
                         <th>Status</th>
@@ -399,41 +518,74 @@ export default function ProcurementDashboard({ onLogout, currentUser }) {
                     <tbody>
                       {purchaseOrders.length === 0 ? (
                         <tr>
-                          <td colSpan="7" className="empty-state">
+                          <td colSpan="8" className="empty-state">
                             <Icons.FileText />
                             <p>No purchase orders generated yet. Select a winning vendor from quotation comparison to auto-generate a Purchase Order.</p>
                           </td>
                         </tr>
                       ) : (
-                        purchaseOrders.map(po => {
-                          const rfqObj = rfqs.find(r => r.id === po.rfq) || po.rfq_details;
-                          const vendorObj = vendors.find(v => v.id === po.vendor) || po.vendor_details;
-                          const quotObj = quotations.find(q => q.id === po.quotation) || po.quotation_details;
-                          return (
-                            <tr key={po.id}>
-                              <td><span className="mono-text">{po.po_number}</span></td>
-                              <td>
-                                <span className="cell-primary">{vendorObj?.name || 'Dell Technologies'}</span>
-                                <span className="cell-sub">{vendorObj?.vendor_code || 'VND-DELL'}</span>
-                              </td>
-                              <td><span className="cell-primary">{rfqObj?.title || 'Laptops Procurement'}</span></td>
-                              <td className="num-cell" style={{ fontWeight: 700, color: 'var(--accent)' }}>
-                                ₹{parseFloat(po.total_value || 147500).toLocaleString('en-IN')}
-                              </td>
-                              <td className="date-cell">{po.expected_delivery_date || '—'}</td>
-                              <td>
-                                <span className={`badge badge-status-${po.status === 'issued' || po.status === 'delivered' ? 'approved' : po.status === 'acknowledged' ? 'open' : 'draft'}`} style={{ background: po.status === 'invoiced' ? '#8b5cf6' : po.status === 'delivered' ? '#059669' : undefined, color: po.status === 'invoiced' || po.status === 'delivered' ? '#fff' : undefined }}>
-                                  {po.status?.toUpperCase() || 'DRAFT'}
-                                </span>
-                              </td>
-                              <td className="actions-cell">
-                                <button className="btn-action btn-submit" onClick={() => setActivePOInfo({ po, rfq: rfqObj, quotation: quotObj, vendor: vendorObj })}>
-                                  {po.status === 'invoiced' ? '📄 View Invoiced PO' : po.status === 'delivered' ? '📄 View Delivered PO' : (po.status === 'issued' || po.status === 'acknowledged' || po.status === 'in_progress') ? '📄 View PO' : '📄 Review & Issue PO'}
-                                </button>
-                              </td>
-                            </tr>
-                          );
-                        })
+                        purchaseOrders
+                          .filter(po => {
+                            const rfqObj = rfqs.find(r => r.id === po.rfq) || po.rfq_details;
+                            const vendorObj = vendors.find(v => v.id === po.vendor) || po.vendor_details;
+                            const creatorName = rfqObj?.created_by_details?.name || rfqObj?.created_by_name || '';
+                            const q = searchQuery.toLowerCase();
+                            const matchesSearch = !q || po.po_number?.toLowerCase().includes(q) || vendorObj?.name?.toLowerCase().includes(q) || rfqObj?.title?.toLowerCase().includes(q) || creatorName.toLowerCase().includes(q);
+                            const matchesOwn = ownershipFilter === 'ALL' || isOwnRfq(po) || isOwnRfq(rfqObj);
+                            return matchesSearch && matchesOwn;
+                          })
+                          .map(po => {
+                            const rfqObj = rfqs.find(r => r.id === po.rfq) || po.rfq_details;
+                            const vendorObj = vendors.find(v => v.id === po.vendor) || po.vendor_details;
+                            const quotObj = quotations.find(q => q.id === po.quotation) || po.quotation_details;
+                            const isOwn = isOwnRfq(po) || isOwnRfq(rfqObj);
+                            const creatorName = rfqObj?.created_by_details?.name || rfqObj?.created_by_name || (isOwn ? (currentUser?.name || 'Alex Mercer') : 'Priya Shah');
+                            return (
+                              <tr key={po.id}>
+                                <td><span className="mono-text">{po.po_number}</span></td>
+                                <td>
+                                  <span className="cell-primary">{vendorObj?.name || 'Dell Technologies'}</span>
+                                  <span className="cell-sub">{vendorObj?.vendor_code || 'VND-DELL'}</span>
+                                </td>
+                                <td><span className="cell-primary">{rfqObj?.title || 'Laptops Procurement'}</span></td>
+                                <td>
+                                  <span className="cell-primary" style={{ fontSize: '13px', fontWeight: 600 }}>{creatorName}</span>
+                                  {isOwn ? (
+                                    <span className="cell-sub" style={{ color: 'var(--accent)' }}>You (Creator)</span>
+                                  ) : (
+                                    <span className="cell-sub" style={{ color: 'var(--text-muted)' }}>Officer</span>
+                                  )}
+                                </td>
+                                <td className="num-cell" style={{ fontWeight: 700, color: 'var(--accent)' }}>
+                                  ₹{parseFloat(po.total_value || 147500).toLocaleString('en-IN')}
+                                </td>
+                                <td className="date-cell">{po.expected_delivery_date || '—'}</td>
+                                <td>
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                    <span className={`badge badge-status-${po.status === 'issued' || po.status === 'delivered' ? 'approved' : po.status === 'acknowledged' ? 'open' : 'draft'}`} style={{ background: po.status === 'invoiced' ? '#8b5cf6' : po.status === 'delivered' ? '#059669' : undefined, color: po.status === 'invoiced' || po.status === 'delivered' ? '#fff' : undefined }}>
+                                      {po.status?.toUpperCase() || 'DRAFT'}
+                                    </span>
+                                    {!isOwn && (
+                                      <span className="badge badge-status-draft" style={{ background: 'rgba(148, 163, 184, 0.12)', color: '#94a3b8', border: '1px solid rgba(148, 163, 184, 0.25)', fontSize: '10px', padding: '2px 6px', width: 'fit-content' }}>
+                                        View Only
+                                      </span>
+                                    )}
+                                  </div>
+                                </td>
+                                <td className="actions-cell">
+                                  {isOwn ? (
+                                    <button className="btn-action btn-submit" onClick={() => setActivePOInfo({ po, rfq: rfqObj, quotation: quotObj, vendor: vendorObj })}>
+                                      {po.status === 'invoiced' ? '📄 View Invoiced PO' : po.status === 'delivered' ? '📄 View Delivered PO' : (po.status === 'issued' || po.status === 'acknowledged' || po.status === 'in_progress') ? '📄 View PO' : '📄 Review & Issue PO'}
+                                    </button>
+                                  ) : (
+                                    <button className="btn-secondary" style={{ padding: '4px 12px', fontSize: '12px' }} onClick={() => setActivePOInfo({ po, rfq: rfqObj, quotation: quotObj, vendor: vendorObj })}>
+                                      👁 View PO (View Only)
+                                    </button>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })
                       )}
                     </tbody>
                   </table>
@@ -443,10 +595,46 @@ export default function ProcurementDashboard({ onLogout, currentUser }) {
           ) : currentView === 'quotations' ? (
             /* ── Quotations View ── */
             <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                <div className="search-input" style={{ flex: 1, maxWidth: '440px' }}>
+                  <Icons.Search />
+                  <input
+                    type="text"
+                    placeholder="Search quotations by RFQ #, title, officer..."
+                    value={searchQuery}
+                    onChange={e => setSearchQuery(e.target.value)}
+                  />
+                </div>
+                <div style={{ display: 'flex', background: 'rgba(255, 255, 255, 0.05)', padding: '4px', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
+                  <button
+                    className={`btn-ghost ${ownershipFilter === 'ALL' ? 'btn-primary' : ''}`}
+                    style={{ padding: '6px 16px', fontSize: '13px', borderRadius: '6px', cursor: 'pointer' }}
+                    onClick={() => setOwnershipFilter('ALL')}
+                  >
+                    🏢 All Quotations ({rfqsWithQuotations.length})
+                  </button>
+                  <button
+                    className={`btn-ghost ${ownershipFilter === 'MY' ? 'btn-primary' : ''}`}
+                    style={{ padding: '6px 16px', fontSize: '13px', borderRadius: '6px', cursor: 'pointer' }}
+                    onClick={() => setOwnershipFilter('MY')}
+                  >
+                    👤 My RFQs Quotations ({rfqsWithQuotations.filter(r => isOwnRfq(r)).length})
+                  </button>
+                </div>
+              </div>
+
               <section className="table-card">
                 <div className="table-header-bar">
                   <span className="table-title">RFQs with Vendor Quotations</span>
-                  <span className="table-count">{rfqsWithQuotations.length} RFQs</span>
+                  <span className="table-count">
+                    {rfqsWithQuotations.filter(rfq => {
+                      const creatorName = rfq.created_by_details?.name || rfq.created_by_name || '';
+                      const q = searchQuery.toLowerCase();
+                      const matchesSearch = !q || rfq.rfq_number?.toLowerCase().includes(q) || rfq.title?.toLowerCase().includes(q) || creatorName.toLowerCase().includes(q);
+                      const matchesOwn = ownershipFilter === 'ALL' || isOwnRfq(rfq);
+                      return matchesSearch && matchesOwn;
+                    }).length} RFQs
+                  </span>
                 </div>
                 <div className="table-scroll">
                   <table className="data-table">
@@ -455,9 +643,8 @@ export default function ProcurementDashboard({ onLogout, currentUser }) {
                         <th>RFQ #</th>
                         <th>Title</th>
                         <th>Department</th>
-                        <th>Priority</th>
-                        <th>Deadline</th>
-                        <th>Quotations</th>
+                        <th>Created By</th>
+                        <th>Total Quotations</th>
                         <th>Status</th>
                         <th className="th-actions">Action</th>
                       </tr>
@@ -465,41 +652,62 @@ export default function ProcurementDashboard({ onLogout, currentUser }) {
                     <tbody>
                       {rfqsWithQuotations.length === 0 ? (
                         <tr>
-                          <td colSpan="8" className="empty-state">
+                          <td colSpan="7" className="empty-state">
                             <Icons.Inbox />
-                            <p>No quotations received yet. Vendors will submit quotations for approved RFQs.</p>
+                            <p>No vendor quotations received yet for active RFQs.</p>
                           </td>
                         </tr>
                       ) : (
-                        rfqsWithQuotations.map(rfq => {
-                          const quotCount = quotations.filter(q => q.rfq === rfq.id && q.status !== 'draft').length;
-                          return (
-                            <tr key={rfq.id} onClick={() => setComparisonRfq(rfq)} style={{ cursor: 'pointer' }}>
-                              <td>
-                                <span className="mono-text">{rfq.rfq_number}</span>
-                                <span className="cell-sub">{new Date(rfq.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
-                              </td>
-                              <td>
-                                <span className="cell-primary">{rfq.title}</span>
-                                <span className="cell-sub cell-desc">{rfq.description}</span>
-                              </td>
-                              <td><span className="dept-chip">{rfq.department_details?.code || '—'}</span></td>
-                              <td><span className={`badge badge-priority-${rfq.priority}`}>{rfq.priority}</span></td>
-                              <td className="date-cell">{rfq.deadline || '—'}</td>
-                              <td>
-                                <span className="badge badge-status-open" style={{ fontSize: '12px' }}>
-                                  {quotCount} received
-                                </span>
-                              </td>
-                              <td><span className={`badge badge-status-${rfq.status}`}>{statusLabel(rfq.status)}</span></td>
-                              <td className="actions-cell">
-                                <button className="btn-action btn-submit" onClick={(e) => { e.stopPropagation(); setComparisonRfq(rfq); }}>
-                                  📊 Compare
-                                </button>
-                              </td>
-                            </tr>
-                          );
-                        })
+                        rfqsWithQuotations
+                          .filter(rfq => {
+                            const creatorName = rfq.created_by_details?.name || rfq.created_by_name || '';
+                            const q = searchQuery.toLowerCase();
+                            const matchesSearch = !q || rfq.rfq_number?.toLowerCase().includes(q) || rfq.title?.toLowerCase().includes(q) || creatorName.toLowerCase().includes(q);
+                            const matchesOwn = ownershipFilter === 'ALL' || isOwnRfq(rfq);
+                            return matchesSearch && matchesOwn;
+                          })
+                          .map(rfq => {
+                            const rfqQuots = quotations.filter(q => q.rfq === rfq.id);
+                            const isOwn = isOwnRfq(rfq);
+                            const creatorName = rfq.created_by_details?.name || rfq.created_by_name || (isOwn ? (currentUser?.name || 'Alex Mercer') : 'Priya Shah');
+                            return (
+                              <tr key={rfq.id}>
+                                <td><span className="mono-text">{rfq.rfq_number}</span></td>
+                                <td><span className="cell-primary">{rfq.title}</span></td>
+                                <td><span className="dept-chip">{rfq.department_details?.code || '—'}</span></td>
+                                <td>
+                                  <span className="cell-primary" style={{ fontSize: '13px', fontWeight: 600 }}>{creatorName}</span>
+                                  {isOwn ? (
+                                    <span className="cell-sub" style={{ color: 'var(--accent)' }}>You (Creator)</span>
+                                  ) : (
+                                    <span className="cell-sub" style={{ color: 'var(--text-muted)' }}>Officer</span>
+                                  )}
+                                </td>
+                                <td style={{ fontWeight: 600, color: 'var(--accent)' }}>{rfqQuots.length} Bids Received</td>
+                                <td>
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                    <span className={`badge badge-status-${rfq.status}`}>{statusLabel(rfq.status)}</span>
+                                    {!isOwn && (
+                                      <span className="badge badge-status-draft" style={{ background: 'rgba(148, 163, 184, 0.12)', color: '#94a3b8', border: '1px solid rgba(148, 163, 184, 0.25)', fontSize: '10px', padding: '2px 6px', width: 'fit-content' }}>
+                                        View Only
+                                      </span>
+                                    )}
+                                  </div>
+                                </td>
+                                <td className="actions-cell">
+                                  {isOwn ? (
+                                    <button className="btn-action btn-submit" onClick={() => setComparisonRfq(rfq)}>
+                                      📊 Compare & Select Winner
+                                    </button>
+                                  ) : (
+                                    <button className="btn-secondary" style={{ padding: '4px 12px', fontSize: '12px' }} onClick={() => setComparisonRfq(rfq)}>
+                                      👁 View Quotations (View Only)
+                                    </button>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })
                       )}
                     </tbody>
                   </table>
@@ -515,8 +723,8 @@ export default function ProcurementDashboard({ onLogout, currentUser }) {
                     <span className="stat-label">Total Procurement RFQs</span>
                     <div className="stat-icon-wrap"><Icons.FileText /></div>
                   </div>
-                  <div className="stat-value">{totalCount}</div>
-                  <span className="stat-sub">Across all departments</span>
+                  <div className="stat-value">{companyRfqsCount}</div>
+                  <span className="stat-sub">Across all officers</span>
                 </div>
                 <div className="stat-card stat-amber">
                   <div className="stat-header">
@@ -532,7 +740,7 @@ export default function ProcurementDashboard({ onLogout, currentUser }) {
                     <div className="stat-icon-wrap"><Icons.Inbox /></div>
                   </div>
                   <div className="stat-value">{quotations.length}</div>
-                  <span className="stat-sub">From 6 registered vendors</span>
+                  <span className="stat-sub">From registered vendors</span>
                 </div>
                 <div className="stat-card stat-zinc">
                   <div className="stat-header">
@@ -540,51 +748,9 @@ export default function ProcurementDashboard({ onLogout, currentUser }) {
                     <div className="stat-icon-wrap"><Icons.BarChart /></div>
                   </div>
                   <div className="stat-value">6.8 days</div>
-                  <span className="stat-sub">Creation to Vendor Selection</span>
+                  <span className="stat-sub">Creation to Selection</span>
                 </div>
               </section>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-                <div className="table-card" style={{ padding: '20px' }}>
-                  <span className="table-title" style={{ marginBottom: '16px', display: 'block' }}>RFQ Status Distribution</span>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    {[
-                      { label: 'Drafts', val: draftCount, color: '#a1a1aa' },
-                      { label: 'Open for Bids', val: rfqs.filter(r => r.status === 'open').length, color: '#4ade80' },
-                      { label: 'Under Review', val: rfqs.filter(r => r.status === 'under_review').length, color: '#fbbf24' },
-                      { label: 'Completed', val: rfqs.filter(r => r.status === 'completed').length, color: '#34d399' },
-                      { label: 'Closed', val: rfqs.filter(r => r.status === 'closed').length, color: '#71717a' },
-                    ].map(st => (
-                      <div key={st.label} style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '13px' }}>
-                        <span style={{ width: '120px', color: 'var(--text-secondary)' }}>{st.label}</span>
-                        <div style={{ flex: 1, height: '10px', background: 'rgba(255,255,255,0.06)', borderRadius: '5px', overflow: 'hidden' }}>
-                          <div style={{ width: `${totalCount ? (st.val / totalCount) * 100 : 0}%`, height: '100%', background: st.color, borderRadius: '5px' }} />
-                        </div>
-                        <span style={{ width: '40px', fontWeight: 600, color: 'var(--text-primary)', textAlign: 'right' }}>{st.val}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="table-card" style={{ padding: '20px' }}>
-                  <span className="table-title" style={{ marginBottom: '16px', display: 'block' }}>Priority Breakdown</span>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    {[
-                      { label: 'High Priority', val: rfqs.filter(r => r.priority === 'high').length, color: '#f87171' },
-                      { label: 'Medium Priority', val: rfqs.filter(r => r.priority === 'medium').length, color: '#fbbf24' },
-                      { label: 'Low Priority', val: rfqs.filter(r => r.priority === 'low').length, color: '#60a5fa' },
-                    ].map(st => (
-                      <div key={st.label} style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '13px' }}>
-                        <span style={{ width: '120px', color: 'var(--text-secondary)' }}>{st.label}</span>
-                        <div style={{ flex: 1, height: '10px', background: 'rgba(255,255,255,0.06)', borderRadius: '5px', overflow: 'hidden' }}>
-                          <div style={{ width: `${totalCount ? (st.val / totalCount) * 100 : 0}%`, height: '100%', background: st.color, borderRadius: '5px' }} />
-                        </div>
-                        <span style={{ width: '40px', fontWeight: 600, color: 'var(--text-primary)', textAlign: 'right' }}>{st.val}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
             </div>
           ) : currentView === 'settings' ? (
             /* ── Settings View ── */
@@ -601,94 +767,107 @@ export default function ProcurementDashboard({ onLogout, currentUser }) {
                     <input type="number" defaultValue={50000} />
                   </div>
                   <div className="field">
-                    <label>Notification Email</label>
-                    <input type="email" defaultValue="officer@vendorbridge.com" />
+                    <label>Auto-Close Expired RFQs</label>
+                    <select defaultValue="enabled">
+                      <option value="enabled">Enabled</option>
+                      <option value="disabled">Disabled</option>
+                    </select>
                   </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '8px' }}>
-                    <label style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>Preferences</label>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12.5px', color: 'var(--text-secondary)', cursor: 'pointer' }}>
-                      <input type="checkbox" defaultChecked /> Send email alert when vendor submits quotation
-                    </label>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12.5px', color: 'var(--text-secondary)', cursor: 'pointer' }}>
-                      <input type="checkbox" defaultChecked /> Auto-close RFQs upon deadline expiration
-                    </label>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12.5px', color: 'var(--text-secondary)', cursor: 'pointer' }}>
-                      <input type="checkbox" defaultChecked /> Enable AI Random Forest recommendation assistant
-                    </label>
-                  </div>
-                  <button type="submit" className="btn-primary" style={{ alignSelf: 'flex-start', marginTop: '10px' }}>
-                    Save Preferences
-                  </button>
+                  <button type="submit" className="btn-primary" style={{ alignSelf: 'flex-start' }}>Save Settings</button>
                 </form>
-              </div>
-
-              <div className="table-card decision-card">
-                <div className="table-header-bar"><span className="table-title">Officer Profile</span></div>
-                <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  <div className="info-row"><span className="info-label">Name</span><span className="info-val">Alex Mercer</span></div>
-                  <div className="info-row"><span className="info-label">Role</span><span className="info-val">Procurement Officer</span></div>
-                  <div className="info-row"><span className="info-label">Department</span><span className="info-val">Engineering & Ops</span></div>
-                  <div className="info-row"><span className="info-label">Status</span><span className="badge badge-status-open">ACTIVE</span></div>
-                </div>
               </div>
             </div>
           ) : (
+          /* ── Main Dashboard & RFQ Management Views ── */
           <>
-          {/* ── Summary Stats ── */}
+          {/* Stats Row */}
           <section className="stats-row">
             <div className="stat-card stat-blue">
               <div className="stat-header">
-                <span className="stat-label">Total RFQs</span>
+                <span className="stat-label">My RFQs</span>
                 <div className="stat-icon-wrap"><Icons.FileText /></div>
               </div>
-              <div className="stat-value">{totalCount}</div>
-              <span className="stat-sub">All time requests</span>
+              <div className="stat-value">{myRfqsCount}</div>
+              <span className="stat-sub">Created by you</span>
             </div>
+
             <div className="stat-card stat-zinc">
               <div className="stat-header">
-                <span className="stat-label">Drafts</span>
+                <span className="stat-label">Company RFQs</span>
                 <div className="stat-icon-wrap"><Icons.Inbox /></div>
               </div>
-              <div className="stat-value">{draftCount}</div>
-              <span className="stat-sub">In progress</span>
+              <div className="stat-value">{companyRfqsCount}</div>
+              <span className="stat-sub">Across all officers</span>
             </div>
-            <div className="stat-card stat-green">
-              <div className="stat-header">
-                <span className="stat-label">Open</span>
-                <div className="stat-icon-wrap"><Icons.CheckCircle /></div>
-              </div>
-              <div className="stat-value">{openCount}</div>
-              <span className="stat-sub">Live for bids</span>
-            </div>
+
             <div className="stat-card stat-amber">
               <div className="stat-header">
                 <span className="stat-label">Pending Approval</span>
                 <div className="stat-icon-wrap"><Icons.Clock /></div>
               </div>
               <div className="stat-value">{pendingCount}</div>
-              <span className="stat-sub">Awaiting review</span>
+              <span className="stat-sub">Across the company</span>
+            </div>
+
+            <div className="stat-card stat-green">
+              <div className="stat-header">
+                <span className="stat-label">Open RFQs</span>
+                <div className="stat-icon-wrap"><Icons.CheckCircle /></div>
+              </div>
+              <div className="stat-value">{openCount}</div>
+              <span className="stat-sub">Across the company</span>
             </div>
           </section>
 
-          {/* Toolbar */}
-          <section className="toolbar">
-            <div className="toolbar-left">
-              <div className="search-input">
+          {/* Toolbar & Filters */}
+          <section className="toolbar" style={{ flexDirection: 'column', gap: '14px', alignItems: 'stretch' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
+              <div className="search-input" style={{ flex: 1, maxWidth: '440px' }}>
                 <Icons.Search />
-                <input type="text" placeholder="Search by RFQ number, title…" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
+                <input
+                  type="text"
+                  placeholder="Search by RFQ #, title, dept, officer name…"
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                />
               </div>
-              <div className="filter-pills">
-                {statusFilters.map(f => (
-                  <button key={f.key} className={`pill ${statusFilter === f.key ? 'pill-active' : ''}`} onClick={() => setStatusFilter(f.key)}>
-                    {f.label}
-                    {f.key !== 'ALL' && <span className="pill-count">{rfqs.filter(r => f.key === 'ALL' || r.status === f.key.toLowerCase()).length}</span>}
-                  </button>
-                ))}
+
+              {/* Ownership Filter Tabs: All RFQs vs My RFQs */}
+              <div style={{ display: 'flex', background: 'rgba(255, 255, 255, 0.05)', padding: '4px', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
+                <button
+                  className={`btn-ghost ${ownershipFilter === 'ALL' ? 'btn-primary' : ''}`}
+                  style={{ padding: '6px 16px', fontSize: '13px', borderRadius: '6px', cursor: 'pointer' }}
+                  onClick={() => setOwnershipFilter('ALL')}
+                >
+                  🏢 All RFQs ({companyRfqsCount})
+                </button>
+                <button
+                  className={`btn-ghost ${ownershipFilter === 'MY' ? 'btn-primary' : ''}`}
+                  style={{ padding: '6px 16px', fontSize: '13px', borderRadius: '6px', cursor: 'pointer' }}
+                  onClick={() => setOwnershipFilter('MY')}
+                >
+                  👤 My RFQs ({myRfqsCount})
+                </button>
               </div>
+
+              <button className="btn-primary" onClick={handleOpenCreateModal}>
+                <Icons.Plus /> New RFQ
+              </button>
             </div>
-            <button className="btn-primary" onClick={() => setIsModalOpen(true)}>
-              <Icons.Plus /> New RFQ
-            </button>
+
+            {/* Status Filter Pills */}
+            <div className="filter-pills" style={{ marginTop: '2px' }}>
+              {statusFilters.map(f => (
+                <button key={f.key} className={`pill ${statusFilter === f.key ? 'pill-active' : ''}`} onClick={() => setStatusFilter(f.key)}>
+                  {f.label}
+                  {f.key !== 'ALL' && (
+                    <span className="pill-count">
+                      {rfqs.filter(r => (f.key === 'ALL' || r.status === f.key.toLowerCase()) && (ownershipFilter === 'ALL' || isOwnRfq(r))).length}
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
           </section>
 
           {/* Loading / Error */}
@@ -704,11 +883,11 @@ export default function ProcurementDashboard({ onLogout, currentUser }) {
             </div>
           )}
 
-          {/* Table */}
+          {/* RFQ Table */}
           {!loading && (
             <section className="table-card">
               <div className="table-header-bar">
-                <span className="table-title">All Requests</span>
+                <span className="table-title">Company Requests for Quotation</span>
                 <span className="table-count">{filteredRfqs.length} {filteredRfqs.length === 1 ? 'result' : 'results'}</span>
               </div>
               <div className="table-scroll">
@@ -718,7 +897,7 @@ export default function ProcurementDashboard({ onLogout, currentUser }) {
                       <th>RFQ #</th>
                       <th>Title</th>
                       <th>Department</th>
-                      <th>Qty</th>
+                      <th>Created By</th>
                       <th>Priority</th>
                       <th>Deadline</th>
                       <th>Status</th>
@@ -730,84 +909,120 @@ export default function ProcurementDashboard({ onLogout, currentUser }) {
                       <tr>
                         <td colSpan="8" className="empty-state">
                           <Icons.FileText />
-                          <p>{rfqs.length === 0 ? 'No RFQs yet. Create your first request.' : 'No results match your filters.'}</p>
+                          <p>{rfqs.length === 0 ? 'No RFQs created yet.' : 'No results match your search or filters.'}</p>
                         </td>
                       </tr>
                     ) : (
-                      filteredRfqs.map(rfq => (
-                        <tr key={rfq.id} onClick={() => openRfqDetail(rfq)} style={{ cursor: 'pointer' }}>
-                          <td>
-                            <span className="mono-text">{rfq.rfq_number}</span>
-                            <span className="cell-sub">{new Date(rfq.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
-                          </td>
-                          <td>
-                            <span className="cell-primary">{rfq.title}</span>
-                            <span className="cell-sub cell-desc">{rfq.description}</span>
-                          </td>
-                          <td><span className="dept-chip">{rfq.department_details?.code || '—'}</span></td>
-                          <td className="num-cell">{rfq.quantity?.toLocaleString()}</td>
-                          <td><span className={`badge badge-priority-${rfq.priority}`}>{rfq.priority}</span></td>
-                          <td className="date-cell">{rfq.deadline || '—'}</td>
-                          <td><span className={`badge badge-status-${rfq.status}`}>{statusLabel(rfq.status)}</span></td>
-                          <td className="actions-cell">
-                            {rfq.status === 'draft' && (
-                              <button className="btn-action btn-submit" onClick={(e) => { e.stopPropagation(); handleStatusUpdate(rfq.id, 'pending_approval'); }}>
-                                <Icons.Send /> Submit to Manager
-                              </button>
-                            )}
-                            {rfq.status === 'pending_approval' && (
-                              <span className="awaiting-text">Awaiting Approval</span>
-                            )}
-                            {(rfq.status === 'open' || rfq.status === 'under_review') && hasQuotations(rfq.id) && (
-                              <button className="btn-action btn-submit" onClick={(e) => { e.stopPropagation(); setComparisonRfq(rfq); }}>
-                                📊 Compare Quotations
-                              </button>
-                            )}
-                            {rfq.status === 'open' && !hasQuotations(rfq.id) && (
-                              <span style={{ color: 'var(--success)', fontWeight: '600', fontSize: '12px' }}>✓ Approved & Live</span>
-                            )}
-                            {rfq.status === 'completed' && (
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <span style={{ color: '#34d399', fontWeight: '600', fontSize: '12px' }}>✓ Completed</span>
-                                <button className="btn-action btn-submit" style={{ padding: '3px 8px', fontSize: '11px' }} onClick={(e) => {
-                                  e.stopPropagation();
-                                  const matchedPo = purchaseOrders.find(p => p.rfq === rfq.id);
-                                  const matchedQuot = quotations.find(q => q.rfq === rfq.id && q.status === 'selected');
-                                  const matchedVend = vendors.find(v => v.id === matchedQuot?.vendor);
-                                  setActivePOInfo({
-                                    po: matchedPo || { po_number: 'PO-2026-0042', status: 'issued', rfq: rfq.id },
-                                    rfq: rfq,
-                                    quotation: matchedQuot,
-                                    vendor: matchedVend
-                                  });
-                                }}>
-                                  📄 View PO
-                                </button>
+                      filteredRfqs.map(rfq => {
+                        const isOwn = isOwnRfq(rfq);
+                        const creatorName = rfq.created_by_details?.name || rfq.created_by_name || (isOwn ? (currentUser?.name || 'Alex Mercer') : 'Priya Shah');
+                        return (
+                          <tr key={rfq.id} onClick={() => openRfqDetail(rfq)} style={{ cursor: 'pointer' }}>
+                            <td>
+                              <span className="mono-text">{rfq.rfq_number}</span>
+                              <span className="cell-sub">{new Date(rfq.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+                            </td>
+                            <td>
+                              <span className="cell-primary">{rfq.title}</span>
+                              <span className="cell-sub cell-desc">{rfq.description}</span>
+                            </td>
+                            <td><span className="dept-chip">{rfq.department_details?.code || rfq.department_details?.name || '—'}</span></td>
+                            <td>
+                              <span className="cell-primary" style={{ fontSize: '13px', fontWeight: 600 }}>{creatorName}</span>
+                              {isOwn ? (
+                                <span className="cell-sub" style={{ color: 'var(--accent)' }}>You (Creator)</span>
+                              ) : (
+                                <span className="cell-sub" style={{ color: 'var(--text-muted)' }}>{rfq.created_by_details?.department_details?.name || 'Officer'}</span>
+                              )}
+                            </td>
+                            <td><span className={`badge badge-priority-${rfq.priority}`}>{rfq.priority}</span></td>
+                            <td className="date-cell">{rfq.deadline || '—'}</td>
+                            <td>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                <span className={`badge badge-status-${rfq.status}`}>{statusLabel(rfq.status)}</span>
+                                {!isOwn && (
+                                  <span className="badge badge-status-draft" style={{ background: 'rgba(148, 163, 184, 0.12)', color: '#94a3b8', border: '1px solid rgba(148, 163, 184, 0.25)', fontSize: '10px', padding: '2px 6px', width: 'fit-content' }}>
+                                    View Only
+                                  </span>
+                                )}
                               </div>
-                            )}
-                            {rfq.status === 'closed' && (
-                              <span style={{ color: 'var(--text-muted)', fontWeight: '600', fontSize: '12px' }}>🔒 Closed</span>
-                            )}
-                            {rfq.status === 'rejected' && (
-                              <button className="btn-action btn-publish" onClick={(e) => { e.stopPropagation(); openRfqDetail(rfq); }}>
-                                ↻ Edit & Resubmit
-                              </button>
-                            )}
-                          </td>
-                        </tr>
-                      ))
+                            </td>
+                            <td className="actions-cell" onClick={e => e.stopPropagation()}>
+                              {isOwn ? (
+                                <>
+                                  {rfq.status === 'draft' && (
+                                    <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                                      <button className="btn-action btn-submit" onClick={() => handleStatusUpdate(rfq.id, 'pending_approval')}>
+                                        <Icons.Send /> Submit
+                                      </button>
+                                      <button className="btn-secondary" style={{ padding: '4px 8px', fontSize: '11px' }} onClick={() => openRfqDetail(rfq)}>
+                                        Edit
+                                      </button>
+                                      <button className="btn-secondary" style={{ padding: '4px 8px', fontSize: '11px', color: '#ef4444', borderColor: 'rgba(239,68,68,0.4)' }} onClick={() => handleDeleteRFQ(rfq.id)}>
+                                        Delete
+                                      </button>
+                                    </div>
+                                  )}
+                                  {rfq.status === 'pending_approval' && (
+                                    <span className="awaiting-text">Awaiting Approval</span>
+                                  )}
+                                  {(rfq.status === 'open' || rfq.status === 'under_review') && hasQuotations(rfq.id) && (
+                                    <button className="btn-action btn-submit" onClick={() => setComparisonRfq(rfq)}>
+                                      📊 Compare Quotations
+                                    </button>
+                                  )}
+                                  {rfq.status === 'open' && !hasQuotations(rfq.id) && (
+                                    <span style={{ color: 'var(--success)', fontWeight: '600', fontSize: '12px' }}>✓ Approved & Live</span>
+                                  )}
+                                  {rfq.status === 'completed' && (
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                      <span style={{ color: '#34d399', fontWeight: '600', fontSize: '12px' }}>✓ Completed</span>
+                                      <button className="btn-action btn-submit" style={{ padding: '3px 8px', fontSize: '11px' }} onClick={() => {
+                                        const matchedPo = purchaseOrders.find(p => p.rfq === rfq.id);
+                                        const matchedQuot = quotations.find(q => q.rfq === rfq.id && q.status === 'selected');
+                                        const matchedVend = vendors.find(v => v.id === matchedQuot?.vendor);
+                                        setActivePOInfo({
+                                          po: matchedPo || { po_number: 'PO-2026-0042', status: 'issued', rfq: rfq.id },
+                                          rfq: rfq,
+                                          quotation: matchedQuot,
+                                          vendor: matchedVend
+                                        });
+                                      }}>
+                                        📄 View PO
+                                      </button>
+                                    </div>
+                                  )}
+                                  {rfq.status === 'closed' && (
+                                    <span style={{ color: 'var(--text-muted)', fontWeight: '600', fontSize: '12px' }}>🔒 Closed</span>
+                                  )}
+                                  {rfq.status === 'rejected' && (
+                                    <button className="btn-action btn-publish" onClick={() => openRfqDetail(rfq)}>
+                                      ↻ Edit & Resubmit
+                                    </button>
+                                  )}
+                                </>
+                              ) : (
+                                /* Read-only view for another officer's RFQ */
+                                <button className="btn-secondary" style={{ padding: '4px 12px', fontSize: '12px' }} onClick={() => openRfqDetail(rfq)}>
+                                  👁 View Details
+                                </button>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })
                     )}
                   </tbody>
                 </table>
               </div>
             </section>
-           )}
+          )}
           </>
           )}
         </main>
       </div>
 
-      {/* ── Modal ── */}
+      {/* ── CREATE RFQ MODAL ── */}
       {isModalOpen && (
         <div className="modal-overlay" onClick={() => setIsModalOpen(false)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
@@ -822,13 +1037,20 @@ export default function ProcurementDashboard({ onLogout, currentUser }) {
             <form onSubmit={handleCreateRFQ} className="modal-body">
               <div className="field full">
                 <label>Title <span className="req">*</span></label>
-                <input type="text" name="title" required placeholder="e.g. Procurement of Server Equipment" value={formData.title} onChange={handleInputChange} />
+                <input
+                  type="text"
+                  name="title"
+                  placeholder="e.g. Enterprise Server Rack Infrastructure"
+                  required
+                  value={formData.title}
+                  onChange={handleInputChange}
+                />
               </div>
 
               <div className="field-row">
                 <div className="field">
-                  <label>Department <span className="req">*</span></label>
-                  <select name="department" value={formData.department} onChange={handleInputChange} required>
+                  <label>Department <span className="req">*</span> <span style={{ fontSize: '11px', color: '#38bdf8', fontWeight: 500 }}>(Locked to your department)</span></label>
+                  <select name="department" value={formData.department} onChange={handleInputChange} disabled style={{ cursor: 'not-allowed', background: 'rgba(255, 255, 255, 0.04)', opacity: 0.85 }}>
                     {departments.map(d => (
                       <option key={d.id} value={d.id}>{d.name} ({d.code})</option>
                     ))}
@@ -847,34 +1069,65 @@ export default function ProcurementDashboard({ onLogout, currentUser }) {
               <div className="field-row">
                 <div className="field">
                   <label>Quantity <span className="req">*</span></label>
-                  <input type="number" name="quantity" min="1" required value={formData.quantity} onChange={handleInputChange} />
+                  <input
+                    type="number"
+                    name="quantity"
+                    min="1"
+                    required
+                    value={formData.quantity}
+                    onChange={handleInputChange}
+                  />
                 </div>
                 <div className="field">
-                  <label>Submission Deadline <span className="req">*</span></label>
-                  <input type="date" name="deadline" required value={formData.deadline} onChange={handleInputChange} />
+                  <label>Deadline <span className="req">*</span></label>
+                  <input
+                    type="date"
+                    name="deadline"
+                    required
+                    value={formData.deadline}
+                    onChange={handleInputChange}
+                  />
                 </div>
               </div>
 
               <div className="field-row">
                 <div className="field">
                   <label>Required By Date</label>
-                  <input type="date" name="required_by_date" value={formData.required_by_date} onChange={handleInputChange} />
+                  <input
+                    type="date"
+                    name="required_by_date"
+                    value={formData.required_by_date}
+                    onChange={handleInputChange}
+                  />
                 </div>
                 <div className="field">
-                  <label>Specs URL</label>
-                  <input type="url" name="specs_file_url" placeholder="https://…" value={formData.specs_file_url} onChange={handleInputChange} />
+                  <label>Specs File URL</label>
+                  <input
+                    type="url"
+                    name="specs_file_url"
+                    placeholder="https://…"
+                    value={formData.specs_file_url}
+                    onChange={handleInputChange}
+                  />
                 </div>
               </div>
 
               <div className="field full">
-                <label>Description <span className="req">*</span></label>
-                <textarea name="description" rows="4" required placeholder="Detailed technical requirements, warranty expectations…" value={formData.description} onChange={handleInputChange} />
+                <label>Description & Scope <span className="req">*</span></label>
+                <textarea
+                  name="description"
+                  rows="4"
+                  placeholder="Detailed specifications, technical constraints, compliance requirements..."
+                  required
+                  value={formData.description}
+                  onChange={handleInputChange}
+                />
               </div>
 
               <div className="modal-actions">
                 <button type="button" className="btn-secondary" onClick={() => setIsModalOpen(false)}>Cancel</button>
                 <button type="submit" className="btn-primary" disabled={submitting}>
-                  {submitting ? 'Creating…' : 'Create RFQ'}
+                  {submitting ? 'Creating…' : 'Create Draft RFQ'}
                 </button>
               </div>
             </form>
@@ -882,30 +1135,45 @@ export default function ProcurementDashboard({ onLogout, currentUser }) {
         </div>
       )}
 
-      {/* ── RFQ Detail / Edit Modal ── */}
+      {/* ── RFQ DETAIL & EDIT MODAL ── */}
       {selectedRfq && (
         <div className="modal-overlay" onClick={closeRfqDetail}>
-          <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '680px' }}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
             <div className="modal-head">
               <div>
-                <h2 className="modal-title">
-                  {editData ? (selectedRfq.status === 'rejected' ? 'Edit & Resubmit RFQ' : 'Edit Draft RFQ') : 'RFQ Details'}
-                </h2>
+                <h2 className="modal-title">{selectedRfq.rfq_number}: {selectedRfq.title}</h2>
                 <p className="modal-subtitle">
-                  <span className="mono-text" style={{ fontSize: '13px' }}>{selectedRfq.rfq_number}</span>
-                  &nbsp;·&nbsp;
-                  <span className={`badge badge-status-${selectedRfq.status}`} style={{ fontSize: '11px' }}>
-                    {statusLabel(selectedRfq.status)}
-                  </span>
+                  Status: <strong>{statusLabel(selectedRfq.status)}</strong> · Created {new Date(selectedRfq.created_at).toLocaleDateString('en-IN')}
                 </p>
               </div>
               <button className="modal-close" onClick={closeRfqDetail}><Icons.X /></button>
             </div>
 
+            {/* View-Only Banner if created by another Officer */}
+            {!isOwnRfq(selectedRfq) && (
+              <div style={{
+                margin: '0 24px 16px',
+                padding: '14px 18px',
+                borderRadius: 'var(--radius-sm)',
+                background: 'rgba(59, 130, 246, 0.08)',
+                border: '1px solid rgba(59, 130, 246, 0.25)',
+              }}>
+                <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '4px' }}>
+                  ℹ This RFQ was created by <span style={{ color: 'var(--accent)' }}>{selectedRfq.created_by_details?.name || selectedRfq.created_by_name || 'Priya Shah'}</span>
+                </div>
+                <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
+                  Department: <strong>{selectedRfq.department_details?.name || selectedRfq.department_details?.code || 'Human Resources'}</strong>
+                </div>
+                <div style={{ fontSize: '12px', color: '#94a3b8', fontStyle: 'italic', marginTop: '6px' }}>
+                  You have view-only access. Actions such as editing, deleting, resubmitting, comparing quotations, and issuing POs are disabled for this request.
+                </div>
+              </div>
+            )}
+
             {/* Manager Remarks Banner (for rejected or approved) */}
             {selectedRfq.manager_remarks && (
               <div style={{
-                margin: '0 24px',
+                margin: '0 24px 16px',
                 padding: '12px 16px',
                 borderRadius: 'var(--radius-sm)',
                 background: selectedRfq.status === 'rejected'
@@ -924,7 +1192,7 @@ export default function ProcurementDashboard({ onLogout, currentUser }) {
               </div>
             )}
 
-            {/* Editable Form (draft / rejected) */}
+            {/* Editable Form (if creator and draft/rejected) */}
             {editData ? (
               <form onSubmit={selectedRfq.status === 'rejected' ? handleEditAndResubmit : handleSaveEdit} className="modal-body">
                 <div className="field full">
@@ -934,8 +1202,8 @@ export default function ProcurementDashboard({ onLogout, currentUser }) {
 
                 <div className="field-row">
                   <div className="field">
-                    <label>Department <span className="req">*</span></label>
-                    <select name="department" value={editData.department} onChange={handleEditChange} required>
+                    <label>Department <span className="req">*</span> <span style={{ fontSize: '11px', color: '#38bdf8', fontWeight: 500 }}>(Locked)</span></label>
+                    <select name="department" value={editData.department} onChange={handleEditChange} disabled style={{ cursor: 'not-allowed', background: 'rgba(255, 255, 255, 0.04)', opacity: 0.85 }}>
                       {departments.map(d => (
                         <option key={d.id} value={d.id}>{d.name} ({d.code})</option>
                       ))}
@@ -992,7 +1260,7 @@ export default function ProcurementDashboard({ onLogout, currentUser }) {
                 </div>
               </form>
             ) : (
-              /* Read-only view (pending_approval / open / closed) */
+              /* Read-only view (pending_approval / open / closed / view-only officer) */
               <div className="modal-body">
                 <div className="field-row">
                   <div className="field">
@@ -1001,7 +1269,7 @@ export default function ProcurementDashboard({ onLogout, currentUser }) {
                   </div>
                   <div className="field">
                     <label>Department</label>
-                    <p style={{ fontSize: '13px', color: 'var(--text-primary)' }}>{selectedRfq.department_details?.name || '—'}</p>
+                    <p style={{ fontSize: '13px', color: 'var(--text-primary)' }}>{selectedRfq.department_details?.name || selectedRfq.department_details?.code || '—'}</p>
                   </div>
                 </div>
 
@@ -1035,9 +1303,12 @@ export default function ProcurementDashboard({ onLogout, currentUser }) {
                 </div>
 
                 <div className="field full">
-                  <label>Created By</label>
-                  <p style={{ fontSize: '13px', color: 'var(--text-primary)' }}>
-                    {selectedRfq.created_by_details?.name || '—'} ({selectedRfq.created_by_details?.email || '—'})
+                  <label>Created By Officer</label>
+                  <p style={{ fontSize: '13px', color: 'var(--text-primary)', fontWeight: 600 }}>
+                    {selectedRfq.created_by_details?.name || selectedRfq.created_by_name || 'Alex Mercer'} &nbsp;
+                    <span style={{ fontSize: '12px', color: 'var(--text-muted)', fontWeight: 400 }}>
+                      ({selectedRfq.created_by_details?.email || 'officer@vendorbridge.com'})
+                    </span>
                   </p>
                 </div>
 

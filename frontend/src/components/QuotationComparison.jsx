@@ -87,12 +87,24 @@ function ComparisonBarChart({ title, dataPoints, color, suffix = '', reverseIsBe
   );
 }
 
-export default function QuotationComparison({ rfq, quotations, vendors, onBack, onRefresh, onViewPO }) {
+export default function QuotationComparison({ rfq, quotations, vendors, currentUser, onBack, onRefresh, onViewPO }) {
   const [selectedVendorProfile, setSelectedVendorProfile] = useState(null);
   const [selectionModal, setSelectionModal] = useState(null);
   const [selectionReason, setSelectionReason] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [showPredictionDetails, setShowPredictionDetails] = useState(false);
+
+  // Helper to check ownership
+  const isOwnRfq = (rfqObj) => {
+    if (!currentUser) return true;
+    const creatorId = typeof rfqObj?.created_by === 'object' ? rfqObj?.created_by?.id : rfqObj?.created_by;
+    if (creatorId && creatorId === currentUser.id) return true;
+    if (rfqObj?.created_by_details && (rfqObj.created_by_details.id === currentUser.id || rfqObj.created_by_details.email === currentUser.email)) return true;
+    if (rfqObj?.created_by_name && currentUser.name && rfqObj.created_by_name.toLowerCase() === currentUser.name.toLowerCase()) return true;
+    return false;
+  };
+
+  const isOwn = isOwnRfq(rfq);
 
   // Build quotation data with ML features
   const enrichedQuotations = quotations
@@ -179,6 +191,21 @@ export default function QuotationComparison({ rfq, quotations, vendors, onBack, 
           <span className={`badge badge-priority-${rfq.priority}`}>{rfq.priority}</span>
         </div>
       </div>
+
+      {/* View-Only Banner for another Officer's RFQ */}
+      {!isOwn && (
+        <div className="state-banner info" style={{ marginBottom: '20px', padding: '14px 18px', background: 'rgba(59, 130, 246, 0.08)', border: '1px solid rgba(59, 130, 246, 0.25)' }}>
+          <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '4px' }}>
+            ℹ This RFQ was created by <span style={{ color: 'var(--accent)' }}>{rfq.created_by_details?.name || rfq.created_by_name || 'Priya Shah'}</span>
+          </div>
+          <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
+            Department: <strong>{rfq.department_details?.name || rfq.department_details?.code || 'Human Resources'}</strong>
+          </div>
+          <div style={{ fontSize: '12px', color: '#94a3b8', fontStyle: 'italic', marginTop: '6px' }}>
+            You have view-only access. Selecting a winning vendor and generating a Purchase Order is restricted to the creator.
+          </div>
+        </div>
+      )}
 
       {/* RFQ Info Cards */}
       <div className="qc-info-row">
@@ -356,10 +383,15 @@ export default function QuotationComparison({ rfq, quotations, vendors, onBack, 
                           <button className="btn-secondary" style={{ padding: '4px 8px', fontSize: '11px' }} onClick={() => setSelectedVendorProfile(q)}>
                             Profile
                           </button>
-                          {!isClosed && rfq.status !== 'completed' && (
+                          {!isClosed && rfq.status !== 'completed' && isOwn && (
                             <button className="btn-primary" style={{ padding: '4px 10px', fontSize: '11px' }} onClick={() => { setSelectionModal(q); setSelectionReason(''); }}>
                               Select
                             </button>
+                          )}
+                          {!isClosed && rfq.status !== 'completed' && !isOwn && (
+                            <span className="badge badge-status-draft" style={{ background: 'rgba(148, 163, 184, 0.12)', color: '#94a3b8', border: '1px solid rgba(148, 163, 184, 0.25)', fontSize: '10px' }}>
+                              View Only
+                            </span>
                           )}
                           {isClosed && (
                             <span style={{ fontSize: '11px', color: 'var(--text-muted)', alignSelf: 'center' }}>🔒 Closed</span>
