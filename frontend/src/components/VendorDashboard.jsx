@@ -4,6 +4,7 @@ import VendorRFQDetail from './VendorRFQDetail';
 import VendorQuotations from './VendorQuotations';
 import VendorHistory from './VendorHistory';
 import VendorProfile from './VendorProfile';
+import VendorPurchaseOrders from './VendorPurchaseOrders';
 import '../components/ProcurementDashboard.css';
 
 /* ── SVG Icons ── */
@@ -57,13 +58,13 @@ export default function VendorDashboard({ onToggleRole }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [currentVendor, setCurrentVendor] = useState(null);
 
-  const mockNotifications = [
-    { id: 1, text: 'New RFQ invitation received — High-Performance Laptops', time: '15m ago', priority: 'high' },
-    { id: 2, text: 'Quotation QTN-2026-4521 submitted successfully', time: '2h ago', priority: 'low' },
-    { id: 3, text: 'Your quotation for Server Equipment was selected!', time: '1d ago', priority: 'high' },
-    { id: 4, text: 'RFQ-2026-3310 deadline approaching — 2 days left', time: '1d ago', priority: 'medium' },
-    { id: 5, text: 'Quotation for Networking Switches was not selected', time: '3d ago', priority: 'medium' },
-  ];
+  const [notificationsList, setNotificationsList] = useState([
+    { id: 1, text: 'New Purchase Order received (PO-2026-0042)', time: '10m ago', priority: 'high' },
+    { id: 2, text: 'Purchase Order PO-2026-0039 acknowledged successfully', time: '1d ago', priority: 'low' },
+    { id: 3, text: 'Purchase Order PO-2026-0031 rejected', time: '2d ago', priority: 'high' },
+    { id: 4, text: 'Procurement Officer cancelled Purchase Order PO-2026-0028', time: '3d ago', priority: 'medium' },
+    { id: 5, text: 'New RFQ invitation received — High-Performance Laptops', time: '4d ago', priority: 'medium' },
+  ]);
 
   const fetchData = async () => {
     setLoading(true);
@@ -387,7 +388,7 @@ export default function VendorDashboard({ onToggleRole }) {
                         <span className="table-title">Recent Notifications</span>
                       </div>
                       <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                        {mockNotifications.slice(0, 4).map(n => (
+                        {notificationsList.slice(0, 4).map(n => (
                           <div key={n.id} className={`notification-item ${n.priority}`} style={{ padding: '10px', borderRadius: '8px', border: '1px solid var(--border-subtle)', background: 'rgba(255,255,255,0.01)' }}>
                             <p style={{ fontSize: '12.5px', color: 'var(--text-secondary)', margin: 0 }}>{n.text}</p>
                             <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{n.time}</span>
@@ -466,42 +467,15 @@ export default function VendorDashboard({ onToggleRole }) {
 
               {/* Purchase Orders View for Vendor */}
               {currentView === 'purchase-orders' && (
-                <section className="table-card">
-                  <div className="table-header-bar">
-                    <span className="table-title">Issued Purchase Orders</span>
-                    <span className="table-count">Official Orders Received</span>
-                  </div>
-                  <div className="table-scroll">
-                    <table className="data-table">
-                      <thead>
-                        <tr>
-                          <th>PO #</th>
-                          <th>RFQ Reference</th>
-                          <th>Order Date</th>
-                          <th>Expected Delivery</th>
-                          <th>Grand Total (₹)</th>
-                          <th>Status</th>
-                          <th className="th-actions">Action</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        <tr>
-                          <td><span className="mono-text">PO-2026-0042</span></td>
-                          <td><span className="cell-primary">Laptops & Workstations Procurement</span></td>
-                          <td className="date-cell">05 Aug 2026</td>
-                          <td className="date-cell">19 Aug 2026</td>
-                          <td className="num-cell" style={{ fontWeight: 700, color: 'var(--accent)' }}>₹1,47,500.00</td>
-                          <td><span className="badge badge-status-approved">ISSUED</span></td>
-                          <td className="actions-cell">
-                            <button className="btn-primary" style={{ padding: '4px 12px', fontSize: '12px' }} onClick={() => alert('Downloading official Purchase Order PO-2026-0042.pdf...')}>
-                              📄 Download PO
-                            </button>
-                          </td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                </section>
+                <VendorPurchaseOrders
+                  vendor={currentVendor}
+                  rfqs={rfqs}
+                  quotations={quotations}
+                  onNotify={msg => setNotificationsList(prev => [
+                    { id: Date.now(), text: msg, time: 'Just now', priority: 'high' },
+                    ...prev
+                  ])}
+                />
               )}
 
               {/* Quotation History */}
@@ -516,7 +490,7 @@ export default function VendorDashboard({ onToggleRole }) {
                     <span className="table-title">All Notifications</span>
                   </div>
                   <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                    {mockNotifications.map(n => (
+                    {notificationsList.map(n => (
                       <div key={n.id} className={`notification-item ${n.priority}`} style={{ padding: '16px', borderRadius: '10px', border: '1px solid var(--border-subtle)', background: 'rgba(255,255,255,0.01)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <div>
                           <p style={{ fontSize: '13.5px', fontWeight: 500, color: 'var(--text-primary)', marginBottom: '4px' }}>{n.text}</p>

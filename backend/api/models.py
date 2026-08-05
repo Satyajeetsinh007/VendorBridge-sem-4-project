@@ -231,6 +231,9 @@ class PurchaseOrder(models.Model):
         DRAFT = 'draft', 'Draft'
         ISSUED = 'issued', 'Issued'
         ACKNOWLEDGED = 'acknowledged', 'Acknowledged'
+        IN_PROGRESS = 'in_progress', 'In Progress'
+        DELIVERED = 'delivered', 'Delivered'
+        INVOICED = 'invoiced', 'Invoiced'
         CANCELLED = 'cancelled', 'Cancelled'
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -288,21 +291,34 @@ class POItem(models.Model):
 
 class Invoice(models.Model):
     class StatusChoices(models.TextChoices):
-        PENDING = 'pending', 'Pending'
-        VERIFIED = 'verified', 'Verified'
+        DRAFT = 'draft', 'Draft'
+        PENDING_VERIFICATION = 'pending_verification', 'Pending Verification'
+        APPROVED = 'approved', 'Approved'
         REJECTED = 'rejected', 'Rejected'
+        PAID = 'paid', 'Paid'
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    invoice_number = models.CharField(max_length=20, unique=True)
+    invoice_number = models.CharField(max_length=50, unique=True)
+    vendor_invoice_number = models.CharField(max_length=50, null=True, blank=True)
     po = models.ForeignKey(PurchaseOrder, on_delete=models.CASCADE, related_name='invoices')
     vendor = models.ForeignKey(Vendor, on_delete=models.CASCADE, related_name='invoices')
-    invoice_date = models.DateField()
-    amount = models.DecimalField(max_digits=12, decimal_places=2)
-    file_url = models.CharField(max_length=500)
-    status = models.CharField(max_length=20, choices=StatusChoices.choices, default=StatusChoices.PENDING)
+    invoice_date = models.DateField(null=True, blank=True)
+    due_date = models.DateField(null=True, blank=True)
+    subtotal = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
+    cgst_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
+    sgst_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
+    igst_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
+    amount = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
+    bank_name = models.CharField(max_length=100, null=True, blank=True)
+    account_number = models.CharField(max_length=50, null=True, blank=True)
+    ifsc_code = models.CharField(max_length=20, null=True, blank=True)
+    upi_id = models.CharField(max_length=50, null=True, blank=True)
+    file_url = models.CharField(max_length=500, null=True, blank=True)
+    delivery_challan_url = models.CharField(max_length=500, null=True, blank=True)
+    eway_bill_url = models.CharField(max_length=500, null=True, blank=True)
+    other_docs_url = models.CharField(max_length=500, null=True, blank=True)
+    status = models.CharField(max_length=30, choices=StatusChoices.choices, default=StatusChoices.DRAFT)
     uploaded_at = models.DateTimeField(auto_now_add=True)
-    verified_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='verified_invoices')
-    verified_at = models.DateTimeField(null=True, blank=True)
     notes = models.TextField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 

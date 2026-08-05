@@ -1,10 +1,10 @@
 from rest_framework import viewsets, status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
-from .models import Department, User, RFQ, Approval, Vendor, Quotation, PurchaseOrder, POItem
+from .models import Department, User, RFQ, Approval, Vendor, Quotation, PurchaseOrder, POItem, Invoice
 from .serializers import (
     DepartmentSerializer, UserSerializer, RFQSerializer,
-    ApprovalSerializer, VendorSerializer, QuotationSerializer, PurchaseOrderSerializer, POItemSerializer
+    ApprovalSerializer, VendorSerializer, QuotationSerializer, PurchaseOrderSerializer, POItemSerializer, InvoiceSerializer
 )
 
 class DepartmentViewSet(viewsets.ModelViewSet):
@@ -50,6 +50,11 @@ class QuotationViewSet(viewsets.ModelViewSet):
 class PurchaseOrderViewSet(viewsets.ModelViewSet):
     queryset = PurchaseOrder.objects.all().order_by('-created_at')
     serializer_class = PurchaseOrderSerializer
+
+
+class InvoiceViewSet(viewsets.ModelViewSet):
+    queryset = Invoice.objects.all().order_by('-created_at')
+    serializer_class = InvoiceSerializer
 
 
 @api_view(['POST'])

@@ -416,13 +416,13 @@ export default function ProcurementDashboard({ onToggleRole }) {
                               </td>
                               <td className="date-cell">{po.expected_delivery_date || '—'}</td>
                               <td>
-                                <span className={`badge badge-status-${po.status === 'issued' ? 'approved' : po.status === 'acknowledged' ? 'open' : 'draft'}`}>
+                                <span className={`badge badge-status-${po.status === 'issued' || po.status === 'delivered' ? 'approved' : po.status === 'acknowledged' ? 'open' : 'draft'}`} style={{ background: po.status === 'invoiced' ? '#8b5cf6' : po.status === 'delivered' ? '#059669' : undefined, color: po.status === 'invoiced' || po.status === 'delivered' ? '#fff' : undefined }}>
                                   {po.status?.toUpperCase() || 'DRAFT'}
                                 </span>
                               </td>
                               <td className="actions-cell">
                                 <button className="btn-action btn-submit" onClick={() => setActivePOInfo({ po, rfq: rfqObj, quotation: quotObj, vendor: vendorObj })}>
-                                  📄 Review & Issue PO
+                                  {po.status === 'invoiced' ? '📄 View Invoiced PO' : po.status === 'delivered' ? '📄 View Delivered PO' : (po.status === 'issued' || po.status === 'acknowledged' || po.status === 'in_progress') ? '📄 View PO' : '📄 Review & Issue PO'}
                                 </button>
                               </td>
                             </tr>
@@ -761,7 +761,23 @@ export default function ProcurementDashboard({ onToggleRole }) {
                               <span style={{ color: 'var(--success)', fontWeight: '600', fontSize: '12px' }}>✓ Approved & Live</span>
                             )}
                             {rfq.status === 'completed' && (
-                              <span style={{ color: '#34d399', fontWeight: '600', fontSize: '12px' }}>✓ Completed</span>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <span style={{ color: '#34d399', fontWeight: '600', fontSize: '12px' }}>✓ Completed</span>
+                                <button className="btn-action btn-submit" style={{ padding: '3px 8px', fontSize: '11px' }} onClick={(e) => {
+                                  e.stopPropagation();
+                                  const matchedPo = purchaseOrders.find(p => p.rfq === rfq.id);
+                                  const matchedQuot = quotations.find(q => q.rfq === rfq.id && q.status === 'selected');
+                                  const matchedVend = vendors.find(v => v.id === matchedQuot?.vendor);
+                                  setActivePOInfo({
+                                    po: matchedPo || { po_number: 'PO-2026-0042', status: 'issued', rfq: rfq.id },
+                                    rfq: rfq,
+                                    quotation: matchedQuot,
+                                    vendor: matchedVend
+                                  });
+                                }}>
+                                  📄 View PO
+                                </button>
+                              </div>
                             )}
                             {rfq.status === 'closed' && (
                               <span style={{ color: 'var(--text-muted)', fontWeight: '600', fontSize: '12px' }}>🔒 Closed</span>

@@ -161,4 +161,34 @@ export const api = {
     if (!res.ok) throw new Error('Failed to update purchase order');
     return res.json();
   },
+
+  // Invoices
+  getInvoices: async () => {
+    const res = await fetch(`${API_BASE_URL}/invoices/`);
+    if (!res.ok) throw new Error('Failed to fetch invoices');
+    return res.json();
+  },
+
+  createInvoice: async (data) => {
+    const res = await fetch(`${API_BASE_URL}/invoices/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(JSON.stringify(errData) || 'Failed to create invoice');
+    }
+    return res.json();
+  },
+
+  patchInvoice: async (invoiceId, data) => {
+    const res = await fetch(`${API_BASE_URL}/invoices/${invoiceId}/`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error('Failed to update invoice');
+    return res.json();
+  },
 };

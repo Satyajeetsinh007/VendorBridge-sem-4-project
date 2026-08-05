@@ -1,8 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { api } from '../services/api';
 
 export default function PurchaseOrderDetail({ po, rfq, quotation, vendor, onBack, onUpdated }) {
   const [poStatus, setPoStatus] = useState(po?.status || 'draft');
+
+  useEffect(() => {
+    if (po?.status) {
+      setPoStatus(po.status);
+    }
+  }, [po?.status]);
   const [saving, setSaving] = useState(false);
   const [issuing, setIssuing] = useState(false);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
@@ -19,7 +25,7 @@ export default function PurchaseOrderDetail({ po, rfq, quotation, vendor, onBack
     discount_amount: po?.discount_amount || 0,
   });
 
-  const isIssued = poStatus === 'issued' || poStatus === 'acknowledged';
+  const isIssued = poStatus === 'issued' || poStatus === 'acknowledged' || poStatus === 'in_progress' || poStatus === 'delivered' || poStatus === 'invoiced';
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -102,8 +108,11 @@ export default function PurchaseOrderDetail({ po, rfq, quotation, vendor, onBack
     switch (st) {
       case 'issued': return <span className="badge badge-status-approved">ISSUED</span>;
       case 'acknowledged': return <span className="badge badge-status-open">ACKNOWLEDGED</span>;
+      case 'in_progress': return <span className="badge badge-priority-medium">IN PROGRESS</span>;
+      case 'delivered': return <span className="badge badge-status-approved" style={{ background: '#059669', color: '#fff' }}>DELIVERED</span>;
+      case 'invoiced': return <span className="badge badge-priority-medium" style={{ background: '#8b5cf6', color: '#fff' }}>INVOICED</span>;
       case 'cancelled': return <span className="badge badge-status-rejected">CANCELLED</span>;
-      default: return <span className="badge badge-status-draft">DRAFT</span>;
+      default: return <span className="badge badge-status-draft">{st ? st.toUpperCase() : 'DRAFT'}</span>;
     }
   };
 
@@ -478,8 +487,9 @@ export default function PurchaseOrderDetail({ po, rfq, quotation, vendor, onBack
             { step: '4', title: 'Officer Selected Vendor', sub: 'Completed', done: true },
             { step: '5', title: 'PO Generated', sub: 'Completed', done: true },
             { step: '6', title: isIssued ? 'PO Issued' : 'Waiting to Issue PO', sub: isIssued ? 'Issued' : 'Action Required', done: isIssued, current: !isIssued },
-            { step: '7', title: 'Vendor Notified', sub: isIssued ? 'Notification Sent' : 'Pending Issue', done: isIssued },
-            { step: '8', title: 'Vendor Acknowledged', sub: poStatus === 'acknowledged' ? 'Acknowledged' : 'Awaiting Vendor', done: poStatus === 'acknowledged' },
+            { step: '7', title: 'Vendor Acknowledged', sub: ['acknowledged', 'in_progress', 'delivered', 'invoiced'].includes(poStatus) ? 'Acknowledged' : 'Awaiting Vendor', done: ['acknowledged', 'in_progress', 'delivered', 'invoiced'].includes(poStatus), current: poStatus === 'issued' },
+            { step: '8', title: 'Goods Delivered', sub: ['delivered', 'invoiced'].includes(poStatus) ? 'Delivered' : poStatus === 'in_progress' ? 'In Progress' : 'Pending', done: ['delivered', 'invoiced'].includes(poStatus), current: poStatus === 'in_progress' },
+            { step: '9', title: 'Invoice Submitted', sub: poStatus === 'invoiced' ? 'Pending Verification' : 'Pending Invoice', done: poStatus === 'invoiced', current: poStatus === 'delivered' },
           ].map((item, index, arr) => (
             <div key={index} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1, position: 'relative', zIndex: 1 }}>
               <div style={{

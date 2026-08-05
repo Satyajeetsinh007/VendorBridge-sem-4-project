@@ -1,6 +1,6 @@
 import random
 from rest_framework import serializers
-from .models import Department, User, RFQ, Approval, Vendor, Quotation, PurchaseOrder, POItem
+from .models import Department, User, RFQ, Approval, Vendor, Quotation, PurchaseOrder, POItem, Invoice
 
 class DepartmentSerializer(serializers.ModelSerializer):
     class Meta:
@@ -120,5 +120,21 @@ class PurchaseOrderSerializer(serializers.ModelSerializer):
         if not validated_data.get('po_number'):
             rand_num = random.randint(1000, 9999)
             validated_data['po_number'] = f"PO-2026-{rand_num}"
+        return super().create(validated_data)
+
+
+class InvoiceSerializer(serializers.ModelSerializer):
+    vendor_details = VendorSerializer(source='vendor', read_only=True)
+    po_details = PurchaseOrderSerializer(source='po', read_only=True)
+
+    class Meta:
+        model = Invoice
+        fields = '__all__'
+        read_only_fields = ['invoice_number', 'created_at', 'uploaded_at']
+
+    def create(self, validated_data):
+        if not validated_data.get('invoice_number'):
+            rand_num = random.randint(1000, 9999)
+            validated_data['invoice_number'] = f"INV-2026-{rand_num}"
         return super().create(validated_data)
 
