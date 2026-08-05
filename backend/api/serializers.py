@@ -1,6 +1,6 @@
 import random
 from rest_framework import serializers
-from .models import Department, User, RFQ, Approval, Vendor, Quotation
+from .models import Department, User, RFQ, Approval, Vendor, Quotation, PurchaseOrder, POItem
 
 class DepartmentSerializer(serializers.ModelSerializer):
     class Meta:
@@ -86,8 +86,9 @@ class QuotationSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'quotation_number', 'rfq', 'rfq_details',
             'vendor', 'vendor_details', 'unit_price', 'total_price',
-            'delivery_days', 'payment_terms', 'notes', 'rating',
-            'status', 'submitted_at', 'created_at'
+            'subtotal', 'tax_type', 'cgst_amount', 'sgst_amount', 'igst_amount',
+            'delivery_days', 'payment_terms', 'warranty', 'attachment_url', 'valid_until',
+            'notes', 'rating', 'status', 'submitted_at', 'created_at'
         ]
         read_only_fields = ['quotation_number', 'created_at']
 
@@ -95,5 +96,29 @@ class QuotationSerializer(serializers.ModelSerializer):
         if not validated_data.get('quotation_number'):
             rand_num = random.randint(1000, 9999)
             validated_data['quotation_number'] = f"QTN-2026-{rand_num}"
+        return super().create(validated_data)
+
+
+class POItemSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = POItem
+        fields = '__all__'
+
+
+class PurchaseOrderSerializer(serializers.ModelSerializer):
+    vendor_details = VendorSerializer(source='vendor', read_only=True)
+    rfq_details = RFQSerializer(source='rfq', read_only=True)
+    quotation_details = QuotationSerializer(source='quotation', read_only=True)
+    items = POItemSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = PurchaseOrder
+        fields = '__all__'
+        read_only_fields = ['po_number', 'created_at', 'generated_at']
+
+    def create(self, validated_data):
+        if not validated_data.get('po_number'):
+            rand_num = random.randint(1000, 9999)
+            validated_data['po_number'] = f"PO-2026-{rand_num}"
         return super().create(validated_data)
 

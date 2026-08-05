@@ -1,10 +1,10 @@
 from rest_framework import viewsets, status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
-from .models import Department, User, RFQ, Approval, Vendor, Quotation
+from .models import Department, User, RFQ, Approval, Vendor, Quotation, PurchaseOrder, POItem
 from .serializers import (
     DepartmentSerializer, UserSerializer, RFQSerializer,
-    ApprovalSerializer, VendorSerializer, QuotationSerializer
+    ApprovalSerializer, VendorSerializer, QuotationSerializer, PurchaseOrderSerializer, POItemSerializer
 )
 
 class DepartmentViewSet(viewsets.ModelViewSet):
@@ -17,9 +17,19 @@ class UserViewSet(viewsets.ModelViewSet):
     serializer_class = UserSerializer
 
 
+from django.utils import timezone
+
 class RFQViewSet(viewsets.ModelViewSet):
-    queryset = RFQ.objects.all().order_by('-created_at')
     serializer_class = RFQSerializer
+
+    def get_queryset(self):
+        today = timezone.now().date()
+        RFQ.objects.filter(
+            deadline__lt=today
+        ).exclude(
+            status__in=['completed', 'closed']
+        ).update(status='closed')
+        return RFQ.objects.all().order_by('-created_at')
 
 
 class ApprovalViewSet(viewsets.ModelViewSet):
@@ -35,6 +45,11 @@ class VendorViewSet(viewsets.ModelViewSet):
 class QuotationViewSet(viewsets.ModelViewSet):
     queryset = Quotation.objects.all().order_by('-created_at')
     serializer_class = QuotationSerializer
+
+
+class PurchaseOrderViewSet(viewsets.ModelViewSet):
+    queryset = PurchaseOrder.objects.all().order_by('-created_at')
+    serializer_class = PurchaseOrderSerializer
 
 
 @api_view(['POST'])

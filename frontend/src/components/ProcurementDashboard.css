@@ -657,6 +657,8 @@
 
 .badge-status-draft { background: rgba(161, 161, 170, 0.12); color: #a1a1aa; }
 .badge-status-open { background: rgba(34, 197, 94, 0.12); color: #4ade80; }
+.badge-status-under_review { background: rgba(245, 158, 11, 0.12); color: #fbbf24; }
+.badge-status-completed { background: rgba(16, 185, 129, 0.15); color: #34d399; }
 .badge-status-pending_approval { background: rgba(168, 85, 247, 0.12); color: #c084fc; }
 .badge-status-approved { background: rgba(59, 130, 246, 0.12); color: #60a5fa; }
 .badge-status-rejected { background: rgba(239, 68, 68, 0.12); color: #f87171; }
@@ -1309,4 +1311,307 @@
   border-bottom: none;
   padding-bottom: 0;
 }
+
+/* ═══════════════════════════════════════════
+   QUOTATION COMPARISON PAGE
+   ═══════════════════════════════════════════ */
+
+.qc-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Page Header */
+.qc-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 20px 24px;
+}
+
+.qc-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.qc-header-badges {
+  display: flex;
+  gap: 8px;
+}
+
+/* RFQ Info Row */
+.qc-info-row {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 12px;
+}
+
+.qc-info-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 14px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.qc-info-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.qc-info-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* AI Recommendation Card */
+.qc-ai-card {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.08), rgba(139, 92, 246, 0.06));
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.qc-ai-left {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.qc-ai-badge {
+  font-size: 11px;
+  font-weight: 700;
+  color: #60a5fa;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.qc-ai-vendor {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.qc-ai-logo {
+  width: 52px;
+  height: 52px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: 800;
+  color: #fff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.qc-ai-vendor-name {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.qc-ai-reasons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.qc-strength-tag {
+  display: inline-block;
+  padding: 4px 10px;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: #4ade80;
+  background: rgba(34, 197, 94, 0.08);
+  border: 1px solid rgba(34, 197, 94, 0.15);
+  border-radius: 20px;
+}
+
+.qc-ai-right {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  min-width: 200px;
+}
+
+.qc-ai-metric {
+  text-align: center;
+}
+
+.qc-ai-circle {
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  background: conic-gradient(#3b82f6 var(--pct), rgba(255,255,255,0.06) 0%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.qc-ai-circle::before {
+  content: '';
+  position: absolute;
+  width: 74px;
+  height: 74px;
+  border-radius: 50%;
+  background: var(--bg-base);
+}
+
+.qc-ai-pct {
+  position: relative;
+  z-index: 1;
+  font-size: 20px;
+  font-weight: 700;
+  color: #60a5fa;
+}
+
+.qc-ai-metric-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  display: block;
+  margin-top: 6px;
+}
+
+.qc-ai-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+}
+
+.qc-ai-meta > div {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+}
+
+.qc-meta-label {
+  color: var(--text-muted);
+}
+
+.qc-meta-value {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+/* Comparison Table Enhancements */
+.qc-table th {
+  font-size: 10.5px;
+  padding: 8px 12px;
+}
+
+.qc-table td {
+  padding: 12px;
+  font-size: 12.5px;
+}
+
+.th-divider {
+  border-left: 2px solid rgba(59, 130, 246, 0.2);
+}
+
+.qc-vendor-logo {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.qc-recommended-row {
+  background: rgba(59, 130, 246, 0.04) !important;
+}
+
+.qc-recommended-row:hover {
+  background: rgba(59, 130, 246, 0.08) !important;
+}
+
+.qc-score-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 700;
+  min-width: 36px;
+}
+
+.qc-rec-badge {
+  display: inline-block;
+  padding: 3px 8px;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #f59e0b;
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.2);
+  border-radius: 6px;
+}
+
+/* Comparison Charts Grid */
+.qc-charts-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+/* Vendor Profile Modal Hero */
+.qc-profile-hero {
+  border-radius: var(--radius-md);
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.qc-profile-logo {
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  font-weight: 800;
+  color: #fff;
+}
+
+/* Selection Preview */
+.qc-selection-preview {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+}
+
 

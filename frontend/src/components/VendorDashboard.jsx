@@ -100,9 +100,24 @@ export default function VendorDashboard({ onToggleRole }) {
     catch (err) { alert(`Seed failed: ${err.message}`); setLoading(false); }
   };
 
-  // Only show open RFQs to vendors
-  const openRfqs = rfqs.filter(r => r.status === 'open');
+  const todayStr = new Date().toISOString().split('T')[0];
+  const isPastDeadline = (d) => d && d < todayStr;
+
   const vendorQuotations = quotations.filter(q => q.vendor === currentVendor?.id);
+  const quotedRfqIds = new Set(vendorQuotations.map(q => q.rfq));
+
+  // Open RFQs tab: available for bidding (excluding closed, past-deadline, or already quoted RFQs)
+  const openRfqs = rfqs.filter(r => 
+    (r.status === 'open' || r.status === 'under_review') && 
+    !isPastDeadline(r.deadline) && 
+    r.status !== 'closed' &&
+    !quotedRfqIds.has(r.id)
+  );
+
+  // Dashboard table: show ALL relevant RFQs for this vendor (Open, Quoted, Closed, Completed)
+  const allDashboardRfqs = rfqs.filter(r => 
+    r.status === 'open' || r.status === 'under_review' || r.status === 'closed' || r.status === 'completed' || quotedRfqIds.has(r.id)
+  );
 
   const submittedCount = vendorQuotations.filter(q => q.status === 'submitted').length;
   const selectedCount = vendorQuotations.filter(q => q.status === 'selected').length;
@@ -140,6 +155,7 @@ export default function VendorDashboard({ onToggleRole }) {
     { icon: <Icons.Home />, label: 'Dashboard', view: 'dashboard' },
     { icon: <Icons.FileText />, label: 'Open RFQs', view: 'open-rfqs', count: openRfqs.length },
     { icon: <Icons.Send />, label: 'My Quotations', view: 'quotations' },
+    { icon: <Icons.FileText />, label: 'Purchase Orders', view: 'purchase-orders' },
     { icon: <Icons.History />, label: 'Quotation History', view: 'history' },
     { icon: <Icons.Bell />, label: 'Notifications', view: 'notifications' },
     { icon: <Icons.User />, label: 'Profile', view: 'profile' },
@@ -315,7 +331,7 @@ export default function VendorDashboard({ onToggleRole }) {
                     <div className="table-card">
                       <div className="table-header-bar">
                         <span className="table-title">Recent RFQ Invitations</span>
-                        <span className="table-count">{openRfqs.length} open</span>
+                        <span className="table-count">{allDashboardRfqs.length} total</span>
                       </div>
                       <div className="table-scroll">
                         <table className="data-table">
@@ -329,27 +345,36 @@ export default function VendorDashboard({ onToggleRole }) {
                             </tr>
                           </thead>
                           <tbody>
-                            {openRfqs.slice(0, 5).length === 0 ? (
-                              <tr><td colSpan="5" className="empty-state"><p>No open RFQs available yet.</p></td></tr>
+                            {allDashboardRfqs.slice(0, 6).length === 0 ? (
+                              <tr><td colSpan="5" className="empty-state"><p>No RFQs available yet.</p></td></tr>
                             ) : (
-                              openRfqs.slice(0, 5).map(rfq => (
-                                <tr key={rfq.id}>
-                                  <td><span className="mono-text">{rfq.rfq_number}</span></td>
-                                  <td><span className="cell-primary">{rfq.title}</span></td>
-                                  <td className="date-cell">{rfq.deadline}</td>
-                                  <td>
-                                    {getExistingQuotation(rfq.id)
-                                      ? <span className="badge badge-status-pending_approval">Quoted</span>
-                                      : <span className="badge badge-status-open">Open</span>
-                                    }
-                                  </td>
-                                  <td>
-                                    <button className="btn-primary" style={{ padding: '4px 12px', fontSize: '12px' }} onClick={() => openRfqDetail(rfq)}>
-                                      View
-                                    </button>
-                                  </td>
-                                </tr>
-                              ))
+                              allDashboardRfqs.slice(0, 6).map(rfq => {
+                                const isClosed = rfq.status === 'closed' || isPastDeadline(rfq.deadline);
+                                const isQuoted = quotedRfqIds.has(rfq.id);
+                                return (
+                                  <tr key={rfq.id}>
+                                    <td><span className="mono-text">{rfq.rfq_number}</span></td>
+                                    <td><span className="cell-primary">{rfq.title}</span></td>
+                                    <td className="date-cell">{rfq.deadline}</td>
+                                    <td>
+                                      {isClosed ? (
+                                        <span className="badge badge-status-closed">Closed</span>
+                                      ) : rfq.status === 'completed' ? (
+                                        <span className="badge badge-status-completed">Completed</span>
+                                      ) : isQuoted ? (
+                                        <span className="badge badge-status-pending_approval">Quoted</span>
+                                      ) : (
+                                        <span className="badge badge-status-open">Open</span>
+                                      )}
+                                    </td>
+                                    <td>
+                                      <button className="btn-primary" style={{ padding: '4px 12px', fontSize: '12px' }} onClick={() => openRfqDetail(rfq)}>
+                                        View
+                                      </button>
+                                    </td>
+                                  </tr>
+                                );
+                              })
                             )}
                           </tbody>
                         </table>
@@ -437,6 +462,46 @@ export default function VendorDashboard({ onToggleRole }) {
                   onEditQuotation={handleEditQuotation}
                   onViewRFQ={openRfqDetail}
                 />
+              )}
+
+              {/* Purchase Orders View for Vendor */}
+              {currentView === 'purchase-orders' && (
+                <section className="table-card">
+                  <div className="table-header-bar">
+                    <span className="table-title">Issued Purchase Orders</span>
+                    <span className="table-count">Official Orders Received</span>
+                  </div>
+                  <div className="table-scroll">
+                    <table className="data-table">
+                      <thead>
+                        <tr>
+                          <th>PO #</th>
+                          <th>RFQ Reference</th>
+                          <th>Order Date</th>
+                          <th>Expected Delivery</th>
+                          <th>Grand Total (₹)</th>
+                          <th>Status</th>
+                          <th className="th-actions">Action</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td><span className="mono-text">PO-2026-0042</span></td>
+                          <td><span className="cell-primary">Laptops & Workstations Procurement</span></td>
+                          <td className="date-cell">05 Aug 2026</td>
+                          <td className="date-cell">19 Aug 2026</td>
+                          <td className="num-cell" style={{ fontWeight: 700, color: 'var(--accent)' }}>₹1,47,500.00</td>
+                          <td><span className="badge badge-status-approved">ISSUED</span></td>
+                          <td className="actions-cell">
+                            <button className="btn-primary" style={{ padding: '4px 12px', fontSize: '12px' }} onClick={() => alert('Downloading official Purchase Order PO-2026-0042.pdf...')}>
+                              📄 Download PO
+                            </button>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </section>
               )}
 
               {/* Quotation History */}

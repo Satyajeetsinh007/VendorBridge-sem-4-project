@@ -131,4 +131,34 @@ export const api = {
     if (!res.ok) throw new Error('Failed to update quotation');
     return res.json();
   },
+
+  // Purchase Orders
+  getPurchaseOrders: async () => {
+    const res = await fetch(`${API_BASE_URL}/purchase-orders/`);
+    if (!res.ok) throw new Error('Failed to fetch purchase orders');
+    return res.json();
+  },
+
+  createPurchaseOrder: async (data) => {
+    const res = await fetch(`${API_BASE_URL}/purchase-orders/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) {
+      const errData = await res.json().catch(() => ({}));
+      throw new Error(JSON.stringify(errData) || 'Failed to create purchase order');
+    }
+    return res.json();
+  },
+
+  patchPurchaseOrder: async (poId, data) => {
+    const res = await fetch(`${API_BASE_URL}/purchase-orders/${poId}/`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) throw new Error('Failed to update purchase order');
+    return res.json();
+  },
 };

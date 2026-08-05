@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../services/api';
+import QuotationComparison from './QuotationComparison';
+import PurchaseOrderDetail from './PurchaseOrderDetail';
 import './ProcurementDashboard.css';
 
 /* ── SVG Icon Components ── */
@@ -71,14 +73,27 @@ export default function ProcurementDashboard({ onToggleRole }) {
   const [selectedRfq, setSelectedRfq] = useState(null);
   const [editData, setEditData] = useState(null);
 
+  // Purchase Order state
+  const [activePOInfo, setActivePOInfo] = useState(null);
+  const [purchaseOrders, setPurchaseOrders] = useState([]);
+
+  // Quotation Comparison state
+  const [comparisonRfq, setComparisonRfq] = useState(null);
+  const [quotations, setQuotations] = useState([]);
+  const [vendors, setVendors] = useState([]);
+  const [currentView, setCurrentView] = useState('dashboard');
+
   const fetchData = async () => {
     setLoading(true);
     setError(null);
     try {
-      let [deptsData, usersData, rfqsData] = await Promise.all([
+      let [deptsData, usersData, rfqsData, quotationsData, vendorsData, posData] = await Promise.all([
         api.getDepartments().catch(() => []),
         api.getUsers().catch(() => []),
         api.getRFQs().catch(() => []),
+        api.getQuotations().catch(() => []),
+        api.getVendors().catch(() => []),
+        api.getPurchaseOrders().catch(() => []),
       ]);
       if (deptsData.length === 0 || usersData.length === 0) {
         await api.seedData().catch(() => {});
@@ -88,6 +103,9 @@ export default function ProcurementDashboard({ onToggleRole }) {
       setDepartments(deptsData);
       setUsers(usersData);
       setRfqs(rfqsData);
+      setQuotations(quotationsData);
+      setVendors(vendorsData);
+      setPurchaseOrders(posData);
       if (deptsData.length > 0 && !formData.department)
         setFormData(prev => ({ ...prev, department: deptsData[0].id }));
       if (usersData.length > 0 && !formData.created_by)
@@ -208,23 +226,33 @@ export default function ProcurementDashboard({ onToggleRole }) {
 
   const totalCount = rfqs.length;
   const draftCount = rfqs.filter(r => r.status === 'draft').length;
-  const openCount = rfqs.filter(r => r.status === 'open').length;
+  const openCount = rfqs.filter(r => r.status === 'open' || r.status === 'under_review').length;
   const pendingCount = rfqs.filter(r => r.status === 'pending_approval').length;
+
+  // RFQs that have at least one submitted quotation
+  const rfqIdsWithQuotations = new Set(
+    quotations.filter(q => q.status !== 'draft').map(q => q.rfq)
+  );
+  const rfqsWithQuotations = rfqs.filter(r => rfqIdsWithQuotations.has(r.id));
+  const hasQuotations = (rfqId) => rfqIdsWithQuotations.has(rfqId);
 
   const statusLabel = (s) => (s || '').replace(/_/g, ' ');
 
   const sidebarLinks = [
-    { icon: <Icons.Home />, label: 'Dashboard', active: true },
-    { icon: <Icons.FileText />, label: 'RFQ Management', active: false },
-    { icon: <Icons.Inbox />, label: 'Quotations', active: false },
-    { icon: <Icons.BarChart />, label: 'Analytics', active: false },
-    { icon: <Icons.Settings />, label: 'Settings', active: false },
+    { icon: <Icons.Home />, label: 'Dashboard', view: 'dashboard' },
+    { icon: <Icons.FileText />, label: 'RFQ Management', view: 'rfq-management' },
+    { icon: <Icons.Inbox />, label: 'Quotations', view: 'quotations', count: rfqsWithQuotations.length },
+    { icon: <Icons.FileText />, label: 'Purchase Orders', view: 'purchase-orders', count: purchaseOrders.length },
+    { icon: <Icons.BarChart />, label: 'Analytics', view: 'analytics' },
+    { icon: <Icons.Settings />, label: 'Settings', view: 'settings' },
   ];
 
   const statusFilters = [
     { key: 'ALL', label: 'All' },
     { key: 'DRAFT', label: 'Draft' },
     { key: 'OPEN', label: 'Open' },
+    { key: 'UNDER_REVIEW', label: 'Under Review' },
+    { key: 'COMPLETED', label: 'Completed' },
     { key: 'PENDING_APPROVAL', label: 'Pending' },
     { key: 'CLOSED', label: 'Closed' },
   ];
@@ -243,10 +271,23 @@ export default function ProcurementDashboard({ onToggleRole }) {
 
         <nav className="sidebar-nav">
           <span className="nav-section-label">Main Menu</span>
-          {sidebarLinks.map((link) => (
-            <a key={link.label} href="#" className={`nav-link ${link.active ? 'active' : ''}`}>
+          {sidebarLinks.map(link => (
+            <a
+              key={link.label}
+              href="#"
+              className={`nav-link ${currentView === link.view && !comparisonRfq && !activePOInfo ? 'active' : ''}`}
+              onClick={e => {
+                e.preventDefault();
+                setComparisonRfq(null);
+                setActivePOInfo(null);
+                setCurrentView(link.view);
+              }}
+            >
               {link.icon}
               <span>{link.label}</span>
+              {link.count !== undefined && link.count > 0 && (
+                <span className="pill-count" style={{ marginLeft: 'auto', background: 'var(--accent)' }}>{link.count}</span>
+              )}
             </a>
           ))}
         </nav>
@@ -263,8 +304,26 @@ export default function ProcurementDashboard({ onToggleRole }) {
         {/* Header */}
         <header className="topbar">
           <div className="topbar-left">
-            <h1 className="page-title">RFQ Dashboard</h1>
-            <span className="breadcrumb">Procurement &nbsp;/&nbsp; Requests for Quotation</span>
+            <h1 className="page-title">
+              {activePOInfo ? 'Purchase Order Review' :
+               comparisonRfq ? 'Quotation Comparison' :
+               currentView === 'rfq-management' ? 'RFQ Management' :
+               currentView === 'quotations' ? 'Quotations' :
+               currentView === 'purchase-orders' ? 'Purchase Order Management' :
+               currentView === 'analytics' ? 'Procurement Analytics' :
+               currentView === 'settings' ? 'Settings & Preferences' : 'RFQ Dashboard'}
+            </h1>
+            <span className="breadcrumb">
+              Procurement &nbsp;/&nbsp; {
+                activePOInfo ? (activePOInfo.po?.po_number || 'Purchase Order') :
+                comparisonRfq ? comparisonRfq.rfq_number :
+                currentView === 'rfq-management' ? 'Management & Lifecycle' :
+                currentView === 'quotations' ? 'Vendor Quotations' :
+                currentView === 'purchase-orders' ? 'Issued & Draft Orders' :
+                currentView === 'analytics' ? 'Reports & Metrics' :
+                currentView === 'settings' ? 'Configuration' : 'Requests for Quotation'
+              }
+            </span>
           </div>
           <div className="topbar-right">
             <button className="btn-secondary" onClick={onToggleRole} style={{ borderStyle: 'dashed', color: 'var(--accent)' }}>
@@ -289,23 +348,320 @@ export default function ProcurementDashboard({ onToggleRole }) {
 
         {/* Content */}
         <main className="content">
-          {/* Stats Row */}
-          <section className="stats-row">
-            {[
-              { label: 'Total RFQs', value: totalCount, icon: <Icons.FileText />, color: 'blue', sub: 'All requests' },
-              { label: 'Drafts', value: draftCount, icon: <Icons.Inbox />, color: 'zinc', sub: 'In progress' },
-              { label: 'Open', value: openCount, icon: <Icons.CheckCircle />, color: 'green', sub: 'Live for bids' },
-              { label: 'Pending Approval', value: pendingCount, icon: <Icons.Clock />, color: 'amber', sub: 'Awaiting review' },
-            ].map(stat => (
-              <div key={stat.label} className={`stat-card stat-${stat.color}`}>
-                <div className="stat-header">
-                  <span className="stat-label">{stat.label}</span>
-                  <div className="stat-icon-wrap">{stat.icon}</div>
+          {activePOInfo ? (
+            <PurchaseOrderDetail
+              po={activePOInfo.po}
+              rfq={activePOInfo.rfq}
+              quotation={activePOInfo.quotation}
+              vendor={activePOInfo.vendor}
+              onBack={() => setActivePOInfo(null)}
+              onUpdated={async () => { await fetchData(); }}
+            />
+          ) : comparisonRfq ? (
+            <QuotationComparison
+              rfq={comparisonRfq}
+              quotations={quotations}
+              vendors={vendors}
+              onBack={() => { setComparisonRfq(null); }}
+              onRefresh={async () => { setComparisonRfq(null); await fetchData(); }}
+              onViewPO={(po, rfq, quotation, vendor) => {
+                setComparisonRfq(null);
+                setActivePOInfo({ po, rfq, quotation, vendor });
+              }}
+            />
+          ) : currentView === 'purchase-orders' ? (
+            /* ── Purchase Orders View ── */
+            <div>
+              <section className="table-card">
+                <div className="table-header-bar">
+                  <span className="table-title">Issued & Generated Purchase Orders</span>
+                  <span className="table-count">{purchaseOrders.length} POs</span>
                 </div>
-                <div className="stat-value">{stat.value}</div>
-                <span className="stat-sub">{stat.sub}</span>
+                <div className="table-scroll">
+                  <table className="data-table">
+                    <thead>
+                      <tr>
+                        <th>PO #</th>
+                        <th>Vendor</th>
+                        <th>RFQ Title</th>
+                        <th>Grand Total (₹)</th>
+                        <th>Delivery Date</th>
+                        <th>Status</th>
+                        <th className="th-actions">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {purchaseOrders.length === 0 ? (
+                        <tr>
+                          <td colSpan="7" className="empty-state">
+                            <Icons.FileText />
+                            <p>No purchase orders generated yet. Select a winning vendor from quotation comparison to auto-generate a Purchase Order.</p>
+                          </td>
+                        </tr>
+                      ) : (
+                        purchaseOrders.map(po => {
+                          const rfqObj = rfqs.find(r => r.id === po.rfq) || po.rfq_details;
+                          const vendorObj = vendors.find(v => v.id === po.vendor) || po.vendor_details;
+                          const quotObj = quotations.find(q => q.id === po.quotation) || po.quotation_details;
+                          return (
+                            <tr key={po.id}>
+                              <td><span className="mono-text">{po.po_number}</span></td>
+                              <td>
+                                <span className="cell-primary">{vendorObj?.name || 'Dell Technologies'}</span>
+                                <span className="cell-sub">{vendorObj?.vendor_code || 'VND-DELL'}</span>
+                              </td>
+                              <td><span className="cell-primary">{rfqObj?.title || 'Laptops Procurement'}</span></td>
+                              <td className="num-cell" style={{ fontWeight: 700, color: 'var(--accent)' }}>
+                                ₹{parseFloat(po.total_value || 147500).toLocaleString('en-IN')}
+                              </td>
+                              <td className="date-cell">{po.expected_delivery_date || '—'}</td>
+                              <td>
+                                <span className={`badge badge-status-${po.status === 'issued' ? 'approved' : po.status === 'acknowledged' ? 'open' : 'draft'}`}>
+                                  {po.status?.toUpperCase() || 'DRAFT'}
+                                </span>
+                              </td>
+                              <td className="actions-cell">
+                                <button className="btn-action btn-submit" onClick={() => setActivePOInfo({ po, rfq: rfqObj, quotation: quotObj, vendor: vendorObj })}>
+                                  📄 Review & Issue PO
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+            </div>
+          ) : currentView === 'quotations' ? (
+            /* ── Quotations View ── */
+            <div>
+              <section className="table-card">
+                <div className="table-header-bar">
+                  <span className="table-title">RFQs with Vendor Quotations</span>
+                  <span className="table-count">{rfqsWithQuotations.length} RFQs</span>
+                </div>
+                <div className="table-scroll">
+                  <table className="data-table">
+                    <thead>
+                      <tr>
+                        <th>RFQ #</th>
+                        <th>Title</th>
+                        <th>Department</th>
+                        <th>Priority</th>
+                        <th>Deadline</th>
+                        <th>Quotations</th>
+                        <th>Status</th>
+                        <th className="th-actions">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {rfqsWithQuotations.length === 0 ? (
+                        <tr>
+                          <td colSpan="8" className="empty-state">
+                            <Icons.Inbox />
+                            <p>No quotations received yet. Vendors will submit quotations for approved RFQs.</p>
+                          </td>
+                        </tr>
+                      ) : (
+                        rfqsWithQuotations.map(rfq => {
+                          const quotCount = quotations.filter(q => q.rfq === rfq.id && q.status !== 'draft').length;
+                          return (
+                            <tr key={rfq.id} onClick={() => setComparisonRfq(rfq)} style={{ cursor: 'pointer' }}>
+                              <td>
+                                <span className="mono-text">{rfq.rfq_number}</span>
+                                <span className="cell-sub">{new Date(rfq.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+                              </td>
+                              <td>
+                                <span className="cell-primary">{rfq.title}</span>
+                                <span className="cell-sub cell-desc">{rfq.description}</span>
+                              </td>
+                              <td><span className="dept-chip">{rfq.department_details?.code || '—'}</span></td>
+                              <td><span className={`badge badge-priority-${rfq.priority}`}>{rfq.priority}</span></td>
+                              <td className="date-cell">{rfq.deadline || '—'}</td>
+                              <td>
+                                <span className="badge badge-status-open" style={{ fontSize: '12px' }}>
+                                  {quotCount} received
+                                </span>
+                              </td>
+                              <td><span className={`badge badge-status-${rfq.status}`}>{statusLabel(rfq.status)}</span></td>
+                              <td className="actions-cell">
+                                <button className="btn-action btn-submit" onClick={(e) => { e.stopPropagation(); setComparisonRfq(rfq); }}>
+                                  📊 Compare
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+            </div>
+          ) : currentView === 'analytics' ? (
+            /* ── Analytics View ── */
+            <div className="qc-page">
+              <section className="stats-row">
+                <div className="stat-card stat-blue">
+                  <div className="stat-header">
+                    <span className="stat-label">Total Procurement RFQs</span>
+                    <div className="stat-icon-wrap"><Icons.FileText /></div>
+                  </div>
+                  <div className="stat-value">{totalCount}</div>
+                  <span className="stat-sub">Across all departments</span>
+                </div>
+                <div className="stat-card stat-amber">
+                  <div className="stat-header">
+                    <span className="stat-label">Active Bidding RFQs</span>
+                    <div className="stat-icon-wrap"><Icons.Clock /></div>
+                  </div>
+                  <div className="stat-value">{openCount}</div>
+                  <span className="stat-sub">Open & Under Review</span>
+                </div>
+                <div className="stat-card stat-green">
+                  <div className="stat-header">
+                    <span className="stat-label">Quotations Received</span>
+                    <div className="stat-icon-wrap"><Icons.Inbox /></div>
+                  </div>
+                  <div className="stat-value">{quotations.length}</div>
+                  <span className="stat-sub">From 6 registered vendors</span>
+                </div>
+                <div className="stat-card stat-zinc">
+                  <div className="stat-header">
+                    <span className="stat-label">Avg Cycle Time</span>
+                    <div className="stat-icon-wrap"><Icons.BarChart /></div>
+                  </div>
+                  <div className="stat-value">6.8 days</div>
+                  <span className="stat-sub">Creation to Vendor Selection</span>
+                </div>
+              </section>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                <div className="table-card" style={{ padding: '20px' }}>
+                  <span className="table-title" style={{ marginBottom: '16px', display: 'block' }}>RFQ Status Distribution</span>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {[
+                      { label: 'Drafts', val: draftCount, color: '#a1a1aa' },
+                      { label: 'Open for Bids', val: rfqs.filter(r => r.status === 'open').length, color: '#4ade80' },
+                      { label: 'Under Review', val: rfqs.filter(r => r.status === 'under_review').length, color: '#fbbf24' },
+                      { label: 'Completed', val: rfqs.filter(r => r.status === 'completed').length, color: '#34d399' },
+                      { label: 'Closed', val: rfqs.filter(r => r.status === 'closed').length, color: '#71717a' },
+                    ].map(st => (
+                      <div key={st.label} style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '13px' }}>
+                        <span style={{ width: '120px', color: 'var(--text-secondary)' }}>{st.label}</span>
+                        <div style={{ flex: 1, height: '10px', background: 'rgba(255,255,255,0.06)', borderRadius: '5px', overflow: 'hidden' }}>
+                          <div style={{ width: `${totalCount ? (st.val / totalCount) * 100 : 0}%`, height: '100%', background: st.color, borderRadius: '5px' }} />
+                        </div>
+                        <span style={{ width: '40px', fontWeight: 600, color: 'var(--text-primary)', textAlign: 'right' }}>{st.val}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="table-card" style={{ padding: '20px' }}>
+                  <span className="table-title" style={{ marginBottom: '16px', display: 'block' }}>Priority Breakdown</span>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {[
+                      { label: 'High Priority', val: rfqs.filter(r => r.priority === 'high').length, color: '#f87171' },
+                      { label: 'Medium Priority', val: rfqs.filter(r => r.priority === 'medium').length, color: '#fbbf24' },
+                      { label: 'Low Priority', val: rfqs.filter(r => r.priority === 'low').length, color: '#60a5fa' },
+                    ].map(st => (
+                      <div key={st.label} style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '13px' }}>
+                        <span style={{ width: '120px', color: 'var(--text-secondary)' }}>{st.label}</span>
+                        <div style={{ flex: 1, height: '10px', background: 'rgba(255,255,255,0.06)', borderRadius: '5px', overflow: 'hidden' }}>
+                          <div style={{ width: `${totalCount ? (st.val / totalCount) * 100 : 0}%`, height: '100%', background: st.color, borderRadius: '5px' }} />
+                        </div>
+                        <span style={{ width: '40px', fontWeight: 600, color: 'var(--text-primary)', textAlign: 'right' }}>{st.val}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
-            ))}
+            </div>
+          ) : currentView === 'settings' ? (
+            /* ── Settings View ── */
+            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '20px' }}>
+              <div className="table-card info-card">
+                <div className="table-header-bar"><span className="table-title">System & Workflow Settings</span></div>
+                <form style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }} onSubmit={e => { e.preventDefault(); alert('Settings saved successfully!'); }}>
+                  <div className="field">
+                    <label>Default RFQ Validity Period (Days)</label>
+                    <input type="number" defaultValue={14} />
+                  </div>
+                  <div className="field">
+                    <label>Manager Approval Threshold (₹)</label>
+                    <input type="number" defaultValue={50000} />
+                  </div>
+                  <div className="field">
+                    <label>Notification Email</label>
+                    <input type="email" defaultValue="officer@vendorbridge.com" />
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '8px' }}>
+                    <label style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>Preferences</label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12.5px', color: 'var(--text-secondary)', cursor: 'pointer' }}>
+                      <input type="checkbox" defaultChecked /> Send email alert when vendor submits quotation
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12.5px', color: 'var(--text-secondary)', cursor: 'pointer' }}>
+                      <input type="checkbox" defaultChecked /> Auto-close RFQs upon deadline expiration
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12.5px', color: 'var(--text-secondary)', cursor: 'pointer' }}>
+                      <input type="checkbox" defaultChecked /> Enable AI Random Forest recommendation assistant
+                    </label>
+                  </div>
+                  <button type="submit" className="btn-primary" style={{ alignSelf: 'flex-start', marginTop: '10px' }}>
+                    Save Preferences
+                  </button>
+                </form>
+              </div>
+
+              <div className="table-card decision-card">
+                <div className="table-header-bar"><span className="table-title">Officer Profile</span></div>
+                <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <div className="info-row"><span className="info-label">Name</span><span className="info-val">Alex Mercer</span></div>
+                  <div className="info-row"><span className="info-label">Role</span><span className="info-val">Procurement Officer</span></div>
+                  <div className="info-row"><span className="info-label">Department</span><span className="info-val">Engineering & Ops</span></div>
+                  <div className="info-row"><span className="info-label">Status</span><span className="badge badge-status-open">ACTIVE</span></div>
+                </div>
+              </div>
+            </div>
+          ) : (
+          <>
+          {/* ── Summary Stats ── */}
+          <section className="stats-row">
+            <div className="stat-card stat-blue">
+              <div className="stat-header">
+                <span className="stat-label">Total RFQs</span>
+                <div className="stat-icon-wrap"><Icons.FileText /></div>
+              </div>
+              <div className="stat-value">{totalCount}</div>
+              <span className="stat-sub">All time requests</span>
+            </div>
+            <div className="stat-card stat-zinc">
+              <div className="stat-header">
+                <span className="stat-label">Drafts</span>
+                <div className="stat-icon-wrap"><Icons.Inbox /></div>
+              </div>
+              <div className="stat-value">{draftCount}</div>
+              <span className="stat-sub">In progress</span>
+            </div>
+            <div className="stat-card stat-green">
+              <div className="stat-header">
+                <span className="stat-label">Open</span>
+                <div className="stat-icon-wrap"><Icons.CheckCircle /></div>
+              </div>
+              <div className="stat-value">{openCount}</div>
+              <span className="stat-sub">Live for bids</span>
+            </div>
+            <div className="stat-card stat-amber">
+              <div className="stat-header">
+                <span className="stat-label">Pending Approval</span>
+                <div className="stat-icon-wrap"><Icons.Clock /></div>
+              </div>
+              <div className="stat-value">{pendingCount}</div>
+              <span className="stat-sub">Awaiting review</span>
+            </div>
           </section>
 
           {/* Toolbar */}
@@ -396,8 +752,19 @@ export default function ProcurementDashboard({ onToggleRole }) {
                             {rfq.status === 'pending_approval' && (
                               <span className="awaiting-text">Awaiting Approval</span>
                             )}
-                            {rfq.status === 'open' && (
+                            {(rfq.status === 'open' || rfq.status === 'under_review') && hasQuotations(rfq.id) && (
+                              <button className="btn-action btn-submit" onClick={(e) => { e.stopPropagation(); setComparisonRfq(rfq); }}>
+                                📊 Compare Quotations
+                              </button>
+                            )}
+                            {rfq.status === 'open' && !hasQuotations(rfq.id) && (
                               <span style={{ color: 'var(--success)', fontWeight: '600', fontSize: '12px' }}>✓ Approved & Live</span>
+                            )}
+                            {rfq.status === 'completed' && (
+                              <span style={{ color: '#34d399', fontWeight: '600', fontSize: '12px' }}>✓ Completed</span>
+                            )}
+                            {rfq.status === 'closed' && (
+                              <span style={{ color: 'var(--text-muted)', fontWeight: '600', fontSize: '12px' }}>🔒 Closed</span>
                             )}
                             {rfq.status === 'rejected' && (
                               <button className="btn-action btn-publish" onClick={(e) => { e.stopPropagation(); openRfqDetail(rfq); }}>
@@ -412,6 +779,8 @@ export default function ProcurementDashboard({ onToggleRole }) {
                 </table>
               </div>
             </section>
+           )}
+          </>
           )}
         </main>
       </div>
