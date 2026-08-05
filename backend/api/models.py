@@ -21,11 +21,24 @@ class User(models.Model):
         VENDOR = 'vendor', 'Vendor'
         FINANCE = 'finance', 'Finance'
 
+    class VerificationStatusChoices(models.TextChoices):
+        PENDING = 'pending', 'Pending'
+        APPROVED = 'approved', 'Approved'
+        REJECTED = 'rejected', 'Rejected'
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=100)
     email = models.EmailField(max_length=150, unique=True)
+    password = models.CharField(max_length=128, default='changeme')
     role = models.CharField(max_length=30, choices=RoleChoices.choices)
     department = models.ForeignKey(Department, on_delete=models.SET_NULL, null=True, blank=True, related_name='users')
+    is_admin = models.BooleanField(default=False)
+    verification_status = models.CharField(
+        max_length=20,
+        choices=VerificationStatusChoices.choices,
+        default=VerificationStatusChoices.APPROVED  # existing rows stay approved
+    )
+    rejection_reason = models.TextField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
@@ -39,9 +52,15 @@ class Vendor(models.Model):
         INACTIVE = 'inactive', 'Inactive'
         BLACKLISTED = 'blacklisted', 'Blacklisted'
 
+    class VerificationStatusChoices(models.TextChoices):
+        PENDING = 'pending', 'Pending'
+        APPROVED = 'approved', 'Approved'
+        REJECTED = 'rejected', 'Rejected'
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     vendor_code = models.CharField(max_length=20, unique=True)
     name = models.CharField(max_length=150)
+    password = models.CharField(max_length=128, default='changeme')
     category = models.CharField(max_length=100, null=True, blank=True)
     contact_person = models.CharField(max_length=100, null=True, blank=True)
     email = models.EmailField(max_length=150)
@@ -51,6 +70,12 @@ class Vendor(models.Model):
     address = models.TextField()
     rating = models.DecimalField(max_digits=3, decimal_places=2, default=0.00)
     status = models.CharField(max_length=20, choices=StatusChoices.choices, default=StatusChoices.ACTIVE)
+    verification_status = models.CharField(
+        max_length=20,
+        choices=VerificationStatusChoices.choices,
+        default=VerificationStatusChoices.APPROVED  # existing rows stay approved
+    )
+    rejection_reason = models.TextField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

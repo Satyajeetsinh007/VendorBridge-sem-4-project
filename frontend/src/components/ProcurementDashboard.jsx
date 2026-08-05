@@ -53,7 +53,7 @@ const Icons = {
   ),
 };
 
-export default function ProcurementDashboard({ onToggleRole }) {
+export default function ProcurementDashboard({ onLogout, currentUser }) {
   const [rfqs, setRfqs] = useState([]);
   const [departments, setDepartments] = useState([]);
   const [users, setUsers] = useState([]);
@@ -66,7 +66,7 @@ export default function ProcurementDashboard({ onToggleRole }) {
   const [formData, setFormData] = useState({
     title: '', description: '', department: '', priority: 'medium',
     quantity: 100, deadline: '', required_by_date: '', specs_file_url: '',
-    status: 'draft', created_by: '',
+    status: 'draft', created_by: currentUser?.id || '',
   });
 
   // Detail/Edit modal state
@@ -108,14 +108,18 @@ export default function ProcurementDashboard({ onToggleRole }) {
       setPurchaseOrders(posData);
       if (deptsData.length > 0 && !formData.department)
         setFormData(prev => ({ ...prev, department: deptsData[0].id }));
-      if (usersData.length > 0 && !formData.created_by)
+      if (currentUser?.id) {
+        setFormData(prev => ({ ...prev, created_by: currentUser.id }));
+      } else if (usersData.length > 0 && !formData.created_by) {
         setFormData(prev => ({ ...prev, created_by: usersData[0].id }));
+      }
     } catch (err) {
       setError(err.message || 'Failed to connect to backend');
     } finally {
       setLoading(false);
     }
   };
+
 
   useEffect(() => { fetchData(); }, []);
 
@@ -326,8 +330,9 @@ export default function ProcurementDashboard({ onToggleRole }) {
             </span>
           </div>
           <div className="topbar-right">
-            <button className="btn-secondary" onClick={onToggleRole} style={{ borderStyle: 'dashed', color: 'var(--accent)' }}>
-              ⇄ Switch to Manager Portal
+            {/* Sign Out Button */}
+            <button className="btn-secondary" onClick={onLogout} style={{ color: 'var(--text-secondary)' }}>
+              Sign Out
             </button>
             <div className="topbar-divider" />
             <button className="icon-btn" title="Notifications">
@@ -336,14 +341,15 @@ export default function ProcurementDashboard({ onToggleRole }) {
             </button>
             <div className="topbar-divider" />
             <div className="user-chip">
-              <div className="user-avatar">{(users[0]?.name || 'A')[0]}</div>
+              <div className="user-avatar">{(currentUser?.name || 'P')[0]}</div>
               <div className="user-meta">
-                <span className="user-name">{users[0]?.name || 'Alex Mercer'}</span>
+                <span className="user-name">{currentUser?.name || 'Procurement User'}</span>
                 <span className="user-role">Procurement Officer</span>
               </div>
               <Icons.ChevronDown />
             </div>
           </div>
+
         </header>
 
         {/* Content */}
