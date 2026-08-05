@@ -1,6 +1,88 @@
 const API_BASE_URL = 'http://localhost:8000/api';
 
 export const api = {
+  // ── Auth ──────────────────────────────────────────
+  signupUser: async (data) => {
+    const res = await fetch(`${API_BASE_URL}/auth/signup/user/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.error || 'Signup failed');
+    return json;
+  },
+
+  signupVendor: async (data) => {
+    const res = await fetch(`${API_BASE_URL}/auth/signup/vendor/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.error || 'Vendor signup failed');
+    return json;
+  },
+
+  login: async (email, password) => {
+    const res = await fetch(`${API_BASE_URL}/auth/login/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
+    const json = await res.json();
+    // 403 = verification gate (pending or rejected)
+    if (res.status === 403) {
+      const err = new Error(json.message || 'Access denied');
+      err.code = json.error;   // 'pending' | 'rejected'
+      err.reason = json.reason || null;
+      throw err;
+    }
+    if (!res.ok) throw new Error(json.error || 'Login failed');
+    return json;
+  },
+
+  // ── Admin ──────────────────────────────────────────
+  adminGetPendingUsers: async () => {
+    const res = await fetch(`${API_BASE_URL}/admin/pending/users/`);
+    if (!res.ok) throw new Error('Failed to fetch pending users');
+    return res.json();
+  },
+
+  adminGetPendingVendors: async () => {
+    const res = await fetch(`${API_BASE_URL}/admin/pending/vendors/`);
+    if (!res.ok) throw new Error('Failed to fetch pending vendors');
+    return res.json();
+  },
+
+  adminGetAllAccounts: async () => {
+    const res = await fetch(`${API_BASE_URL}/admin/accounts/`);
+    if (!res.ok) throw new Error('Failed to fetch all accounts');
+    return res.json();
+  },
+
+  adminVerifyUser: async (userId, action, reason = '') => {
+    const res = await fetch(`${API_BASE_URL}/admin/verify/user/${userId}/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action, reason }),
+    });
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.error || 'Verification failed');
+    return json;
+  },
+
+  adminVerifyVendor: async (vendorId, action, reason = '') => {
+    const res = await fetch(`${API_BASE_URL}/admin/verify/vendor/${vendorId}/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action, reason }),
+    });
+    const json = await res.json();
+    if (!res.ok) throw new Error(json.error || 'Verification failed');
+    return json;
+  },
+
   // Seed initial data
   seedData: async () => {
     const res = await fetch(`${API_BASE_URL}/seed/`, { method: 'POST' });
@@ -31,9 +113,7 @@ export const api = {
   createRFQ: async (rfqData) => {
     const res = await fetch(`${API_BASE_URL}/rfqs/`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(rfqData),
     });
     if (!res.ok) {
@@ -46,9 +126,7 @@ export const api = {
   updateRFQStatus: async (rfqId, status) => {
     const res = await fetch(`${API_BASE_URL}/rfqs/${rfqId}/`, {
       method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status }),
     });
     if (!res.ok) throw new Error('Failed to update RFQ status');
@@ -58,9 +136,7 @@ export const api = {
   patchRFQ: async (rfqId, data) => {
     const res = await fetch(`${API_BASE_URL}/rfqs/${rfqId}/`, {
       method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
     });
     if (!res.ok) throw new Error('Failed to patch RFQ details');
@@ -76,9 +152,7 @@ export const api = {
   createApproval: async (approvalData) => {
     const res = await fetch(`${API_BASE_URL}/approvals/`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(approvalData),
     });
     if (!res.ok) throw new Error('Failed to log approval decision');

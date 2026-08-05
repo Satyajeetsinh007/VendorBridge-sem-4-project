@@ -44,7 +44,7 @@ const Icons = {
   )
 };
 
-export default function ManagerDashboard({ onToggleRole }) {
+export default function ManagerDashboard({ onLogout, currentUser }) {
   const [rfqs, setRfqs] = useState([]);
   const [departments, setDepartments] = useState([]);
   const [users, setUsers] = useState([]);
@@ -60,7 +60,13 @@ export default function ManagerDashboard({ onToggleRole }) {
   // Search
   const [searchQuery, setSearchQuery] = useState('');
 
-  const [managerUser, setManagerUser] = useState(null);
+  const [managerUser, setManagerUser] = useState(currentUser || null);
+
+  useEffect(() => {
+    if (currentUser) {
+      setManagerUser(currentUser);
+    }
+  }, [currentUser]);
 
   const mockNotifications = [
     { id: 1, text: 'New RFQ awaiting approval: RFQ-2026-9041', time: '10m ago', priority: 'high' },
@@ -89,15 +95,18 @@ export default function ManagerDashboard({ onToggleRole }) {
       setDepartments(deptsData);
       setUsers(usersData);
       
-      // Filter out manager profiles
-      const mgr = usersData.find(u => u.role === 'manager');
-      setManagerUser(mgr);
+      // Fallback if currentUser is somehow missing
+      if (!managerUser) {
+        const mgr = usersData.find(u => u.role === 'manager');
+        setManagerUser(mgr);
+      }
 
       // Create enriched approvals mapping (resolving RFQ and User info)
       const enrichedApprovals = approvalsData.map(app => {
         const matchingRfq = rfqsData.find(r => r.id === app.reference_id);
         const officerName = usersData.find(u => u.id === matchingRfq?.created_by)?.name;
         const deptCode = deptsData.find(d => d.id === matchingRfq?.department)?.code;
+
         return {
           ...app,
           rfq_details: matchingRfq ? {
@@ -250,10 +259,11 @@ export default function ManagerDashboard({ onToggleRole }) {
           </div>
           
           <div className="topbar-right">
-            {/* Role switch toggle */}
-            <button className="btn-secondary" onClick={onToggleRole} style={{ borderStyle: 'dashed', color: 'var(--accent)' }}>
-              ⇄ Switch to Procurement Officer
+            {/* Sign Out Button */}
+            <button className="btn-secondary" onClick={onLogout} style={{ color: 'var(--text-secondary)' }}>
+              Sign Out
             </button>
+
             <div className="topbar-divider" />
             <div className="user-chip">
               <div className="user-avatar" style={{ background: 'linear-gradient(135deg, #a78bfa, #818cf8)' }}>

@@ -47,7 +47,7 @@ const Icons = {
   ),
 };
 
-export default function VendorDashboard({ onToggleRole }) {
+export default function VendorDashboard({ onLogout, currentUser }) {
   const [rfqs, setRfqs] = useState([]);
   const [quotations, setQuotations] = useState([]);
   const [vendors, setVendors] = useState([]);
@@ -83,8 +83,14 @@ export default function VendorDashboard({ onToggleRole }) {
       }
 
       setVendors(vendorsData);
-      setCurrentVendor(vendorsData[0] || null);
+      
+      const loggedInVendor = currentUser 
+        ? vendorsData.find(v => v.email.toLowerCase() === currentUser.email.toLowerCase() || v.id === currentUser.id)
+        : null;
+
+      setCurrentVendor(loggedInVendor || vendorsData[0] || null);
       setRfqs(rfqsData);
+
       setQuotations(quotationsData);
     } catch (err) {
       setError(err.message || 'Failed to load vendor data');
@@ -239,9 +245,11 @@ export default function VendorDashboard({ onToggleRole }) {
               </div>
             )}
 
-            <button className="btn-secondary" onClick={onToggleRole} style={{ borderStyle: 'dashed', color: 'var(--accent)' }}>
-              ⇄ Switch Portal
+            {/* Sign Out Button */}
+            <button className="btn-secondary" onClick={onLogout} style={{ color: 'var(--text-secondary)' }}>
+              Sign Out
             </button>
+
             <div className="topbar-divider" />
             <div className="user-chip">
               <div className="user-avatar" style={{ background: 'linear-gradient(135deg, #0ea5e9, #06b6d4)' }}>
