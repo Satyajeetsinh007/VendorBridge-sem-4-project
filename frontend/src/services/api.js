@@ -263,8 +263,7 @@ export const api = {
   // Invoices
   getInvoices: async () => {
     const res = await fetch(`${API_BASE_URL}/invoices/`);
-    if (!res.ok) throw new Error('Failed to fetch invoices');
-    return res.json();
+    return handleResponse(res);
   },
 
   createInvoice: async (data) => {

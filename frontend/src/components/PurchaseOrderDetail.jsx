@@ -37,7 +37,7 @@ export default function PurchaseOrderDetail({ po, rfq, quotation, vendor, curren
     discount_amount: po?.discount_amount || 0,
   });
 
-  const isIssued = !isOwn || poStatus === 'issued' || poStatus === 'acknowledged' || poStatus === 'in_progress' || poStatus === 'delivered' || poStatus === 'invoiced';
+  const isIssued = !isOwn || (poStatus && poStatus !== 'draft');
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -48,13 +48,11 @@ export default function PurchaseOrderDetail({ po, rfq, quotation, vendor, curren
   const qty = rfq?.quantity || quotation?.quantity || 10;
   const unitPrice = parseFloat(quotation?.unit_price) || 12500;
   const subtotal = unitPrice * qty;
-
+  const discount = parseFloat(deliveryData.discount_amount || 0);
   const taxType = quotation?.tax_type || 'GST_9_9';
-  let cgst = taxType === 'GST_9_9' ? subtotal * 0.09 : 0;
-  let sgst = taxType === 'GST_9_9' ? subtotal * 0.09 : 0;
-  let igst = taxType === 'IGST_18' ? subtotal * 0.18 : 0;
-  const discount = parseFloat(deliveryData.discount_amount) || 0;
-
+  const cgst = taxType === 'GST_9_9' ? subtotal * 0.09 : 0;
+  const sgst = taxType === 'GST_9_9' ? subtotal * 0.09 : 0;
+  const igst = taxType === 'IGST_18' ? subtotal * 0.18 : 0;
   const grandTotal = subtotal + cgst + sgst + igst - discount;
 
   const handleSaveDraft = async () => {
@@ -66,13 +64,14 @@ export default function PurchaseOrderDetail({ po, rfq, quotation, vendor, curren
         cgst_amount: cgst,
         sgst_amount: sgst,
         igst_amount: igst,
+        discount_amount: discount,
         total_value: grandTotal,
         status: 'draft',
       };
       if (po?.id) {
         await api.patchPurchaseOrder(po.id, payload);
       }
-      setSuccessBanner('💾 Purchase Order draft updated successfully!');
+      setSuccessBanner('Draft PO updated successfully.');
       setTimeout(() => setSuccessBanner(''), 4000);
       if (onUpdated) onUpdated();
     } catch (err) {
@@ -94,6 +93,7 @@ export default function PurchaseOrderDetail({ po, rfq, quotation, vendor, curren
         cgst_amount: cgst,
         sgst_amount: sgst,
         igst_amount: igst,
+        discount_amount: discount,
         total_value: grandTotal,
         status: 'issued',
         issued_at: new Date().toISOString(),
@@ -123,6 +123,11 @@ export default function PurchaseOrderDetail({ po, rfq, quotation, vendor, curren
       case 'in_progress': return <span className="badge badge-priority-medium">IN PROGRESS</span>;
       case 'delivered': return <span className="badge badge-status-approved" style={{ background: '#059669', color: '#fff' }}>DELIVERED</span>;
       case 'invoiced': return <span className="badge badge-priority-medium" style={{ background: '#8b5cf6', color: '#fff' }}>INVOICED</span>;
+      case 'paid':
+      case 'completed':
+      case 'closed': return <span className="badge badge-status-approved" style={{ background: '#10b981', color: '#fff' }}>PAID & COMPLETED</span>;
+      case 'rejected_by_finance':
+      case 'rejected': return <span className="badge badge-status-rejected" style={{ background: '#ef4444', color: '#fff' }}>REJECTED BY FINANCE</span>;
       case 'cancelled': return <span className="badge badge-status-rejected">CANCELLED</span>;
       default: return <span className="badge badge-status-draft">{st ? st.toUpperCase() : 'DRAFT'}</span>;
     }
@@ -500,10 +505,20 @@ export default function PurchaseOrderDetail({ po, rfq, quotation, vendor, curren
         </div>
       </div>
 
+      {/* ── Rejection Alert Banner if Rejected by Finance ── */}
+      {(poStatus === 'rejected_by_finance' || poStatus === 'rejected') && (
+        <div className="state-banner error" style={{ marginBottom: '20px', padding: '16px 20px', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: 'var(--radius-sm)' }}>
+          <strong style={{ fontSize: '15px', color: '#f87171' }}>⚠️ Invoice Rejected by Finance Department</strong><br />
+          <span style={{ fontSize: '13.5px', color: 'var(--text-primary)', marginTop: '4px', display: 'block' }}>
+            Finance Rejection Remarks: <strong>{po?.procurement_notes || deliveryData?.procurement_notes || 'Invoice details / documentation did not match requirements.'}</strong>
+          </span>
+        </div>
+      )}
+
       {/* ── Purchase Order Timeline ── */}
       <section className="table-card" style={{ padding: '24px' }}>
         <div className="table-header-bar" style={{ marginBottom: '20px' }}>
-          <span className="table-title">⏳ Purchase Order Lifecycle Timeline</span>
+          <span className="table-title">⏳ Purchase Order Lifecycle</span>
         </div>
 
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'relative', padding: '0 10px' }}>
@@ -514,31 +529,39 @@ export default function PurchaseOrderDetail({ po, rfq, quotation, vendor, curren
             { step: '4', title: 'Officer Selected Vendor', sub: 'Completed', done: true },
             { step: '5', title: 'PO Generated', sub: 'Completed', done: true },
             { step: '6', title: isIssued ? 'PO Issued' : 'Waiting to Issue PO', sub: isIssued ? 'Issued' : 'Action Required', done: isIssued, current: !isIssued },
-            { step: '7', title: 'Vendor Acknowledged', sub: ['acknowledged', 'in_progress', 'delivered', 'invoiced'].includes(poStatus) ? 'Acknowledged' : 'Awaiting Vendor', done: ['acknowledged', 'in_progress', 'delivered', 'invoiced'].includes(poStatus), current: poStatus === 'issued' },
-            { step: '8', title: 'Goods Delivered', sub: ['delivered', 'invoiced'].includes(poStatus) ? 'Delivered' : poStatus === 'in_progress' ? 'In Progress' : 'Pending', done: ['delivered', 'invoiced'].includes(poStatus), current: poStatus === 'in_progress' },
-            { step: '9', title: 'Invoice Submitted', sub: poStatus === 'invoiced' ? 'Pending Verification' : 'Pending Invoice', done: poStatus === 'invoiced', current: poStatus === 'delivered' },
+            { step: '7', title: 'Vendor Acknowledged', sub: ['acknowledged', 'in_progress', 'delivered', 'invoiced', 'paid', 'completed', 'closed', 'rejected_by_finance', 'rejected'].includes(poStatus) ? 'Acknowledged' : 'Awaiting Vendor', done: ['acknowledged', 'in_progress', 'delivered', 'invoiced', 'paid', 'completed', 'closed', 'rejected_by_finance', 'rejected'].includes(poStatus), current: poStatus === 'issued' },
+            { step: '8', title: 'Goods Delivered', sub: ['delivered', 'invoiced', 'paid', 'completed', 'closed', 'rejected_by_finance', 'rejected'].includes(poStatus) ? 'Delivered' : poStatus === 'in_progress' ? 'In Progress' : 'Pending', done: ['delivered', 'invoiced', 'paid', 'completed', 'closed', 'rejected_by_finance', 'rejected'].includes(poStatus), current: poStatus === 'in_progress' },
+            { step: '9', title: 'Invoice Submitted', sub: ['invoiced', 'paid', 'completed', 'closed', 'rejected_by_finance', 'rejected'].includes(poStatus) ? 'Submitted' : 'Pending Invoice', done: ['invoiced', 'paid', 'completed', 'closed', 'rejected_by_finance', 'rejected'].includes(poStatus), current: poStatus === 'delivered' },
+            {
+              step: '10',
+              title: (poStatus === 'rejected_by_finance' || poStatus === 'rejected') ? 'Payment Rejected' : 'Paid & Completed',
+              sub: (poStatus === 'rejected_by_finance' || poStatus === 'rejected') ? (po?.procurement_notes || 'Invoice Rejected by Finance') : ['paid', 'completed', 'closed'].includes(poStatus) ? 'Disbursed & Closed' : poStatus === 'invoiced' ? 'Pending Verification' : 'Pending Payment',
+              done: ['paid', 'completed', 'closed'].includes(poStatus),
+              rejected: (poStatus === 'rejected_by_finance' || poStatus === 'rejected'),
+              current: poStatus === 'invoiced'
+            },
           ].map((item, index, arr) => (
             <div key={index} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1, position: 'relative', zIndex: 1 }}>
               <div style={{
                 width: '32px',
                 height: '32px',
                 borderRadius: '50%',
-                background: item.done ? '#22c55e' : item.current ? '#3b82f6' : 'rgba(255,255,255,0.06)',
-                color: item.done || item.current ? '#fff' : 'var(--text-muted)',
+                background: item.rejected ? '#ef4444' : item.done ? '#22c55e' : item.current ? '#3b82f6' : 'rgba(255,255,255,0.06)',
+                color: item.rejected || item.done || item.current ? '#fff' : 'var(--text-muted)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 fontWeight: 700,
                 fontSize: '13px',
-                boxShadow: item.current ? '0 0 12px rgba(59, 130, 246, 0.5)' : 'none',
+                boxShadow: item.rejected ? '0 0 12px rgba(239, 68, 68, 0.5)' : item.current ? '0 0 12px rgba(59, 130, 246, 0.5)' : 'none',
                 marginBottom: '8px'
               }}>
-                {item.done ? '✓' : item.step}
+                {item.rejected ? '✕' : item.done ? '✓' : item.step}
               </div>
-              <span style={{ fontSize: '12px', fontWeight: item.current ? 700 : 600, color: item.current ? 'var(--accent)' : 'var(--text-primary)', textAlign: 'center' }}>
+              <span style={{ fontSize: '12px', fontWeight: item.current || item.rejected ? 700 : 600, color: item.rejected ? '#f87171' : item.current ? 'var(--accent)' : 'var(--text-primary)', textAlign: 'center' }}>
                 {item.title}
               </span>
-              <span style={{ fontSize: '11px', color: item.done ? '#4ade80' : 'var(--text-muted)' }}>
+              <span style={{ fontSize: '11px', color: item.rejected ? '#f87171' : item.done ? '#4ade80' : 'var(--text-muted)' }}>
                 {item.sub}
               </span>
             </div>

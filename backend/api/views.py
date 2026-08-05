@@ -419,6 +419,23 @@ def seed_data(request):
         manager.verification_status = 'approved'
         manager.save()
 
+    # Seed Finance Member
+    fin_dept = created_depts[3] if len(created_depts) > 3 else eng_dept
+    finance_user, fin_created = User.objects.get_or_create(
+        email='finance@vendorbridge.com',
+        defaults={
+            'name': 'Sarah Jenkins',
+            'role': User.RoleChoices.FINANCE,
+            'department': fin_dept,
+            'password': 'finance123',
+            'verification_status': 'approved',
+        }
+    )
+    if not fin_created:
+        finance_user.password = 'finance123'
+        finance_user.verification_status = 'approved'
+        finance_user.save()
+
 
     Vendor.objects.filter(vendor_code='VND-001').delete()
 

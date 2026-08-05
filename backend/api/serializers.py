@@ -1,6 +1,6 @@
 import random
 from rest_framework import serializers
-from .models import Department, User, RFQ, Approval, Vendor, Quotation, PurchaseOrder, POItem, Invoice
+from .models import Department, User, RFQ, Approval, Vendor, Quotation, PurchaseOrder, POItem, Invoice, InvoiceItem
 
 class DepartmentSerializer(serializers.ModelSerializer):
     class Meta:
@@ -123,9 +123,16 @@ class PurchaseOrderSerializer(serializers.ModelSerializer):
         return super().create(validated_data)
 
 
+class InvoiceItemSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = InvoiceItem
+        fields = '__all__'
+
+
 class InvoiceSerializer(serializers.ModelSerializer):
     vendor_details = VendorSerializer(source='vendor', read_only=True)
     po_details = PurchaseOrderSerializer(source='po', read_only=True)
+    items = InvoiceItemSerializer(many=True, read_only=True)
 
     class Meta:
         model = Invoice

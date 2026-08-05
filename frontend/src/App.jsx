@@ -5,6 +5,7 @@ import ProcurementDashboard from './components/ProcurementDashboard'
 import ManagerDashboard from './components/ManagerDashboard'
 import VendorDashboard from './components/VendorDashboard'
 import AdminDashboard from './components/AdminDashboard'
+import FinanceDashboard from './components/FinanceDashboard'
 
 function App() {
   const [page, setPage] = useState('login') // 'login' | 'signup'
@@ -23,6 +24,7 @@ function App() {
   }, [])
 
   const handleLogin = (userData) => {
+    localStorage.setItem('vb_user', JSON.stringify(userData))
     setUser(userData)
   }
 
@@ -58,7 +60,7 @@ function App() {
   const role = user.role
 
 
-  if (role === 'procurement_officer' || role === 'finance') {
+  if (role === 'procurement_officer') {
     return <ProcurementDashboard onLogout={handleLogout} currentUser={user} />
   }
   if (role === 'manager') {
@@ -66,6 +68,9 @@ function App() {
   }
   if (role === 'vendor') {
     return <VendorDashboard onLogout={handleLogout} currentUser={user} />
+  }
+  if (role === 'finance') {
+    return <FinanceDashboard onLogout={handleLogout} currentUser={user} />
   }
 
   // Fallback — unknown role

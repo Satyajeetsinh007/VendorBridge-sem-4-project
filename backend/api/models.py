@@ -259,6 +259,10 @@ class PurchaseOrder(models.Model):
         IN_PROGRESS = 'in_progress', 'In Progress'
         DELIVERED = 'delivered', 'Delivered'
         INVOICED = 'invoiced', 'Invoiced'
+        PAID = 'paid', 'Paid'
+        COMPLETED = 'completed', 'Completed'
+        CLOSED = 'closed', 'Closed'
+        REJECTED_BY_FINANCE = 'rejected_by_finance', 'Rejected by Finance'
         CANCELLED = 'cancelled', 'Cancelled'
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -346,6 +350,18 @@ class Invoice(models.Model):
     uploaded_at = models.DateTimeField(auto_now_add=True)
     notes = models.TextField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        if self.po:
+            if self.status == 'paid' and self.po.status != 'paid':
+                self.po.status = 'paid'
+                self.po.save(update_fields=['status'])
+            elif self.status == 'rejected' and self.po.status != 'rejected_by_finance':
+                self.po.status = 'rejected_by_finance'
+                if self.notes:
+                    self.po.procurement_notes = self.notes
+                self.po.save(update_fields=['status', 'procurement_notes'])
 
     def __str__(self):
         return f"{self.invoice_number} - {self.vendor.name}"

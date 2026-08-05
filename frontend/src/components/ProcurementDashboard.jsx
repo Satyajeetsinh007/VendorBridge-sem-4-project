@@ -562,8 +562,8 @@ export default function ProcurementDashboard({ onLogout, currentUser, onToggleRo
                                 <td className="date-cell">{po.expected_delivery_date || '—'}</td>
                                 <td>
                                   <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                    <span className={`badge badge-status-${po.status === 'issued' || po.status === 'delivered' ? 'approved' : po.status === 'acknowledged' ? 'open' : 'draft'}`} style={{ background: po.status === 'invoiced' ? '#8b5cf6' : po.status === 'delivered' ? '#059669' : undefined, color: po.status === 'invoiced' || po.status === 'delivered' ? '#fff' : undefined }}>
-                                      {po.status?.toUpperCase() || 'DRAFT'}
+                                    <span className={`badge badge-status-${po.status === 'rejected_by_finance' || po.status === 'rejected' ? 'rejected' : po.status === 'issued' || po.status === 'delivered' || po.status === 'paid' || po.status === 'completed' || po.status === 'closed' ? 'approved' : po.status === 'acknowledged' ? 'open' : 'draft'}`} style={{ background: (po.status === 'rejected_by_finance' || po.status === 'rejected') ? '#ef4444' : (po.status === 'paid' || po.status === 'completed' || po.status === 'closed') ? '#10b981' : po.status === 'invoiced' ? '#8b5cf6' : po.status === 'delivered' ? '#059669' : undefined, color: (po.status === 'rejected_by_finance' || po.status === 'rejected' || po.status === 'paid' || po.status === 'completed' || po.status === 'closed' || po.status === 'invoiced' || po.status === 'delivered') ? '#fff' : undefined }}>
+                                      {(po.status === 'rejected_by_finance' || po.status === 'rejected') ? 'REJECTED BY FINANCE' : (po.status === 'paid' || po.status === 'completed' || po.status === 'closed') ? 'PAID & COMPLETED' : (po.status?.toUpperCase() || 'DRAFT')}
                                     </span>
                                     {!isOwn && (
                                       <span className="badge badge-status-draft" style={{ background: 'rgba(148, 163, 184, 0.12)', color: '#94a3b8', border: '1px solid rgba(148, 163, 184, 0.25)', fontSize: '10px', padding: '2px 6px', width: 'fit-content' }}>
@@ -574,8 +574,8 @@ export default function ProcurementDashboard({ onLogout, currentUser, onToggleRo
                                 </td>
                                 <td className="actions-cell">
                                   {isOwn ? (
-                                    <button className="btn-action btn-submit" onClick={() => setActivePOInfo({ po, rfq: rfqObj, quotation: quotObj, vendor: vendorObj })}>
-                                      {po.status === 'invoiced' ? '📄 View Invoiced PO' : po.status === 'delivered' ? '📄 View Delivered PO' : (po.status === 'issued' || po.status === 'acknowledged' || po.status === 'in_progress') ? '📄 View PO' : '📄 Review & Issue PO'}
+                                    <button className="btn-action btn-submit" style={(po.status === 'rejected_by_finance' || po.status === 'rejected') ? { background: '#ef4444', borderColor: '#ef4444' } : undefined} onClick={() => setActivePOInfo({ po, rfq: rfqObj, quotation: quotObj, vendor: vendorObj })}>
+                                      {(po.status === 'rejected_by_finance' || po.status === 'rejected') ? '⚠️ View Rejected PO' : (po.status === 'paid' || po.status === 'completed' || po.status === 'closed') ? '📄 View Paid & Completed PO' : po.status === 'invoiced' ? '📄 View Invoiced PO' : po.status === 'delivered' ? '📄 View Delivered PO' : (po.status === 'issued' || po.status === 'acknowledged' || po.status === 'in_progress') ? '📄 View PO' : '📄 Review & Issue PO'}
                                     </button>
                                   ) : (
                                     <button className="btn-secondary" style={{ padding: '4px 12px', fontSize: '12px' }} onClick={() => setActivePOInfo({ po, rfq: rfqObj, quotation: quotObj, vendor: vendorObj })}>

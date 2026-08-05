@@ -310,7 +310,11 @@ export default function VendorPurchaseOrders({ vendor, rfqs = [], quotations = [
       case 'in_progress': return <span className="badge badge-priority-medium">In Progress</span>;
       case 'delivered': return <span className="badge badge-status-approved" style={{ background: '#059669', color: '#fff' }}>Delivered</span>;
       case 'invoiced': return <span className="badge badge-priority-medium" style={{ background: '#8b5cf6', color: '#fff' }}>Invoiced</span>;
-      case 'rejected': return <span className="badge badge-status-rejected">Rejected</span>;
+      case 'paid':
+      case 'completed':
+      case 'closed': return <span className="badge badge-status-approved" style={{ background: '#10b981', color: '#fff' }}>Paid & Completed</span>;
+      case 'rejected_by_finance':
+      case 'rejected': return <span className="badge badge-status-rejected" style={{ background: '#ef4444', color: '#fff' }}>Rejected by Finance</span>;
       case 'cancelled': return <span className="badge badge-status-closed">Cancelled</span>;
       default: return <span className="badge badge-status-draft">{status?.toUpperCase()}</span>;
     }
@@ -556,45 +560,47 @@ export default function VendorPurchaseOrders({ vendor, rfqs = [], quotations = [
                 {
                   step: '5',
                   title: 'Purchase Order Acknowledged',
-                  done: ['acknowledged', 'in_progress', 'delivered', 'invoiced'].includes(selectedPo.status),
+                  done: ['acknowledged', 'in_progress', 'delivered', 'invoiced', 'paid', 'completed', 'closed'].includes(selectedPo.status),
                   current: selectedPo.status === 'issued'
                 },
                 {
                   step: '6',
                   title: 'Order Fulfillment Started',
-                  done: ['in_progress', 'delivered', 'invoiced'].includes(selectedPo.status),
+                  done: ['in_progress', 'delivered', 'invoiced', 'paid', 'completed', 'closed'].includes(selectedPo.status),
                   current: selectedPo.status === 'acknowledged'
                 },
                 {
                   step: '7',
                   title: 'Goods Delivered',
-                  done: ['delivered', 'invoiced'].includes(selectedPo.status),
+                  done: ['delivered', 'invoiced', 'paid', 'completed', 'closed', 'rejected_by_finance', 'rejected'].includes(selectedPo.status),
                   current: selectedPo.status === 'in_progress'
                 },
                 {
                   step: '8',
                   title: 'Invoice Submitted',
-                  done: selectedPo.status === 'invoiced',
+                  done: ['invoiced', 'paid', 'completed', 'closed', 'rejected_by_finance', 'rejected'].includes(selectedPo.status),
                   current: selectedPo.status === 'delivered'
                 },
                 {
                   step: '9',
-                  title: 'Waiting for Finance Verification',
-                  done: false,
+                  title: (selectedPo.status === 'rejected_by_finance' || selectedPo.status === 'rejected') ? 'Payment Rejected' : 'Paid & Completed',
+                  done: ['paid', 'completed', 'closed'].includes(selectedPo.status),
+                  rejected: (selectedPo.status === 'rejected_by_finance' || selectedPo.status === 'rejected'),
                   current: selectedPo.status === 'invoiced'
                 },
               ].map((item, idx) => (
                 <div key={idx} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1 }}>
                   <div style={{
                     width: '32px', height: '32px', borderRadius: '50%',
-                    background: item.done ? '#22c55e' : item.current ? '#3b82f6' : 'rgba(255,255,255,0.06)',
-                    color: item.done || item.current ? '#fff' : 'var(--text-muted)',
+                    background: item.rejected ? '#ef4444' : item.done ? '#22c55e' : item.current ? '#3b82f6' : 'rgba(255,255,255,0.06)',
+                    color: item.rejected || item.done || item.current ? '#fff' : 'var(--text-muted)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontWeight: 700, fontSize: '13px', marginBottom: '8px'
+                    fontWeight: 700, fontSize: '13px', marginBottom: '8px',
+                    boxShadow: item.rejected ? '0 0 12px rgba(239, 68, 68, 0.5)' : 'none'
                   }}>
-                    {item.done ? '✓' : item.step}
+                    {item.rejected ? '✕' : item.done ? '✓' : item.step}
                   </div>
-                  <span style={{ fontSize: '12px', fontWeight: item.current ? 700 : 500, color: item.current ? 'var(--accent)' : 'var(--text-primary)', textAlign: 'center' }}>
+                  <span style={{ fontSize: '12px', fontWeight: item.current || item.rejected ? 700 : 500, color: item.rejected ? '#f87171' : item.current ? 'var(--accent)' : 'var(--text-primary)', textAlign: 'center' }}>
                     {item.title}
                   </span>
                 </div>
@@ -603,6 +609,32 @@ export default function VendorPurchaseOrders({ vendor, rfqs = [], quotations = [
           </section>
 
           {/* ── Vendor Decision & Order Fulfillment Panels ── */}
+          {(selectedPo.status === 'rejected_by_finance' || selectedPo.status === 'rejected') && (
+            <div className="table-card decision-card" style={{ padding: '24px', background: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.3)', marginBottom: '20px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                <span style={{ fontSize: '24px' }}>⚠️</span>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '18px', color: '#f87171' }}>Invoice Rejected by Finance Department</h3>
+                  <p style={{ margin: '4px 0 0', fontSize: '13.5px', color: 'var(--text-secondary)' }}>
+                    Finance Remarks: <strong>{selectedPo.rejection_reason || selectedPo.procurement_notes || 'Invoice rejected by Finance.'}</strong>
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+          {['paid', 'completed', 'closed'].includes(selectedPo.status) && (
+            <div className="table-card decision-card" style={{ padding: '24px', background: 'rgba(16, 185, 129, 0.08)', border: '1px solid rgba(16, 185, 129, 0.3)', marginBottom: '20px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                <span style={{ fontSize: '24px' }}>🎉</span>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '18px', color: '#10b981' }}>Order Paid & Completed</h3>
+                  <p style={{ margin: '4px 0 0', fontSize: '13.5px', color: 'var(--text-secondary)' }}>
+                    Payment has been successfully processed and disbursed by the Finance Department. This Purchase Order is fully closed and complete.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
           {selectedPo.status === 'issued' && (
             <div className="table-card decision-card" style={{ padding: '24px', background: 'rgba(59, 130, 246, 0.05)', border: '1px solid rgba(59, 130, 246, 0.3)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
