@@ -465,7 +465,7 @@ export default function ProcurementDashboard({ onLogout, currentUser, onToggleRo
                     onChange={e => setSearchQuery(e.target.value)}
                   />
                 </div>
-                <div style={{ display: 'flex', background: 'rgba(255, 255, 255, 0.05)', padding: '4px', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
+                <div style={{ display: 'flex', background: 'var(--bg-elevated)', padding: '4px', borderRadius: '8px', border: '1px solid var(--border-default)' }}>
                   <button
                     className={`btn-ghost ${ownershipFilter === 'ALL' ? 'btn-primary' : ''}`}
                     style={{ padding: '6px 16px', fontSize: '13px', borderRadius: '6px', cursor: 'pointer' }}
@@ -605,7 +605,7 @@ export default function ProcurementDashboard({ onLogout, currentUser, onToggleRo
                     onChange={e => setSearchQuery(e.target.value)}
                   />
                 </div>
-                <div style={{ display: 'flex', background: 'rgba(255, 255, 255, 0.05)', padding: '4px', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
+                <div style={{ display: 'flex', background: 'var(--bg-elevated)', padding: '4px', borderRadius: '8px', border: '1px solid var(--border-default)' }}>
                   <button
                     className={`btn-ghost ${ownershipFilter === 'ALL' ? 'btn-primary' : ''}`}
                     style={{ padding: '6px 16px', fontSize: '13px', borderRadius: '6px', cursor: 'pointer' }}
@@ -780,6 +780,17 @@ export default function ProcurementDashboard({ onLogout, currentUser, onToggleRo
           ) : (
           /* ── Main Dashboard & RFQ Management Views ── */
           <>
+          {/* Welcome Banner */}
+          <div className="dashboard-hero-banner">
+            <div className="dashboard-hero-badge">
+              🧭 24/7 Corporate Procurement Portal
+            </div>
+            <h2 className="dashboard-hero-title">Welcome back, {currentUser?.name || users[0]?.name || 'Alex Mercer'}!</h2>
+            <p className="dashboard-hero-desc">
+              Manage requests for quotations, collaborate with vendors, compare quotation proposals with AI analysis, and issue purchase orders. All system components are optimized for light, rapid operations.
+            </p>
+          </div>
+
           {/* Stats Row */}
           <section className="stats-row">
             <div className="stat-card stat-blue">
@@ -833,17 +844,17 @@ export default function ProcurementDashboard({ onLogout, currentUser, onToggleRo
               </div>
 
               {/* Ownership Filter Tabs: All RFQs vs My RFQs */}
-              <div style={{ display: 'flex', background: 'rgba(255, 255, 255, 0.05)', padding: '4px', borderRadius: '8px', border: '1px solid var(--border-subtle)' }}>
+              <div style={{ display: 'flex', background: 'rgba(255, 255, 255, 0.03)', padding: '4px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-subtle)', gap: '4px' }}>
                 <button
-                  className={`btn-ghost ${ownershipFilter === 'ALL' ? 'btn-primary' : ''}`}
-                  style={{ padding: '6px 16px', fontSize: '13px', borderRadius: '6px', cursor: 'pointer' }}
+                  className={ownershipFilter === 'ALL' ? 'pill pill-active' : 'pill'}
+                  style={{ padding: '6px 16px', fontSize: '13px', borderRadius: 'var(--radius-md)', cursor: 'pointer' }}
                   onClick={() => setOwnershipFilter('ALL')}
                 >
                   🏢 All RFQs ({companyRfqsCount})
                 </button>
                 <button
-                  className={`btn-ghost ${ownershipFilter === 'MY' ? 'btn-primary' : ''}`}
-                  style={{ padding: '6px 16px', fontSize: '13px', borderRadius: '6px', cursor: 'pointer' }}
+                  className={ownershipFilter === 'MY' ? 'pill pill-active' : 'pill'}
+                  style={{ padding: '6px 16px', fontSize: '13px', borderRadius: 'var(--radius-md)', cursor: 'pointer' }}
                   onClick={() => setOwnershipFilter('MY')}
                 >
                   👤 My RFQs ({myRfqsCount})
@@ -1050,7 +1061,7 @@ export default function ProcurementDashboard({ onLogout, currentUser, onToggleRo
               <div className="field-row">
                 <div className="field">
                   <label>Department <span className="req">*</span> <span style={{ fontSize: '11px', color: '#38bdf8', fontWeight: 500 }}>(Locked to your department)</span></label>
-                  <select name="department" value={formData.department} onChange={handleInputChange} disabled style={{ cursor: 'not-allowed', background: 'rgba(255, 255, 255, 0.04)', opacity: 0.85 }}>
+                  <select name="department" value={formData.department} onChange={handleInputChange} disabled style={{ cursor: 'not-allowed', background: 'var(--bg-elevated)', opacity: 0.85 }}>
                     {departments.map(d => (
                       <option key={d.id} value={d.id}>{d.name} ({d.code})</option>
                     ))}
@@ -1203,7 +1214,7 @@ export default function ProcurementDashboard({ onLogout, currentUser, onToggleRo
                 <div className="field-row">
                   <div className="field">
                     <label>Department <span className="req">*</span> <span style={{ fontSize: '11px', color: '#38bdf8', fontWeight: 500 }}>(Locked)</span></label>
-                    <select name="department" value={editData.department} onChange={handleEditChange} disabled style={{ cursor: 'not-allowed', background: 'rgba(255, 255, 255, 0.04)', opacity: 0.85 }}>
+                    <select name="department" value={editData.department} onChange={handleEditChange} disabled style={{ cursor: 'not-allowed', background: 'var(--bg-elevated)', opacity: 0.85 }}>
                       {departments.map(d => (
                         <option key={d.id} value={d.id}>{d.name} ({d.code})</option>
                       ))}
@@ -1297,7 +1308,7 @@ export default function ProcurementDashboard({ onLogout, currentUser, onToggleRo
 
                 <div className="field full">
                   <label>Description</label>
-                  <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.6, background: 'rgba(255,255,255,0.02)', padding: '12px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)' }}>
+                  <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.6, background: 'var(--bg-elevated)', padding: '12px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-default)' }}>
                     {selectedRfq.description}
                   </p>
                 </div>

@@ -48,7 +48,7 @@ function HBar({ label, value, max, color, suffix = '' }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '12.5px' }}>
       <span style={{ width: '140px', color: 'var(--text-secondary)', flexShrink: 0 }}>{label}</span>
-      <div style={{ flex: 1, height: '8px', background: 'rgba(255,255,255,0.06)', borderRadius: '4px', overflow: 'hidden' }}>
+      <div style={{ flex: 1, height: '8px', background: 'rgba(15,23,42,0.06)', borderRadius: '4px', overflow: 'hidden' }}>
         <div style={{ width: `${(value / max) * 100}%`, height: '100%', background: color, borderRadius: '4px', transition: 'width 0.5s ease' }} />
       </div>
       <span style={{ width: '50px', textAlign: 'right', fontWeight: 600, color: 'var(--text-primary)' }}>{value}{suffix}</span>
@@ -70,10 +70,10 @@ function ComparisonBarChart({ title, dataPoints, color, suffix = '', reverseIsBe
         {dataPoints.map((d, i) => (
           <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '12px' }}>
             <span style={{ width: '100px', color: 'var(--text-secondary)', flexShrink: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{d.label}</span>
-            <div style={{ flex: 1, height: '18px', background: 'rgba(255,255,255,0.04)', borderRadius: '4px', overflow: 'hidden', position: 'relative' }}>
+            <div style={{ flex: 1, height: '18px', background: 'rgba(15,23,42,0.04)', borderRadius: '4px', overflow: 'hidden', position: 'relative' }}>
               <div style={{
                 width: `${(d.value / max) * 100}%`, height: '100%', borderRadius: '4px',
-                background: i === bestIdx ? color : 'rgba(255,255,255,0.1)',
+                background: i === bestIdx ? color : 'rgba(15,23,42,0.1)',
                 transition: 'width 0.5s ease',
               }} />
             </div>
@@ -93,6 +93,111 @@ export default function QuotationComparison({ rfq, quotations, vendors, currentU
   const [selectionReason, setSelectionReason] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [showPredictionDetails, setShowPredictionDetails] = useState(false);
+  const [expandedRows, setExpandedRows] = useState({});
+
+  const toggleRow = (id) => {
+    setExpandedRows(prev => ({
+      ...prev,
+      [id]: !prev[id]
+    }));
+  };
+
+  const handleDownloadPDF = (e, q) => {
+    e.preventDefault();
+    const isMock = !q.attachment_url || q.attachment_url.includes('vendorbridge.s3.amazonaws.com') || q.attachment_url === '#';
+    
+    if (isMock) {
+      const printWindow = window.open('', '_blank');
+      if (printWindow) {
+        const logoColor = logoColors[q.vendor.vendor_code] || '#3b82f6';
+        const unitP = parseFloat(q.unit_price) || 0;
+        const qty = rfq.quantity || 1;
+        const subT = parseFloat(q.subtotal) || (unitP * qty);
+        const cgstVal = parseFloat(q.cgst_amount) || (q.tax_type === 'GST_9_9' ? subT * 0.09 : 0);
+        const sgstVal = parseFloat(q.sgst_amount) || (q.tax_type === 'GST_9_9' ? subT * 0.09 : 0);
+        const igstVal = parseFloat(q.igst_amount) || (q.tax_type === 'IGST_18' ? subT * 0.18 : 0);
+        const grandT = parseFloat(q.total_price) || (subT + cgstVal + sgstVal + igstVal);
+
+        printWindow.document.write(`
+          <html>
+            <head>
+              <title>Quotation Specification - ${q.vendor.name}</title>
+              <style>
+                body { font-family: 'Outfit', -apple-system, sans-serif; padding: 40px; color: #0f172a; background: #ffffff; line-height: 1.5; }
+                .header { display: flex; justify-content: space-between; border-bottom: 2px solid #e2e8f0; padding-bottom: 20px; margin-bottom: 30px; }
+                .logo-box { background: ${logoColor}; color: #ffffff; padding: 12px 24px; border-radius: 8px; font-weight: bold; font-size: 20px; }
+                .details { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; margin-bottom: 40px; }
+                .details h4 { margin: 0 0 6px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; }
+                .details p { margin: 0; font-size: 14px; font-weight: 600; }
+                .table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
+                .table th, .table td { padding: 12px; border-bottom: 1px solid #e2e8f0; text-align: left; }
+                .table th { background: #f8fafc; font-size: 12px; text-transform: uppercase; color: #475569; }
+                .totals { margin-left: auto; width: 300px; display: flex; flex-direction: column; gap: 8px; font-size: 14px; }
+                .totals div { display: flex; justify-content: space-between; }
+                .totals .grand { font-weight: bold; font-size: 16px; border-top: 2px solid #0f172a; padding-top: 8px; margin-top: 4px; }
+                .badge { display: inline-block; padding: 4px 10px; border-radius: 99px; font-size: 11px; font-weight: bold; text-transform: uppercase; background: #e0f2fe; color: #2563eb; }
+                @media print {
+                  body { padding: 0; }
+                  button { display: none; }
+                }
+              </style>
+            </head>
+            <body>
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <span class="badge">Official Quotation Proposal</span>
+                <button onclick="window.print()" style="padding: 8px 16px; background: #2563eb; color: #ffffff; border: none; border-radius: 99px; font-weight: bold; cursor: pointer;">Print Document</button>
+              </div>
+              <div class="header">
+                <div>
+                  <h1 style="margin: 0; font-size: 28px; font-weight: 800;">VendorBridge</h1>
+                  <p style="margin: 4px 0 0; color: #64748b; font-size: 13px;">RFQ: ${rfq.rfq_number} - ${rfq.title}</p>
+                </div>
+                <div class="logo-box">${q.vendor.name}</div>
+              </div>
+              <div class="details">
+                <div>
+                  <h4>Quoted By Vendor</h4>
+                  <p>${q.vendor.name}</p>
+                  <p style="font-weight: normal; color: #475569; font-size: 13px;">Code: ${q.vendor.vendor_code} | Rating: ⭐ ${q.vendor.rating}</p>
+                </div>
+                <div>
+                  <h4>Quotation Summary</h4>
+                  <p>Validity: ${q.valid_until || '20 Aug 2026'}</p>
+                  <p style="font-weight: normal; color: #475569; font-size: 13px;">Payment Terms: ${q.payment_terms || 'Net 30'}</p>
+                </div>
+              </div>
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Item Description</th>
+                    <th style="text-align: right;">Quantity</th>
+                    <th style="text-align: right;">Quoted Unit Price (₹)</th>
+                    <th style="text-align: right;">Total Subtotal (₹)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Specification requirements for RFQ request ${rfq.title}</td>
+                    <td style="text-align: right;">${qty}</td>
+                    <td style="text-align: right;">₹${unitP.toLocaleString('en-IN')}</td>
+                    <td style="text-align: right;">₹${subT.toLocaleString('en-IN')}</td>
+                  </tr>
+                </tbody>
+              </table>
+              <div class="totals">
+                <div><span>Subtotal:</span><span>₹${subT.toLocaleString('en-IN')}</span></div>
+                <div><span>Taxes (GST):</span><span>₹${(cgstVal + sgstVal + igstVal).toLocaleString('en-IN')}</span></div>
+                <div class="grand"><span>Grand Total:</span><span>₹${grandT.toLocaleString('en-IN')}</span></div>
+              </div>
+            </body>
+          </html>
+        `);
+        printWindow.document.close();
+      }
+    } else {
+      window.open(q.attachment_url, '_blank');
+    }
+  };
 
   // Helper to check ownership
   const isOwnRfq = (rfqObj) => {
@@ -252,9 +357,32 @@ export default function QuotationComparison({ rfq, quotations, vendors, currentU
             </div>
           </div>
           <div className="qc-ai-right">
-            <div className="qc-ai-metric">
-              <div className="qc-ai-circle" style={{ '--pct': `${recommended.ml.confidence}%` }}>
-                <span className="qc-ai-pct">{recommended.ml.confidence}%</span>
+            <div className="qc-ai-metric" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+              <div style={{ position: 'relative', width: 90, height: 90, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <svg width="90" height="90" viewBox="0 0 100 100" style={{ transform: 'rotate(-90deg)' }}>
+                  <circle cx="50" cy="50" r="40" stroke="rgba(15,23,42,0.06)" strokeWidth="8" fill="transparent" />
+                  <circle
+                    cx="50"
+                    cy="50"
+                    r="40"
+                    stroke="url(#aiGrad)"
+                    strokeWidth="8"
+                    fill="transparent"
+                    strokeDasharray="251.2"
+                    strokeDashoffset={251.2 - (251.2 * recommended.ml.confidence) / 100}
+                    strokeLinecap="round"
+                    style={{ transition: 'stroke-dashoffset 0.8s ease-in-out' }}
+                  />
+                  <defs>
+                    <linearGradient id="aiGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stopColor="#3b82f6" />
+                      <stop offset="100%" stopColor="#8b5cf6" />
+                    </linearGradient>
+                  </defs>
+                </svg>
+                <div style={{ position: 'absolute', fontSize: '18px', fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.5px' }}>
+                  {recommended.ml.confidence}%
+                </div>
               </div>
               <span className="qc-ai-metric-label">AI Confidence</span>
             </div>
@@ -297,25 +425,12 @@ export default function QuotationComparison({ rfq, quotations, vendors, currentU
             <table className="data-table qc-table">
               <thead>
                 <tr>
-                  <th style={{ position: 'sticky', left: 0, background: 'var(--bg-surface)', zIndex: 2 }}>Vendor</th>
+                  <th style={{ width: '40px', textAlign: 'center' }}></th>
+                  <th style={{ position: 'sticky', left: 0, background: '#f8fafc', zIndex: 2 }}>Vendor</th>
                   <th>Unit Price</th>
-                  <th>Subtotal</th>
-                  <th>CGST (9%)</th>
-                  <th>SGST (9%)</th>
-                  <th>IGST (18%)</th>
                   <th>Grand Total</th>
                   <th>Delivery</th>
-                  <th>Warranty</th>
-                  <th>Valid Until</th>
-                  <th>Payment Terms</th>
-                  <th>Attachment</th>
-                  <th className="th-divider">Rating</th>
-                  <th>Success %</th>
-                  <th>On-time %</th>
-                  <th>Avg Delivery</th>
-                  <th>Business Value</th>
                   <th className="th-divider">AI Score</th>
-                  <th>Confidence</th>
                   <th className="th-actions">Actions</th>
                 </tr>
               </thead>
@@ -329,76 +444,160 @@ export default function QuotationComparison({ rfq, quotations, vendors, currentU
                   const sgstVal = parseFloat(q.sgst_amount) || (q.tax_type === 'GST_9_9' ? subT * 0.09 : 0);
                   const igstVal = parseFloat(q.igst_amount) || (q.tax_type === 'IGST_18' ? subT * 0.18 : 0);
                   const grandT = parseFloat(q.total_price) || (subT + cgstVal + sgstVal + igstVal);
+                  const totalTax = cgstVal + sgstVal + igstVal;
 
                   return (
-                    <tr key={q.id} className={isRecommended ? 'qc-recommended-row' : ''}>
-                      <td style={{ position: 'sticky', left: 0, background: isRecommended ? 'rgba(59,130,246,0.06)' : 'var(--bg-surface)', zIndex: 1, minWidth: '180px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                          <div className="qc-vendor-logo" style={{ background: logoColors[q.vendor.vendor_code] || '#64748b' }}>
-                            {initials(q.vendor.name)}
+                    <React.Fragment key={q.id}>
+                      <tr className={isRecommended ? 'qc-recommended-row' : ''}>
+                        <td style={{ textAlign: 'center', cursor: 'pointer' }} onClick={() => toggleRow(q.id)}>
+                          <span style={{ fontSize: '13px', color: 'var(--text-secondary)', display: 'block', padding: '4px' }}>
+                            {expandedRows[q.id] ? '▼' : '▶'}
+                          </span>
+                        </td>
+                        <td style={{ position: 'sticky', left: 0, background: isRecommended ? 'rgba(37, 99, 235, 0.04)' : '#ffffff', zIndex: 1, minWidth: '180px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <div className="qc-vendor-logo" style={{ background: logoColors[q.vendor.vendor_code] || '#64748b' }}>
+                              {initials(q.vendor.name)}
+                            </div>
+                            <div>
+                              <span className="cell-primary">{q.vendor.name}</span>
+                              <span className="cell-sub">{q.vendor.vendor_code}</span>
+                            </div>
                           </div>
-                          <div>
-                            <span className="cell-primary">{q.vendor.name}</span>
-                            <span className="cell-sub">{q.vendor.vendor_code}</span>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="num-cell">₹{unitP.toLocaleString('en-IN')}</td>
-                      <td className="num-cell">₹{subT.toLocaleString('en-IN')}</td>
-                      <td className="num-cell" style={{ color: cgstVal ? 'var(--text-secondary)' : 'var(--text-muted)' }}>
-                        {cgstVal ? `₹${cgstVal.toLocaleString('en-IN')}` : '—'}
-                      </td>
-                      <td className="num-cell" style={{ color: sgstVal ? 'var(--text-secondary)' : 'var(--text-muted)' }}>
-                        {sgstVal ? `₹${sgstVal.toLocaleString('en-IN')}` : '—'}
-                      </td>
-                      <td className="num-cell" style={{ color: igstVal ? 'var(--text-secondary)' : 'var(--text-muted)' }}>
-                        {igstVal ? `₹${igstVal.toLocaleString('en-IN')}` : '—'}
-                      </td>
-                      <td className="num-cell" style={{ fontWeight: 700, color: 'var(--accent)' }}>
-                        ₹{grandT.toLocaleString('en-IN')}
-                      </td>
-                      <td>{q.delivery_days} days</td>
-                      <td><span className="badge badge-status-open">{q.warranty || '2 Years'}</span></td>
-                      <td className="date-cell">{q.valid_until || '20 Aug 2026'}</td>
-                      <td>{q.payment_terms || 'Net 30'}</td>
-                      <td>
-                        <a href={q.attachment_url || '#'} target="_blank" rel="noreferrer" className="download-link" style={{ fontSize: '11.5px', whiteSpace: 'nowrap' }}>
-                          📄 Download PDF
-                        </a>
-                      </td>
-                      <td className="th-divider"><span className="badge badge-priority-medium">⭐ {q.vendor.rating}</span></td>
-                      <td className="num-cell">{q.ml.quoteSuccessRate}%</td>
-                      <td className="num-cell">{q.ml.onTimeDelivery}%</td>
-                      <td>{q.ml.avgDeliveryDays}d</td>
-                      <td>{q.ml.totalBusinessValue}</td>
-                      <td className="th-divider">
-                        <span className="qc-score-pill" style={{ background: q.ml.aiScore >= 80 ? 'rgba(34,197,94,0.15)' : q.ml.aiScore >= 60 ? 'rgba(245,158,11,0.15)' : 'rgba(239,68,68,0.15)', color: q.ml.aiScore >= 80 ? '#4ade80' : q.ml.aiScore >= 60 ? '#fbbf24' : '#f87171' }}>
-                          {q.ml.aiScore}
-                        </span>
-                      </td>
-                      <td className="num-cell">{q.ml.confidence}%</td>
-                      <td className="actions-cell" style={{ whiteSpace: 'nowrap' }}>
-                        {isRecommended && <span className="qc-rec-badge">⭐ Recommended</span>}
-                        <div style={{ display: 'flex', gap: '6px', marginTop: isRecommended ? '6px' : 0 }}>
-                          <button className="btn-secondary" style={{ padding: '4px 8px', fontSize: '11px' }} onClick={() => setSelectedVendorProfile(q)}>
-                            Profile
-                          </button>
-                          {!isClosed && rfq.status !== 'completed' && isOwn && (
-                            <button className="btn-primary" style={{ padding: '4px 10px', fontSize: '11px' }} onClick={() => { setSelectionModal(q); setSelectionReason(''); }}>
-                              Select
-                            </button>
-                          )}
-                          {!isClosed && rfq.status !== 'completed' && !isOwn && (
-                            <span className="badge badge-status-draft" style={{ background: 'rgba(148, 163, 184, 0.12)', color: '#94a3b8', border: '1px solid rgba(148, 163, 184, 0.25)', fontSize: '10px' }}>
-                              View Only
+                        </td>
+                        <td className="num-cell">₹{unitP.toLocaleString('en-IN')}</td>
+                        <td className="num-cell" style={{ fontWeight: 700, color: 'var(--accent)' }}>
+                          ₹{grandT.toLocaleString('en-IN')}
+                        </td>
+                        <td>{q.delivery_days}d</td>
+                        <td className="th-divider">
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <svg width="24" height="24" viewBox="0 0 36 36" style={{ transform: 'rotate(-90deg)', flexShrink: 0 }}>
+                              <circle cx="18" cy="18" r="14" stroke="rgba(15,23,42,0.06)" strokeWidth="3.5" fill="transparent" />
+                              <circle
+                                cx="18"
+                                cy="18"
+                                r="14"
+                                stroke={q.ml.aiScore >= 80 ? '#10b981' : q.ml.aiScore >= 60 ? '#fbbf24' : '#ef4444'}
+                                strokeWidth="3.5"
+                                fill="transparent"
+                                strokeDasharray="87.9"
+                                strokeDashoffset={87.9 - (87.9 * q.ml.aiScore) / 100}
+                                strokeLinecap="round"
+                              />
+                            </svg>
+                            <span style={{ fontWeight: 700, fontSize: '13px', color: q.ml.aiScore >= 80 ? '#10b981' : q.ml.aiScore >= 60 ? '#fbbf24' : '#ef4444' }}>
+                              {q.ml.aiScore}
                             </span>
-                          )}
-                          {isClosed && (
-                            <span style={{ fontSize: '11px', color: 'var(--text-muted)', alignSelf: 'center' }}>🔒 Closed</span>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
+                          </div>
+                        </td>
+                        <td className="actions-cell" style={{ whiteSpace: 'nowrap' }}>
+                          {isRecommended && <span className="qc-rec-badge" style={{ verticalAlign: 'middle', marginRight: '6px' }}>⭐ Recommended</span>}
+                          <div style={{ display: 'inline-flex', gap: '6px' }}>
+                            <button className="btn-secondary" style={{ padding: '4px 8px', fontSize: '11px' }} onClick={() => setSelectedVendorProfile(q)}>
+                              Profile
+                            </button>
+                            {!isClosed && rfq.status !== 'completed' && isOwn && (
+                              <button className="btn-action btn-submit" style={{ padding: '4px 8px', fontSize: '11px' }} onClick={() => setSelectionModal(q)}>
+                                Award PO
+                              </button>
+                            )}
+                            {!isClosed && rfq.status !== 'completed' && !isOwn && (
+                              <span className="badge badge-status-draft" style={{ background: 'rgba(148, 163, 184, 0.12)', color: '#94a3b8', border: '1px solid rgba(148, 163, 184, 0.25)', fontSize: '10px', verticalAlign: 'middle' }}>
+                                View Only
+                              </span>
+                            )}
+                            {isClosed && (
+                              <span style={{ fontSize: '11px', color: 'var(--text-muted)', alignSelf: 'center' }}>🔒 Closed</span>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                      {expandedRows[q.id] && (
+                        <tr>
+                          <td colSpan="7" style={{ padding: '0px', background: '#f8fafc', borderBottom: '1px solid var(--border-default)' }}>
+                            <div style={{ padding: '20px 24px', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '32px' }}>
+                              
+                              {/* Group 1: Financial & Tax Details */}
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                <span style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Financial Details</span>
+                                <div style={{ fontSize: '13px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                    <span style={{ color: 'var(--text-secondary)' }}>Unit Price:</span>
+                                    <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>₹{unitP.toLocaleString('en-IN')}</span>
+                                  </div>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                    <span style={{ color: 'var(--text-secondary)' }}>Subtotal:</span>
+                                    <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>₹{subT.toLocaleString('en-IN')}</span>
+                                  </div>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                    <span style={{ color: 'var(--text-secondary)' }}>Taxes (GST):</span>
+                                    <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{totalTax > 0 ? `₹${totalTax.toLocaleString('en-IN')}` : '—'}</span>
+                                  </div>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid var(--border-default)', paddingTop: '8px', marginTop: '2px' }}>
+                                    <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>Grand Total:</span>
+                                    <span style={{ fontWeight: 700, color: 'var(--accent)' }}>₹{grandT.toLocaleString('en-IN')}</span>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Group 2: Quotation Terms & Contract */}
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                <span style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Terms & Validity</span>
+                                <div style={{ fontSize: '13px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                    <span style={{ color: 'var(--text-secondary)' }}>Warranty Period:</span>
+                                    <span style={{ fontWeight: 600, color: 'var(--success)' }}>{q.warranty || '2 Years'}</span>
+                                  </div>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                    <span style={{ color: 'var(--text-secondary)' }}>Validity Until:</span>
+                                    <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{q.valid_until || '20 Aug 2026'}</span>
+                                  </div>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                    <span style={{ color: 'var(--text-secondary)' }}>Payment Terms:</span>
+                                    <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{q.payment_terms || 'Net 30'}</span>
+                                  </div>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '2px' }}>
+                                    <span style={{ color: 'var(--text-secondary)' }}>Quotation Attachment:</span>
+                                    <a href="#" onClick={(e) => handleDownloadPDF(e, q)} className="badge badge-status-draft" style={{ background: 'rgba(37, 99, 235, 0.05)', color: 'var(--accent)', border: '1px solid rgba(37, 99, 235, 0.12)', textDecoration: 'none', padding: '3px 8px', fontSize: '11px', display: 'inline-block' }}>
+                                      📄 PDF Document
+                                    </a>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Group 3: AI & Historical Performance */}
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                <span style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Vendor Historical Analytics</span>
+                                <div style={{ fontSize: '13px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                    <span style={{ color: 'var(--text-secondary)' }}>Vendor Rating:</span>
+                                    <span style={{ fontWeight: 700, color: '#eab308' }}>⭐ {q.vendor.rating} / 5.0</span>
+                                  </div>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                    <span style={{ color: 'var(--text-secondary)' }}>Quote Success Rate:</span>
+                                    <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{q.ml.quoteSuccessRate}%</span>
+                                  </div>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                    <span style={{ color: 'var(--text-secondary)' }}>On-time Delivery %:</span>
+                                    <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{q.ml.onTimeDelivery}%</span>
+                                  </div>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                    <span style={{ color: 'var(--text-secondary)' }}>Avg Delivery (Days):</span>
+                                    <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{q.ml.avgDeliveryDays} days</span>
+                                  </div>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                    <span style={{ color: 'var(--text-secondary)' }}>AI Confidence Level:</span>
+                                    <span style={{ fontWeight: 600, color: 'var(--purple)' }}>{q.ml.confidence}%</span>
+                                  </div>
+                                </div>
+                              </div>
+
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
                   );
                 })}
               </tbody>
@@ -458,7 +657,7 @@ export default function QuotationComparison({ rfq, quotations, vendors, currentU
           {featureImportance.map((f, i) => (
             <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <span style={{ width: '160px', fontSize: '13px', color: 'var(--text-secondary)', flexShrink: 0 }}>{f.feature}</span>
-              <div style={{ flex: 1, height: '24px', background: 'rgba(255,255,255,0.04)', borderRadius: '6px', overflow: 'hidden', position: 'relative' }}>
+              <div style={{ flex: 1, height: '24px', background: 'rgba(15,23,42,0.04)', borderRadius: '6px', overflow: 'hidden', position: 'relative' }}>
                 <div style={{ width: `${(f.weight / 35) * 100}%`, height: '100%', background: `${f.color}30`, borderRadius: '6px', borderLeft: `3px solid ${f.color}`, display: 'flex', alignItems: 'center', paddingLeft: '8px' }}>
                   <span style={{ fontSize: '11px', fontWeight: 700, color: f.color }}>{f.weight}%</span>
                 </div>
@@ -512,14 +711,14 @@ export default function QuotationComparison({ rfq, quotations, vendors, currentU
               </div>
 
               {/* Financial & Quotation Details */}
-              <div className="table-card" style={{ padding: '16px', marginTop: '14px', background: 'rgba(255,255,255,0.02)' }}>
+              <div className="table-card" style={{ padding: '16px', marginTop: '14px', background: 'var(--bg-elevated)' }}>
                 <span className="table-title" style={{ marginBottom: '12px', display: 'block' }}>Quotation Financial & Tax Details</span>
                 <div className="field-row">
                   <div className="field"><label>Warranty Period</label><p style={{ fontSize: '13px', fontWeight: 600, color: 'var(--accent)' }}>{selectedVendorProfile.warranty || '2 Years'}</p></div>
                   <div className="field"><label>Quotation Valid Until</label><p style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>{selectedVendorProfile.valid_until || '20 Aug 2026'}</p></div>
                   <div className="field">
                     <label>Quotation Attachment</label>
-                    <a href={selectedVendorProfile.attachment_url || '#'} target="_blank" rel="noreferrer" className="download-link" style={{ fontSize: '13px' }}>
+                    <a href="#" onClick={(e) => handleDownloadPDF(e, selectedVendorProfile)} className="download-link" style={{ fontSize: '13px' }}>
                       📄 Download quotation.pdf
                     </a>
                   </div>

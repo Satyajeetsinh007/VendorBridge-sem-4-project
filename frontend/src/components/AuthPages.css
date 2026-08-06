@@ -16,7 +16,8 @@
   position: relative;
   width: 42%;
   min-width: 340px;
-  background: linear-gradient(145deg, #0f0f23 0%, #13131f 40%, #0a0a18 100%);
+  background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 50%, #6d28d9 100%);
+  border-right: 1px solid var(--border-default);
   display: flex;
   align-items: stretch;
   overflow: hidden;
@@ -207,11 +208,11 @@
 /* ── Account Type Toggle ───────────────────────────── */
 .auth-type-toggle {
   display: flex;
-  background: var(--bg-elevated);
-  border: 1px solid var(--border-default);
-  border-radius: var(--radius-md);
-  padding: 3px;
-  gap: 2px;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: var(--radius-lg);
+  padding: 4px;
+  gap: 4px;
 }
 
 .auth-type-btn {
@@ -220,27 +221,27 @@
   align-items: center;
   justify-content: center;
   gap: 7px;
-  padding: 9px 16px;
+  padding: 8px 14px;
   background: transparent;
   border: none;
-  border-radius: 7px;
-  font-size: 0.85rem;
+  border-radius: var(--radius-md);
+  font-size: 0.82rem;
   font-weight: 500;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   cursor: pointer;
   transition: all var(--transition);
 }
 
 .auth-type-btn:hover {
   color: var(--text-primary);
-  background: rgba(255,255,255,0.04);
+  background: rgba(15, 23, 42, 0.04);
 }
 
 .auth-type-btn--active {
-  background: var(--bg-surface);
-  color: var(--text-primary);
-  box-shadow: 0 1px 4px rgba(0,0,0,0.4);
-  border: 1px solid var(--border-default);
+  background: #ffffff;
+  color: var(--accent);
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
 }
 
 /* ── Error / Success Banners ───────────────────────── */
@@ -299,10 +300,13 @@
 }
 
 .auth-label {
-  font-size: 0.8rem;
-  font-weight: 600;
+  font-size: 10px;
+  font-weight: 700;
   color: var(--text-secondary);
-  letter-spacing: 0.01em;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  display: inline-block;
+  margin-bottom: 2px;
 }
 
 .auth-required {
@@ -351,14 +355,14 @@
 /* ── Input ─────────────────────────────────────────── */
 .auth-input {
   width: 100%;
-  background: var(--bg-elevated);
+  background: #ffffff;
   border: 1px solid var(--border-default);
   border-radius: var(--radius-md);
-  padding: 10px 12px 10px 38px;
+  padding: 11px 12px 11px 38px;
   font-size: 0.875rem;
   font-family: inherit;
   color: var(--text-primary);
-  transition: border-color var(--transition), box-shadow var(--transition);
+  transition: border-color 200ms, box-shadow 200ms, background-color 200ms;
   appearance: none;
   -webkit-appearance: none;
 }
@@ -369,12 +373,13 @@
 
 .auth-input:focus {
   outline: none;
+  background: #ffffff;
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.14);
 }
 
 .auth-input:hover:not(:focus) {
-  border-color: rgba(255,255,255,0.18);
+  border-color: #cbd5e1;
 }
 
 .auth-select {
@@ -395,6 +400,7 @@
   resize: vertical;
   min-height: 70px;
   padding-top: 10px;
+  border-radius: var(--radius-lg) !important;
 }
 
 /* ── Password Toggle ───────────────────────────────── */
@@ -466,24 +472,24 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  padding: 12px 20px;
-  background: linear-gradient(135deg, #3b82f6 0%, #6366f1 100%);
-  border: none;
+  padding: 11px 20px;
+  background: linear-gradient(135deg, #2563eb 0%, #4f46e5 100%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: var(--radius-md);
-  font-size: 0.9rem;
+  font-size: 0.875rem;
   font-weight: 600;
   font-family: inherit;
   color: #fff;
   cursor: pointer;
-  transition: opacity var(--transition), transform var(--transition), box-shadow var(--transition);
-  box-shadow: 0 4px 16px rgba(59, 130, 246, 0.3);
+  transition: all 250ms cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 4px 20px rgba(37, 99, 235, 0.25);
   margin-bottom: 4px;
 }
 
 .auth-btn-primary:hover:not(:disabled) {
-  opacity: 0.92;
-  transform: translateY(-1px);
-  box-shadow: 0 6px 24px rgba(59, 130, 246, 0.4);
+  transform: translateY(-1.5px);
+  background: linear-gradient(135deg, #1d4ed8 0%, #4338ca 100%);
+  box-shadow: 0 6px 28px rgba(37, 99, 235, 0.35);
 }
 
 .auth-btn-primary:active:not(:disabled) {
@@ -491,7 +497,7 @@
 }
 
 .auth-btn-primary:disabled {
-  opacity: 0.6;
+  opacity: 0.55;
   cursor: not-allowed;
 }
 

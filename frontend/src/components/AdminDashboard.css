@@ -61,19 +61,19 @@
 /* Header Navigation Tabs */
 .admin-nav {
   display: flex;
-  gap: 8px;
-  background: var(--bg-elevated);
+  gap: 6px;
+  background: #f1f5f9;
   padding: 4px;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  border: 1px solid #e2e8f0;
 }
 
 .admin-nav-btn {
   padding: 8px 16px;
-  border-radius: 6px;
+  border-radius: var(--radius-md);
   background: transparent;
   border: none;
-  font-size: 0.85rem;
+  font-size: 0.82rem;
   font-weight: 500;
   color: var(--text-secondary);
   cursor: pointer;
@@ -85,12 +85,14 @@
 
 .admin-nav-btn:hover {
   color: var(--text-primary);
+  background: rgba(15, 23, 42, 0.03);
 }
 
 .admin-nav-btn.active {
-  background: var(--bg-surface);
-  color: var(--text-primary);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  background: #ffffff;
+  color: var(--accent);
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
 }
 
 .pending-indicator {
@@ -185,12 +187,38 @@
 }
 
 .admin-stat-card {
-  background: var(--bg-surface);
+  background: #ffffff;
   border: 1px solid var(--border-default);
   border-radius: var(--radius-lg);
-  padding: 20px 24px;
+  padding: 22px 24px;
   display: flex;
   flex-direction: column;
+  transition: all var(--transition);
+  box-shadow: var(--shadow-sm);
+  position: relative;
+  overflow: hidden;
+}
+
+.admin-stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--grad-brand);
+  opacity: 0;
+  transition: opacity var(--transition);
+}
+
+.admin-stat-card:hover {
+  border-color: #cbd5e1;
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.admin-stat-card:hover::before {
+  opacity: 1;
 }
 
 .stat-label {
@@ -242,12 +270,13 @@
 
 /* ── Panel Box (Card Grid) ────────────────────────── */
 .admin-panel-card {
-  background: var(--bg-surface);
+  background: #ffffff;
   border: 1px solid var(--border-default);
   border-radius: var(--radius-lg);
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  box-shadow: var(--shadow-sm);
 }
 
 .panel-header {
@@ -274,10 +303,10 @@
 .subtabs-wrap {
   display: flex;
   gap: 4px;
-  background: var(--bg-elevated);
-  padding: 3px;
+  background: #f1f5f9;
+  padding: 4px;
   border-radius: 8px;
-  border: 1px solid var(--border-default);
+  border: 1px solid #e2e8f0;
 }
 
 .subtab-btn {
@@ -294,12 +323,14 @@
 
 .subtab-btn:hover {
   color: var(--text-primary);
+  background: rgba(15, 23, 42, 0.04);
 }
 
 .subtab-btn.active {
-  background: var(--bg-surface);
-  color: var(--text-primary);
-  box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+  background: #ffffff;
+  color: var(--accent);
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
 }
 
 .panel-body {
@@ -326,7 +357,7 @@
 }
 
 .admin-table th {
-  background: rgba(255, 255, 255, 0.015);
+  background: #f8fafc;
   font-weight: 600;
   color: var(--text-secondary);
   text-transform: uppercase;
@@ -335,7 +366,7 @@
 }
 
 .admin-table tbody tr:hover td {
-  background: rgba(255, 255, 255, 0.01);
+  background: rgba(15, 23, 42, 0.015);
 }
 
 /* Table statuses & badges */
