@@ -2,6 +2,19 @@ import React, { useState, useEffect } from 'react';
 import { api } from '../services/api';
 import './AdminDashboard.css';
 
+/* ── SVG Icons ── */
+const Icons = {
+  Clock: () => (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/></svg>
+  ),
+  Database: () => (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+  ),
+  Users: () => (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+  ),
+};
+
 export default function AdminDashboard({ onLogout, currentUser }) {
   const [tab, setTab] = useState('pending'); // 'pending' | 'all'
   const [subTab, setSubTab] = useState('users'); // 'users' | 'vendors'
@@ -98,51 +111,91 @@ export default function AdminDashboard({ onLogout, currentUser }) {
   const totalRejected = stats.rejected_users + stats.rejected_vendors;
 
   return (
-    <div className="admin-root">
-      {/* Sidebar / Navigation Header */}
-      <header className="admin-header">
-        <div className="admin-brand">
-          <div className="admin-logo-icon">
-            <svg width="24" height="24" viewBox="0 0 28 28" fill="none">
-              <path d="M4 8L14 3L24 8V20L14 25L4 20V8Z" stroke="white" strokeWidth="2" strokeLinejoin="round"/>
-              <path d="M14 3V25" stroke="white" strokeWidth="1.5" opacity="0.3"/>
-            </svg>
-          </div>
-          <div className="admin-brand-info">
-            <span className="admin-title">VendorBridge</span>
-            <span className="admin-badge">Control Center</span>
+    <div className="layout">
+      {/* ── Sidebar ── */}
+      <aside className="sidebar">
+        <div className="sidebar-brand">
+          <img 
+            src="/logo.png" 
+            className="brand-logo" 
+            alt="VB" 
+            onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
+            style={{ objectFit: 'contain', padding: '2px', background: 'transparent' }} 
+          />
+          <div className="brand-logo" style={{ display: 'none', background: '#111827' }}>VB</div>
+          <div className="brand-text">
+            <span className="brand-name">VendorBridge</span>
+            <span className="brand-sub">Control Center</span>
           </div>
         </div>
 
-        <nav className="admin-nav">
-          <button 
-            className={`admin-nav-btn ${tab === 'pending' ? 'active' : ''}`}
-            onClick={() => setTab('pending')}
+        <nav className="sidebar-nav">
+          <span className="nav-section-label">Admin Controls</span>
+          <a
+            href="#"
+            className={`nav-link ${tab === 'pending' ? 'active' : ''}`}
+            onClick={e => { e.preventDefault(); setTab('pending'); }}
           >
-            Pending Requests 
-            {totalPending > 0 && <span className="pending-indicator">{totalPending}</span>}
-          </button>
-          <button 
-            className={`admin-nav-btn ${tab === 'all' ? 'active' : ''}`}
-            onClick={() => setTab('all')}
+            <Icons.Clock />
+            <span>Pending Requests</span>
+            {totalPending > 0 && (
+              <span className="pill-count" style={{ marginLeft: 'auto', background: 'var(--accent)' }}>{totalPending}</span>
+            )}
+          </a>
+          <a
+            href="#"
+            className={`nav-link ${tab === 'all' ? 'active' : ''}`}
+            onClick={e => { e.preventDefault(); setTab('all'); }}
           >
-            All Accounts
-          </button>
+            <Icons.Users />
+            <span>All Accounts</span>
+          </a>
         </nav>
 
-        <div className="admin-profile">
-          <div className="admin-user-info">
-            <div className="admin-avatar">A</div>
-            <div className="admin-meta">
-              <span className="admin-user-name">{currentUser?.name || 'Administrator'}</span>
-              <span className="admin-user-role">System Admin</span>
+        <div className="sidebar-footer">
+          <button className="seed-btn" onClick={fetchDashboardData}>
+            <Icons.Database /> Sync Accounts Database
+          </button>
+
+          {/* Usage limit bar matching between.indevs.in */}
+          <div className="sidebar-usage">
+            <div className="usage-label">Verifications: {totalApproved} approved</div>
+            <div className="usage-progress-bar">
+              <div className="usage-progress-fill" style={{ width: `${Math.min((totalApproved / (totalApproved + totalPending || 1)) * 100, 100)}%` }} />
             </div>
           </div>
-          <button className="admin-logout-btn" onClick={onLogout}>
-            Sign Out
-          </button>
+
+          {/* Profile widget matching between.indevs.in */}
+          <div className="sidebar-profile">
+            <div className="profile-avatar">A</div>
+            <div className="profile-meta">
+              <span className="profile-name">{currentUser?.name || 'Administrator'}</span>
+              <span className="profile-email">admin@vendorbridge.com</span>
+            </div>
+            {onLogout && (
+              <button className="profile-logout-btn" onClick={onLogout} title="Logout">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                  <polyline points="16 17 21 12 16 7" />
+                  <line x1="21" y1="12" x2="9" y2="12" />
+                </svg>
+              </button>
+            )}
+          </div>
         </div>
-      </header>
+      </aside>
+
+      {/* ── Main Area ── */}
+      <div className="main-area">
+        {/* Header */}
+        <header className="topbar">
+          <div className="topbar-left">
+            <h1 className="page-title">
+              {tab === 'pending' ? 'Pending Verifications' : 'Accounts Management'}
+            </h1>
+            <span className="breadcrumb">System &nbsp;/&nbsp; Admin Workspace</span>
+          </div>
+        </header>
 
       {/* Main Body */}
       <main className="admin-main">
@@ -472,6 +525,7 @@ export default function AdminDashboard({ onLogout, currentUser }) {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }
