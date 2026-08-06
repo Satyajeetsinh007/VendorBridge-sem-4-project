@@ -438,7 +438,14 @@ export default function FinanceDashboard({ onLogout, currentUser, onToggleRole }
       {/* ── Sidebar ── */}
       <aside className="sidebar">
         <div className="sidebar-brand">
-          <div className="brand-logo" style={{ background: '#10b981' }}>VB</div>
+          <img 
+            src="/logo.png" 
+            className="brand-logo" 
+            alt="VB" 
+            onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
+            style={{ objectFit: 'contain', padding: '2px', background: 'transparent' }} 
+          />
+          <div className="brand-logo" style={{ display: 'none', background: '#10b981' }}>VB</div>
           <div className="brand-text">
             <span className="brand-name">VendorBridge</span>
             <span className="brand-sub">Finance & Treasury</span>
@@ -471,6 +478,34 @@ export default function FinanceDashboard({ onLogout, currentUser, onToggleRole }
           <button className="seed-btn" onClick={fetchData}>
             <Icons.Database /> Refresh Data
           </button>
+
+          {/* Usage limit bar matching between.indevs.in */}
+          <div className="sidebar-usage">
+            <div className="usage-label">Paid Invoices: {paidCount} / 100</div>
+            <div className="usage-progress-bar">
+              <div className="usage-progress-fill" style={{ width: `${Math.min((paidCount / 100) * 100, 100)}%` }} />
+            </div>
+          </div>
+
+          {/* Profile widget matching between.indevs.in */}
+          <div className="sidebar-profile">
+            <div className="profile-avatar" style={{ background: '#111827' }}>
+              {((currentUser?.name || 'Sarah Jenkins'))[0]}
+            </div>
+            <div className="profile-meta">
+              <span className="profile-name">{currentUser?.name || 'Sarah Jenkins'}</span>
+              <span className="profile-email">{currentUser?.email || 'finance@vendorbridge.com'}</span>
+            </div>
+            {onLogout && (
+              <button className="profile-logout-btn" onClick={onLogout} title="Logout">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                  <polyline points="16 17 21 12 16 7" />
+                  <line x1="21" y1="12" x2="9" y2="12" />
+                </svg>
+              </button>
+            )}
+          </div>
         </div>
       </aside>
 
@@ -508,21 +543,6 @@ export default function FinanceDashboard({ onLogout, currentUser, onToggleRole }
               <Icons.Bell />
               <span className="notif-dot" style={{ background: '#10b981' }} />
             </button>
-            <div className="topbar-divider" />
-            <div className="user-chip">
-              <div className="user-avatar" style={{ background: '#10b981' }}>
-                {((currentUser?.name || 'Sarah Jenkins'))[0]}
-              </div>
-              <div className="user-meta">
-                <span className="user-name">{currentUser?.name || 'Sarah Jenkins'}</span>
-                <span className="user-role">Finance Lead</span>
-              </div>
-              {onLogout && (
-                <button onClick={onLogout} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', marginLeft: '8px', cursor: 'pointer', fontSize: '12px' }}>
-                  Logout
-                </button>
-              )}
-            </div>
           </div>
         </header>
 

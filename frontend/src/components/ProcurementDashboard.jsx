@@ -337,7 +337,14 @@ export default function ProcurementDashboard({ onLogout, currentUser, onToggleRo
       {/* ── Sidebar ── */}
       <aside className="sidebar">
         <div className="sidebar-brand">
-          <div className="brand-logo">VB</div>
+          <img 
+            src="/logo.png" 
+            className="brand-logo" 
+            alt="VB" 
+            onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
+            style={{ objectFit: 'contain', padding: '2px', background: 'transparent' }} 
+          />
+          <div className="brand-logo" style={{ display: 'none' }}>VB</div>
           <div className="brand-text">
             <span className="brand-name">VendorBridge</span>
             <span className="brand-sub">Procurement Suite</span>
@@ -371,6 +378,34 @@ export default function ProcurementDashboard({ onLogout, currentUser, onToggleRo
           <button className="seed-btn" onClick={handleSeedClick}>
             <Icons.Database /> Seed Sample Data
           </button>
+
+          {/* Usage limit bar matching between.indevs.in */}
+          <div className="sidebar-usage">
+            <div className="usage-label">Active RFQs: {openCount} / 100</div>
+            <div className="usage-progress-bar">
+              <div className="usage-progress-fill" style={{ width: `${Math.min((openCount / 100) * 100, 100)}%` }} />
+            </div>
+          </div>
+
+          {/* Profile widget matching between.indevs.in */}
+          <div className="sidebar-profile">
+            <div className="profile-avatar">
+              {((currentUser?.name || users[0]?.name || 'Alex Mercer'))[0]}
+            </div>
+            <div className="profile-meta">
+              <span className="profile-name">{currentUser?.name || users[0]?.name || 'Alex Mercer'}</span>
+              <span className="profile-email">{currentUser?.email || 'officer@vendorbridge.com'}</span>
+            </div>
+            {onLogout && (
+              <button className="profile-logout-btn" onClick={onLogout} title="Logout">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                  <polyline points="16 17 21 12 16 7" />
+                  <line x1="21" y1="12" x2="9" y2="12" />
+                </svg>
+              </button>
+            )}
+          </div>
         </div>
       </aside>
 
@@ -411,19 +446,6 @@ export default function ProcurementDashboard({ onLogout, currentUser, onToggleRo
               <Icons.Bell />
               <span className="notif-dot" />
             </button>
-            <div className="topbar-divider" />
-            <div className="user-chip">
-              <div className="user-avatar">{((currentUser?.name || users[0]?.name || 'Alex Mercer'))[0]}</div>
-              <div className="user-meta">
-                <span className="user-name">{currentUser?.name || users[0]?.name || 'Alex Mercer'}</span>
-                <span className="user-role">Procurement Officer</span>
-              </div>
-              {onLogout && (
-                <button onClick={onLogout} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', marginLeft: '8px', cursor: 'pointer', fontSize: '12px' }}>
-                  Logout
-                </button>
-              )}
-            </div>
           </div>
         </header>
 
@@ -777,258 +799,327 @@ export default function ProcurementDashboard({ onLogout, currentUser, onToggleRo
                 </form>
               </div>
             </div>
+          ) : currentView === 'dashboard' ? (
+            /* ── High-Level Dashboard View ── */
+            <>
+              {/* Welcome Banner */}
+              <div className="dashboard-hero-banner">
+                <div className="dashboard-hero-badge">
+                  🧭 24/7 Corporate Procurement Portal
+                </div>
+                <h2 className="dashboard-hero-title">Welcome back, {currentUser?.name || users[0]?.name || 'Alex Mercer'}!</h2>
+                <p className="dashboard-hero-desc">
+                  Manage requests for quotations, collaborate with vendors, compare quotation proposals with AI analysis, and issue purchase orders. All system components are optimized for light, rapid operations.
+                </p>
+              </div>
+
+              {/* Stats Row */}
+              <section className="stats-row">
+                <div className="stat-card stat-blue">
+                  <div className="stat-header">
+                    <span className="stat-label">My RFQs</span>
+                    <div className="stat-icon-wrap"><Icons.FileText /></div>
+                  </div>
+                  <div className="stat-value">{myRfqsCount}</div>
+                  <span className="stat-sub">Created by you</span>
+                </div>
+
+                <div className="stat-card stat-zinc">
+                  <div className="stat-header">
+                    <span className="stat-label">Company RFQs</span>
+                    <div className="stat-icon-wrap"><Icons.Inbox /></div>
+                  </div>
+                  <div className="stat-value">{companyRfqsCount}</div>
+                  <span className="stat-sub">Across all officers</span>
+                </div>
+
+                <div className="stat-card stat-amber">
+                  <div className="stat-header">
+                    <span className="stat-label">Pending Approval</span>
+                    <div className="stat-icon-wrap"><Icons.Clock /></div>
+                  </div>
+                  <div className="stat-value">{pendingCount}</div>
+                  <span className="stat-sub">Across the company</span>
+                </div>
+
+                <div className="stat-card stat-green">
+                  <div className="stat-header">
+                    <span className="stat-label">Open RFQs</span>
+                    <div className="stat-icon-wrap"><Icons.CheckCircle /></div>
+                  </div>
+                  <div className="stat-value">{openCount}</div>
+                  <span className="stat-sub">Across the company</span>
+                </div>
+              </section>
+
+              {/* Quick Actions & Recent Activity layout */}
+              <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '20px', alignItems: 'start' }}>
+                {/* Recent RFQs summary card */}
+                <section className="table-card" style={{ boxShadow: 'var(--shadow-sm)' }}>
+                  <div className="table-header-bar">
+                    <span className="table-title">Recent Activity Requests</span>
+                    <button className="btn-secondary" style={{ padding: '4px 10px', fontSize: '11px' }} onClick={() => setCurrentView('rfq-management')}>
+                      View Directory →
+                    </button>
+                  </div>
+                  <div className="table-scroll">
+                    <table className="data-table">
+                      <thead>
+                        <tr>
+                          <th>RFQ #</th>
+                          <th>Title</th>
+                          <th>Created By</th>
+                          <th>Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {rfqs.slice(0, 5).length === 0 ? (
+                          <tr>
+                            <td colSpan="4" className="empty-state" style={{ padding: '30px' }}>No RFQs created yet.</td>
+                          </tr>
+                        ) : (
+                          rfqs.slice(0, 5).map(rfq => (
+                            <tr key={rfq.id} onClick={() => openRfqDetail(rfq)} style={{ cursor: 'pointer' }}>
+                              <td><span className="mono-text">{rfq.rfq_number}</span></td>
+                              <td><span className="cell-primary">{rfq.title}</span></td>
+                              <td>{rfq.created_by_details?.name || rfq.created_by_name || 'Alex Mercer'}</td>
+                              <td><span className={`badge badge-status-${rfq.status}`}>{statusLabel(rfq.status)}</span></td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </section>
+
+                {/* Quick actions panel card */}
+                <div className="table-card info-card" style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  <h3 className="panel-title" style={{ fontSize: '1.05rem', fontWeight: 700 }}>Quick Tasks</h3>
+                  <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                    Quickly launch RFQ creation or review bidding status.
+                  </p>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    <button className="btn-primary" onClick={handleOpenCreateModal} style={{ width: '100%', justifyContent: 'center' }}>
+                      <Icons.Plus /> New RFQ
+                    </button>
+                    <button className="btn-secondary" onClick={() => setCurrentView('quotations')} style={{ width: '100%', justifyContent: 'center' }}>
+                      📊 Compare Quotations ({rfqsWithQuotations.length})
+                    </button>
+                    <button className="btn-secondary" onClick={() => setCurrentView('purchase-orders')} style={{ width: '100%', justifyContent: 'center' }}>
+                      📄 View Purchase Orders ({purchaseOrders.length})
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </>
           ) : (
-          /* ── Main Dashboard & RFQ Management Views ── */
-          <>
-          {/* Welcome Banner */}
-          <div className="dashboard-hero-banner">
-            <div className="dashboard-hero-badge">
-              🧭 24/7 Corporate Procurement Portal
-            </div>
-            <h2 className="dashboard-hero-title">Welcome back, {currentUser?.name || users[0]?.name || 'Alex Mercer'}!</h2>
-            <p className="dashboard-hero-desc">
-              Manage requests for quotations, collaborate with vendors, compare quotation proposals with AI analysis, and issue purchase orders. All system components are optimized for light, rapid operations.
-            </p>
-          </div>
-
-          {/* Stats Row */}
-          <section className="stats-row">
-            <div className="stat-card stat-blue">
-              <div className="stat-header">
-                <span className="stat-label">My RFQs</span>
-                <div className="stat-icon-wrap"><Icons.FileText /></div>
-              </div>
-              <div className="stat-value">{myRfqsCount}</div>
-              <span className="stat-sub">Created by you</span>
-            </div>
-
-            <div className="stat-card stat-zinc">
-              <div className="stat-header">
-                <span className="stat-label">Company RFQs</span>
-                <div className="stat-icon-wrap"><Icons.Inbox /></div>
-              </div>
-              <div className="stat-value">{companyRfqsCount}</div>
-              <span className="stat-sub">Across all officers</span>
-            </div>
-
-            <div className="stat-card stat-amber">
-              <div className="stat-header">
-                <span className="stat-label">Pending Approval</span>
-                <div className="stat-icon-wrap"><Icons.Clock /></div>
-              </div>
-              <div className="stat-value">{pendingCount}</div>
-              <span className="stat-sub">Across the company</span>
-            </div>
-
-            <div className="stat-card stat-green">
-              <div className="stat-header">
-                <span className="stat-label">Open RFQs</span>
-                <div className="stat-icon-wrap"><Icons.CheckCircle /></div>
-              </div>
-              <div className="stat-value">{openCount}</div>
-              <span className="stat-sub">Across the company</span>
-            </div>
-          </section>
-
-          {/* Toolbar & Filters */}
-          <section className="toolbar" style={{ flexDirection: 'column', gap: '14px', alignItems: 'stretch' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
-              <div className="search-input" style={{ flex: 1, maxWidth: '440px' }}>
-                <Icons.Search />
-                <input
-                  type="text"
-                  placeholder="Search by RFQ #, title, dept, officer name…"
-                  value={searchQuery}
-                  onChange={e => setSearchQuery(e.target.value)}
-                />
-              </div>
-
-              {/* Ownership Filter Tabs: All RFQs vs My RFQs */}
-              <div style={{ display: 'flex', background: 'rgba(255, 255, 255, 0.03)', padding: '4px', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-subtle)', gap: '4px' }}>
-                <button
-                  className={ownershipFilter === 'ALL' ? 'pill pill-active' : 'pill'}
-                  style={{ padding: '6px 16px', fontSize: '13px', borderRadius: 'var(--radius-md)', cursor: 'pointer' }}
-                  onClick={() => setOwnershipFilter('ALL')}
-                >
-                  🏢 All RFQs ({companyRfqsCount})
-                </button>
-                <button
-                  className={ownershipFilter === 'MY' ? 'pill pill-active' : 'pill'}
-                  style={{ padding: '6px 16px', fontSize: '13px', borderRadius: 'var(--radius-md)', cursor: 'pointer' }}
-                  onClick={() => setOwnershipFilter('MY')}
-                >
-                  👤 My RFQs ({myRfqsCount})
+            /* ── Full RFQ Management Directory View ── */
+            <>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                <div>
+                  <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>Requests for Quotation Directory</h2>
+                  <p style={{ fontSize: '0.84rem', color: 'var(--text-secondary)', marginTop: '2px' }}>Track, edit, delete, and manage lifecycle events for all RFQ documents.</p>
+                </div>
+                <button className="btn-primary" onClick={handleOpenCreateModal}>
+                  <Icons.Plus /> Create RFQ
                 </button>
               </div>
 
-              <button className="btn-primary" onClick={handleOpenCreateModal}>
-                <Icons.Plus /> New RFQ
-              </button>
-            </div>
+              {/* Toolbar & Filters */}
+              <section className="toolbar" style={{ flexDirection: 'column', gap: '14px', alignItems: 'stretch', width: '100%' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px', flexWrap: 'wrap', width: '100%' }}>
+                  <div className="search-input" style={{ flex: 1, maxWidth: '440px' }}>
+                    <Icons.Search />
+                    <input
+                      type="text"
+                      placeholder="Search by RFQ #, title, dept, officer name…"
+                      value={searchQuery}
+                      onChange={e => setSearchQuery(e.target.value)}
+                    />
+                  </div>
 
-            {/* Status Filter Pills */}
-            <div className="filter-pills" style={{ marginTop: '2px' }}>
-              {statusFilters.map(f => (
-                <button key={f.key} className={`pill ${statusFilter === f.key ? 'pill-active' : ''}`} onClick={() => setStatusFilter(f.key)}>
-                  {f.label}
-                  {f.key !== 'ALL' && (
-                    <span className="pill-count">
-                      {rfqs.filter(r => (f.key === 'ALL' || r.status === f.key.toLowerCase()) && (ownershipFilter === 'ALL' || isOwnRfq(r))).length}
-                    </span>
-                  )}
-                </button>
-              ))}
-            </div>
-          </section>
+                  {/* Ownership Filter Tabs: All RFQs vs My RFQs */}
+                  <div style={{ display: 'flex', background: 'rgba(0, 0, 0, 0.04)', padding: '4px', borderRadius: '8px', gap: '4px' }}>
+                    <button
+                      className={ownershipFilter === 'ALL' ? 'pill pill-active' : 'pill'}
+                      style={{ padding: '6px 14px', fontSize: '0.82rem', cursor: 'pointer' }}
+                      onClick={() => setOwnershipFilter('ALL')}
+                    >
+                      🏢 All RFQs ({companyRfqsCount})
+                    </button>
+                    <button
+                      className={ownershipFilter === 'MY' ? 'pill pill-active' : 'pill'}
+                      style={{ padding: '6px 14px', fontSize: '0.82rem', cursor: 'pointer' }}
+                      onClick={() => setOwnershipFilter('MY')}
+                    >
+                      👤 My RFQs ({myRfqsCount})
+                    </button>
+                  </div>
+                </div>
 
-          {/* Loading / Error */}
-          {loading && (
-            <div className="state-banner info">
-              <div className="spinner" /> Connecting to backend…
-            </div>
-          )}
-          {error && (
-            <div className="state-banner error">
-              <span>⚠ {error}</span>
-              <button className="btn-ghost" onClick={fetchData}>Retry</button>
-            </div>
-          )}
+                {/* Status Filter Pills */}
+                <div className="filter-pills" style={{ marginTop: '2px' }}>
+                  {statusFilters.map(f => (
+                    <button key={f.key} className={`pill ${statusFilter === f.key ? 'pill-active' : ''}`} onClick={() => setStatusFilter(f.key)}>
+                      {f.label}
+                      {f.key !== 'ALL' && (
+                        <span className="pill-count">
+                          {rfqs.filter(r => (f.key === 'ALL' || r.status === f.key.toLowerCase()) && (ownershipFilter === 'ALL' || isOwnRfq(r))).length}
+                        </span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </section>
 
-          {/* RFQ Table */}
-          {!loading && (
-            <section className="table-card">
-              <div className="table-header-bar">
-                <span className="table-title">Company Requests for Quotation</span>
-                <span className="table-count">{filteredRfqs.length} {filteredRfqs.length === 1 ? 'result' : 'results'}</span>
-              </div>
-              <div className="table-scroll">
-                <table className="data-table">
-                  <thead>
-                    <tr>
-                      <th>RFQ #</th>
-                      <th>Title</th>
-                      <th>Department</th>
-                      <th>Created By</th>
-                      <th>Priority</th>
-                      <th>Deadline</th>
-                      <th>Status</th>
-                      <th className="th-actions">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredRfqs.length === 0 ? (
-                      <tr>
-                        <td colSpan="8" className="empty-state">
-                          <Icons.FileText />
-                          <p>{rfqs.length === 0 ? 'No RFQs created yet.' : 'No results match your search or filters.'}</p>
-                        </td>
-                      </tr>
-                    ) : (
-                      filteredRfqs.map(rfq => {
-                        const isOwn = isOwnRfq(rfq);
-                        const creatorName = rfq.created_by_details?.name || rfq.created_by_name || (isOwn ? (currentUser?.name || 'Alex Mercer') : 'Priya Shah');
-                        return (
-                          <tr key={rfq.id} onClick={() => openRfqDetail(rfq)} style={{ cursor: 'pointer' }}>
-                            <td>
-                              <span className="mono-text">{rfq.rfq_number}</span>
-                              <span className="cell-sub">{new Date(rfq.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
-                            </td>
-                            <td>
-                              <span className="cell-primary">{rfq.title}</span>
-                              <span className="cell-sub cell-desc">{rfq.description}</span>
-                            </td>
-                            <td><span className="dept-chip">{rfq.department_details?.code || rfq.department_details?.name || '—'}</span></td>
-                            <td>
-                              <span className="cell-primary" style={{ fontSize: '13px', fontWeight: 600 }}>{creatorName}</span>
-                              {isOwn ? (
-                                <span className="cell-sub" style={{ color: 'var(--accent)' }}>You (Creator)</span>
-                              ) : (
-                                <span className="cell-sub" style={{ color: 'var(--text-muted)' }}>{rfq.created_by_details?.department_details?.name || 'Officer'}</span>
-                              )}
-                            </td>
-                            <td><span className={`badge badge-priority-${rfq.priority}`}>{rfq.priority}</span></td>
-                            <td className="date-cell">{rfq.deadline || '—'}</td>
-                            <td>
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                                <span className={`badge badge-status-${rfq.status}`}>{statusLabel(rfq.status)}</span>
-                                {!isOwn && (
-                                  <span className="badge badge-status-draft" style={{ background: 'rgba(148, 163, 184, 0.12)', color: '#94a3b8', border: '1px solid rgba(148, 163, 184, 0.25)', fontSize: '10px', padding: '2px 6px', width: 'fit-content' }}>
-                                    View Only
-                                  </span>
-                                )}
-                              </div>
-                            </td>
-                            <td className="actions-cell" onClick={e => e.stopPropagation()}>
-                              {isOwn ? (
-                                <>
-                                  {rfq.status === 'draft' && (
-                                    <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                                      <button className="btn-action btn-submit" onClick={() => handleStatusUpdate(rfq.id, 'pending_approval')}>
-                                        <Icons.Send /> Submit
-                                      </button>
-                                      <button className="btn-secondary" style={{ padding: '4px 8px', fontSize: '11px' }} onClick={() => openRfqDetail(rfq)}>
-                                        Edit
-                                      </button>
-                                      <button className="btn-secondary" style={{ padding: '4px 8px', fontSize: '11px', color: '#ef4444', borderColor: 'rgba(239,68,68,0.4)' }} onClick={() => handleDeleteRFQ(rfq.id)}>
-                                        Delete
-                                      </button>
-                                    </div>
-                                  )}
-                                  {rfq.status === 'pending_approval' && (
-                                    <span className="awaiting-text">Awaiting Approval</span>
-                                  )}
-                                  {(rfq.status === 'open' || rfq.status === 'under_review') && hasQuotations(rfq.id) && (
-                                    <button className="btn-action btn-submit" onClick={() => setComparisonRfq(rfq)}>
-                                      📊 Compare Quotations
-                                    </button>
-                                  )}
-                                  {rfq.status === 'open' && !hasQuotations(rfq.id) && (
-                                    <span style={{ color: 'var(--success)', fontWeight: '600', fontSize: '12px' }}>✓ Approved & Live</span>
-                                  )}
-                                  {rfq.status === 'completed' && (
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                      <span style={{ color: '#34d399', fontWeight: '600', fontSize: '12px' }}>✓ Completed</span>
-                                      <button className="btn-action btn-submit" style={{ padding: '3px 8px', fontSize: '11px' }} onClick={() => {
-                                        const matchedPo = purchaseOrders.find(p => p.rfq === rfq.id);
-                                        const matchedQuot = quotations.find(q => q.rfq === rfq.id && q.status === 'selected');
-                                        const matchedVend = vendors.find(v => v.id === matchedQuot?.vendor);
-                                        setActivePOInfo({
-                                          po: matchedPo || { po_number: 'PO-2026-0042', status: 'issued', rfq: rfq.id },
-                                          rfq: rfq,
-                                          quotation: matchedQuot,
-                                          vendor: matchedVend
-                                        });
-                                      }}>
-                                        📄 View PO
-                                      </button>
-                                    </div>
-                                  )}
-                                  {rfq.status === 'closed' && (
-                                    <span style={{ color: 'var(--text-muted)', fontWeight: '600', fontSize: '12px' }}>🔒 Closed</span>
-                                  )}
-                                  {rfq.status === 'rejected' && (
-                                    <button className="btn-action btn-publish" onClick={() => openRfqDetail(rfq)}>
-                                      ↻ Edit & Resubmit
-                                    </button>
-                                  )}
-                                </>
-                              ) : (
-                                /* Read-only view for another officer's RFQ */
-                                <button className="btn-secondary" style={{ padding: '4px 12px', fontSize: '12px' }} onClick={() => openRfqDetail(rfq)}>
-                                  👁 View Details
-                                </button>
-                              )}
+              {/* Loading / Error */}
+              {loading && (
+                <div className="state-banner info">
+                  <div className="spinner" /> Connecting to backend…
+                </div>
+              )}
+              {error && (
+                <div className="state-banner error">
+                  <span>⚠ {error}</span>
+                  <button className="btn-ghost" onClick={fetchData}>Retry</button>
+                </div>
+              )}
+
+              {/* RFQ Table */}
+              {!loading && (
+                <section className="table-card">
+                  <div className="table-header-bar">
+                    <span className="table-title">Company Requests for Quotation</span>
+                    <span className="table-count">{filteredRfqs.length} {filteredRfqs.length === 1 ? 'result' : 'results'}</span>
+                  </div>
+                  <div className="table-scroll">
+                    <table className="data-table">
+                      <thead>
+                        <tr>
+                          <th>RFQ #</th>
+                          <th>Title</th>
+                          <th>Department</th>
+                          <th>Created By</th>
+                          <th>Priority</th>
+                          <th>Deadline</th>
+                          <th>Status</th>
+                          <th className="th-actions">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {filteredRfqs.length === 0 ? (
+                          <tr>
+                            <td colSpan="8" className="empty-state">
+                              <Icons.FileText />
+                              <p>{rfqs.length === 0 ? 'No RFQs created yet.' : 'No results match your search or filters.'}</p>
                             </td>
                           </tr>
-                        );
-                      })
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </section>
-          )}
-          </>
+                        ) : (
+                          filteredRfqs.map(rfq => {
+                            const isOwn = isOwnRfq(rfq);
+                            const creatorName = rfq.created_by_details?.name || rfq.created_by_name || (isOwn ? (currentUser?.name || 'Alex Mercer') : 'Priya Shah');
+                            return (
+                              <tr key={rfq.id} onClick={() => openRfqDetail(rfq)} style={{ cursor: 'pointer' }}>
+                                <td>
+                                  <span className="mono-text">{rfq.rfq_number}</span>
+                                  <span className="cell-sub">{new Date(rfq.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+                                </td>
+                                <td>
+                                  <span className="cell-primary">{rfq.title}</span>
+                                  <span className="cell-sub cell-desc">{rfq.description}</span>
+                                </td>
+                                <td><span className="dept-chip">{rfq.department_details?.code || rfq.department_details?.name || '—'}</span></td>
+                                <td>
+                                  <span className="cell-primary" style={{ fontSize: '13px', fontWeight: 600 }}>{creatorName}</span>
+                                  {isOwn ? (
+                                    <span className="cell-sub" style={{ color: 'var(--accent)' }}>You (Creator)</span>
+                                  ) : (
+                                    <span className="cell-sub" style={{ color: 'var(--text-muted)' }}>{rfq.created_by_details?.department_details?.name || 'Officer'}</span>
+                                  )}
+                                </td>
+                                <td><span className={`badge badge-priority-${rfq.priority}`}>{rfq.priority}</span></td>
+                                <td className="date-cell">{rfq.deadline || '—'}</td>
+                                <td>
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                    <span className={`badge badge-status-${rfq.status}`}>{statusLabel(rfq.status)}</span>
+                                    {!isOwn && (
+                                      <span className="badge badge-status-draft" style={{ background: 'rgba(148, 163, 184, 0.12)', color: '#94a3b8', border: '1px solid rgba(148, 163, 184, 0.25)', fontSize: '10px', padding: '2px 6px', width: 'fit-content' }}>
+                                        View Only
+                                      </span>
+                                    )}
+                                  </div>
+                                </td>
+                                <td className="actions-cell" onClick={e => e.stopPropagation()}>
+                                  {isOwn ? (
+                                    <>
+                                      {rfq.status === 'draft' && (
+                                        <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                                          <button className="btn-action btn-submit" onClick={() => handleStatusUpdate(rfq.id, 'pending_approval')}>
+                                            <Icons.Send /> Submit
+                                          </button>
+                                          <button className="btn-secondary" style={{ padding: '4px 8px', fontSize: '11px' }} onClick={() => openRfqDetail(rfq)}>
+                                            Edit
+                                          </button>
+                                          <button className="btn-secondary" style={{ padding: '4px 8px', fontSize: '11px', color: '#ef4444', borderColor: 'rgba(239,68,68,0.4)' }} onClick={() => handleDeleteRFQ(rfq.id)}>
+                                            Delete
+                                          </button>
+                                        </div>
+                                      )}
+                                      {rfq.status === 'pending_approval' && (
+                                        <span className="awaiting-text">Awaiting Approval</span>
+                                      )}
+                                      {(rfq.status === 'open' || rfq.status === 'under_review') && hasQuotations(rfq.id) && (
+                                        <button className="btn-action btn-submit" onClick={() => setComparisonRfq(rfq)}>
+                                          📊 Compare Quotations
+                                        </button>
+                                      )}
+                                      {rfq.status === 'open' && !hasQuotations(rfq.id) && (
+                                        <span style={{ color: 'var(--success)', fontWeight: '600', fontSize: '12px' }}>✓ Approved & Live</span>
+                                      )}
+                                      {rfq.status === 'completed' && (
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                          <span style={{ color: '#34d399', fontWeight: '600', fontSize: '12px' }}>✓ Completed</span>
+                                          <button className="btn-action btn-submit" style={{ padding: '3px 8px', fontSize: '11px' }} onClick={() => {
+                                            const matchedPo = purchaseOrders.find(p => p.rfq === rfq.id);
+                                            const matchedQuot = quotations.find(q => q.rfq === rfq.id && q.status === 'selected');
+                                            const matchedVend = vendors.find(v => v.id === matchedQuot?.vendor);
+                                            setActivePOInfo({
+                                              po: matchedPo || { po_number: 'PO-2026-0042', status: 'issued', rfq: rfq.id },
+                                              rfq: rfq,
+                                              quotation: matchedQuot,
+                                              vendor: matchedVend
+                                            });
+                                          }}>
+                                            📄 View PO
+                                          </button>
+                                        </div>
+                                      )}
+                                      {rfq.status === 'closed' && (
+                                        <span style={{ color: 'var(--text-muted)', fontWeight: '600', fontSize: '12px' }}>🔒 Closed</span>
+                                      )}
+                                      {rfq.status === 'rejected' && (
+                                        <button className="btn-action btn-publish" onClick={() => openRfqDetail(rfq)}>
+                                          ↻ Edit & Resubmit
+                                        </button>
+                                      )}
+                                    </>
+                                  ) : (
+                                    /* Read-only view for another officer's RFQ */
+                                    <button className="btn-secondary" style={{ padding: '4px 12px', fontSize: '12px' }} onClick={() => openRfqDetail(rfq)}>
+                                      👁 View Details
+                                    </button>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </section>
+              )}
+            </>
           )}
         </main>
       </div>

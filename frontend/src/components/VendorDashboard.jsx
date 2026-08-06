@@ -173,7 +173,14 @@ export default function VendorDashboard({ onLogout, currentUser }) {
       {/* Sidebar */}
       <aside className="sidebar">
         <div className="sidebar-brand">
-          <div className="brand-logo" style={{ background: 'linear-gradient(135deg, #0ea5e9, #06b6d4)' }}>VB</div>
+          <img 
+            src="/logo.png" 
+            className="brand-logo" 
+            alt="VB" 
+            onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
+            style={{ objectFit: 'contain', padding: '2px', background: 'transparent' }} 
+          />
+          <div className="brand-logo" style={{ display: 'none', background: 'linear-gradient(135deg, #0ea5e9, #06b6d4)' }}>VB</div>
           <div className="brand-text">
             <span className="brand-name">VendorBridge</span>
             <span className="brand-sub">Vendor Portal</span>
@@ -196,6 +203,34 @@ export default function VendorDashboard({ onLogout, currentUser }) {
           <button className="seed-btn" onClick={handleSeedClick}>
             <Icons.Database /> Sync Data
           </button>
+
+          {/* Usage limit bar matching between.indevs.in */}
+          <div className="sidebar-usage">
+            <div className="usage-label">Bids Placed: {vendorQuotations.length} / 100</div>
+            <div className="usage-progress-bar">
+              <div className="usage-progress-fill" style={{ width: `${Math.min((vendorQuotations.length / 100) * 100, 100)}%` }} />
+            </div>
+          </div>
+
+          {/* Profile widget matching between.indevs.in */}
+          <div className="sidebar-profile">
+            <div className="profile-avatar" style={{ background: '#111827' }}>
+              {(currentVendor?.name || 'D')[0]}
+            </div>
+            <div className="profile-meta">
+              <span className="profile-name">{currentVendor?.name || 'Dell Technologies'}</span>
+              <span className="profile-email">{currentUser?.email || 'vendor@company.com'}</span>
+            </div>
+            {onLogout && (
+              <button className="profile-logout-btn" onClick={onLogout} title="Logout">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                  <polyline points="16 17 21 12 16 7" />
+                  <line x1="21" y1="12" x2="9" y2="12" />
+                </svg>
+              </button>
+            )}
+          </div>
         </div>
       </aside>
 
@@ -244,22 +279,11 @@ export default function VendorDashboard({ onLogout, currentUser }) {
                 </select>
               </div>
             )}
-
-            {/* Sign Out Button */}
-            <button className="btn-secondary" onClick={onLogout} style={{ color: 'var(--text-secondary)' }}>
-              Sign Out
-            </button>
-
             <div className="topbar-divider" />
-            <div className="user-chip">
-              <div className="user-avatar" style={{ background: 'linear-gradient(135deg, #0ea5e9, #06b6d4)' }}>
-                {(currentVendor?.name || 'D')[0]}
-              </div>
-              <div className="user-meta">
-                <span className="user-name">{currentVendor?.name || 'Dell Technologies'}</span>
-                <span className="user-role">{currentVendor?.vendor_code || 'VND-DELL'}</span>
-              </div>
-            </div>
+            <button className="icon-btn" title="Notifications">
+              <Icons.Bell />
+              <span className="notif-dot" />
+            </button>
           </div>
         </header>
 
