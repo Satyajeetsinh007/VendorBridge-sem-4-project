@@ -2,204 +2,190 @@ import React, { useState, useEffect } from 'react';
 import { api } from '../services/api';
 import './AuthPages.css';
 
+/* ─── Role definitions ─── */
 const ROLES = [
-  { value: 'procurement_officer', label: 'Procurement Officer', icon: '📋', desc: 'Raises RFQs, invites vendors, compares quotes' },
-  { value: 'manager', label: 'Manager', icon: '✅', desc: 'Approves & rejects RFQs and vendor selections' },
-  { value: 'finance', label: 'Finance', icon: '💳', desc: 'Verifies invoices and manages payments' },
-  { value: 'vendor', label: 'Vendor (Internal)', icon: '🤝', desc: 'Internal vendor relationship manager' },
+  { value: 'procurement_officer', label: 'Procurement Officer', desc: 'Raises RFQs, invites vendors, compares quotes' },
+  { value: 'manager',             label: 'Manager',             desc: 'Approves & rejects RFQs and vendor selections' },
+  { value: 'finance',             label: 'Finance',             desc: 'Verifies invoices and manages payments' },
+  { value: 'vendor',              label: 'Vendor (Internal)',   desc: 'Internal vendor relationship manager' },
 ];
 
 const VENDOR_CATEGORIES = [
-  'IT Hardware', 'IT Software', 'Electronics', 'Furniture',
-  'Office Supplies', 'Logistics', 'Construction', 'Catering',
-  'Security Services', 'Consulting', 'Other'
+  'IT Hardware','IT Software','Electronics','Furniture',
+  'Office Supplies','Logistics','Construction','Catering',
+  'Security Services','Consulting','Other',
 ];
 
+/* ─── Inline SVG icons ─── */
+const Ico = {
+  User:  () => <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="5" r="3" stroke="currentColor" strokeWidth="1.4"/><path d="M2 14c0-3.3 2.7-6 6-6s6 2.7 6 6" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg>,
+  Vendor:() => <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M2 13V6l6-4 6 4v7" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round"/><rect x="6" y="9" width="4" height="4" rx="0.5" stroke="currentColor" strokeWidth="1.4"/></svg>,
+  Email: () => <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><rect x="1" y="3" width="14" height="10" rx="2" stroke="currentColor" strokeWidth="1.4"/><path d="M1 5.5l7 4 7-4" stroke="currentColor" strokeWidth="1.4"/></svg>,
+  Lock:  () => <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><rect x="3" y="7" width="10" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.4"/><path d="M5 7V5a3 3 0 016 0v2" stroke="currentColor" strokeWidth="1.4"/></svg>,
+  Check: () => <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M5 8l2 2 4-4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/><rect x="3" y="7" width="10" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.4"/><path d="M5 7V5a3 3 0 016 0v2" stroke="currentColor" strokeWidth="1.4"/></svg>,
+  Phone: () => <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M3 2h3l1 3-2 1a10 10 0 004 4l1-2 3 1v3a1 1 0 01-1 1A13 13 0 012 3a1 1 0 011-1z" stroke="currentColor" strokeWidth="1.3"/></svg>,
+  Star:  () => <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M8 2l1.5 3 3.5.5-2.5 2.5.5 3.5L8 10l-3 1.5.5-3.5L3 5.5 6.5 5 8 2z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round"/></svg>,
+  Bldg:  () => <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M2 13V6l6-4 6 4v7" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round"/><rect x="6" y="9" width="4" height="4" rx="0.5" stroke="currentColor" strokeWidth="1.4"/></svg>,
+  Pin:   () => <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M8 1C5.8 1 4 2.8 4 5c0 3 4 9 4 9s4-6 4-9c0-2.2-1.8-4-4-4z" stroke="currentColor" strokeWidth="1.4"/><circle cx="8" cy="5" r="1.5" stroke="currentColor" strokeWidth="1.4"/></svg>,
+  Globe: () => <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="currentColor" strokeWidth="1.4"/><path d="M8 2c0 0-3 2-3 6s3 6 3 6M8 2c0 0 3 2 3 6s-3 6-3 6M2 8h12" stroke="currentColor" strokeWidth="1.4"/></svg>,
+  Doc:   () => <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><rect x="2" y="3" width="12" height="10" rx="1.5" stroke="currentColor" strokeWidth="1.4"/><path d="M5 7h6M5 10h4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg>,
+  Grid:  () => <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><rect x="1" y="1" width="6" height="6" rx="1" stroke="currentColor" strokeWidth="1.4"/><rect x="9" y="1" width="6" height="6" rx="1" stroke="currentColor" strokeWidth="1.4"/><rect x="1" y="9" width="6" height="6" rx="1" stroke="currentColor" strokeWidth="1.4"/><rect x="9" y="9" width="6" height="6" rx="1" stroke="currentColor" strokeWidth="1.4"/></svg>,
+  Info:  () => <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" stroke="currentColor" strokeWidth="1.4"/><path d="M8 7v5M8 5v.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg>,
+  Eye:   () => <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M1 8s2.5-5 7-5 7 5 7 5-2.5 5-7 5-7-5-7-5z" stroke="currentColor" strokeWidth="1.4"/><circle cx="8" cy="8" r="2" stroke="currentColor" strokeWidth="1.4"/></svg>,
+  EyeOff:() => <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 2l12 12M6.5 6.6A2 2 0 009.4 9.5M3 7s1.5-3 5-3c.7 0 1.4.1 2 .4M13 7s-.5 1.2-1.5 2.1" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg>,
+  Arrow: () => <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+  Back:  () => <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M10 3L5 8l5 5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+};
+
+/* Floating dots background */
+const DOTS = [
+  { size:5, top:'8%',  left:'5%',  delay:'0s',   dur:'6s'   },
+  { size:3, top:'15%', left:'12%', delay:'1s',   dur:'8s'   },
+  { size:4, top:'4%',  left:'22%', delay:'2s',   dur:'7s'   },
+  { size:6, top:'20%', left:'78%', delay:'0.5s', dur:'9s'   },
+  { size:3, top:'12%', left:'88%', delay:'3s',   dur:'6.5s' },
+  { size:4, top:'72%', left:'8%',  delay:'1.5s', dur:'8s'   },
+  { size:5, top:'80%', left:'18%', delay:'0s',   dur:'7.5s' },
+  { size:3, top:'88%', left:'80%', delay:'2.5s', dur:'6s'   },
+  { size:4, top:'75%', left:'92%', delay:'1s',   dur:'8.5s' },
+  { size:6, top:'60%', left:'3%',  delay:'3.5s', dur:'7s'   },
+  { size:3, top:'35%', left:'96%', delay:'0.5s', dur:'9s'   },
+  { size:4, top:'50%', left:'48%', delay:'4s',   dur:'6s'   },
+];
+
+/* Shared field component */
+function Field({ id, label, required, optional, children }) {
+  return (
+    <div className="auth-input-group">
+      <label className="auth-input-label" htmlFor={id}>
+        {label}
+        {required && <span className="auth-required"> *</span>}
+        {optional && <span style={{fontWeight:400,textTransform:'none',fontSize:'0.71rem',color:'#9ca3af',letterSpacing:0}}> (optional)</span>}
+      </label>
+      {children}
+    </div>
+  );
+}
+
+/* Shared eye-toggle input */
+function PwInput({ id, name, placeholder, value, onChange, show, onToggle }) {
+  return (
+    <div className="auth-input-wrap">
+      <span className="auth-input-icon"><Ico.Lock /></span>
+      <input id={id} className="auth-input" type={show ? 'text' : 'password'}
+        name={name} placeholder={placeholder} value={value} onChange={onChange} required />
+      <button type="button" className="auth-toggle-pw" onClick={onToggle} aria-label={show ? 'Hide' : 'Show'}>
+        {show ? <Ico.EyeOff /> : <Ico.Eye />}
+      </button>
+    </div>
+  );
+}
+
 export default function SignupPage({ onNavigateLogin }) {
-  const [accountType, setAccountType] = useState('user'); // 'user' | 'vendor'
-  const [step, setStep] = useState(1); // Step 1: type select (for user: role + dept), Step 2: credentials
-  const [departments, setDepartments] = useState([]);
+  const [accountType, setAccountType] = useState('user');
+  const [departments, setDepartments]  = useState([]);
   const [loadingDepts, setLoadingDepts] = useState(false);
+  const [userForm, setUserForm] = useState({ name:'', email:'', password:'', confirmPassword:'', role:'', department:'' });
+  const [vendorForm, setVendorForm] = useState({ name:'', contact_person:'', email:'', password:'', confirmPassword:'', phone:'', category:'', gst_number:'', address:'', website:'' });
+  const [error, setError]       = useState('');
+  const [success, setSuccess]   = useState('');
+  const [submitted, setSubmitted] = useState(false);
+  const [loading, setLoading]   = useState(false);
+  const [showPw, setShowPw]     = useState(false);
+  const [showCPw, setShowCPw]   = useState(false);
 
-  // User form state
-  const [userForm, setUserForm] = useState({
-    name: '', email: '', password: '', confirmPassword: '',
-    role: '', department: ''
-  });
-
-  // Vendor form state
-  const [vendorForm, setVendorForm] = useState({
-    name: '', contact_person: '', email: '', password: '',
-    confirmPassword: '', phone: '', category: '', gst_number: '',
-    address: '', website: ''
-  });
-
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
-  const [submitted, setSubmitted] = useState(false); // show pending approval screen
-  const [loading, setLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirm, setShowConfirm] = useState(false);
-
-  // Fetch departments on mount
   useEffect(() => {
     setLoadingDepts(true);
-    api.getDepartments()
-      .then(setDepartments)
-      .catch(() => setDepartments([]))
-      .finally(() => setLoadingDepts(false));
+    api.getDepartments().then(setDepartments).catch(() => setDepartments([])).finally(() => setLoadingDepts(false));
   }, []);
 
-  const needsDepartment = userForm.role && userForm.role !== 'manager';
+  const needsDept = userForm.role && userForm.role !== 'manager';
+  const selRole   = ROLES.find(r => r.value === userForm.role);
 
-  const handleUserChange = (e) => {
-    setUserForm({ ...userForm, [e.target.name]: e.target.value });
-    if (error) setError('');
-  };
+  const onUserChange   = e => { setUserForm({...userForm,   [e.target.name]: e.target.value }); if (error) setError(''); };
+  const onVendorChange = e => { setVendorForm({...vendorForm,[e.target.name]: e.target.value }); if (error) setError(''); };
+  const switchType = t => { setAccountType(t); setError(''); setSuccess(''); };
 
-  const handleVendorChange = (e) => {
-    setVendorForm({ ...vendorForm, [e.target.name]: e.target.value });
-    if (error) setError('');
-  };
-
-  const switchAccountType = (type) => {
-    setAccountType(type);
-    setStep(1);
-    setError('');
-    setSuccess('');
-  };
-
-  // ── User Signup ──────────────────────────────────────────────────────────────
-  const handleUserSignup = async (e) => {
-    e.preventDefault();
-    setError('');
-
-    if (!userForm.name || !userForm.email || !userForm.password || !userForm.role) {
+  const handleUserSignup = async e => {
+    e.preventDefault(); setError('');
+    if (!userForm.name || !userForm.email || !userForm.password || !userForm.role)
       return setError('Please fill in all required fields.');
-    }
-    if (userForm.password !== userForm.confirmPassword) {
-      return setError('Passwords do not match.');
-    }
-    if (userForm.password.length < 6) {
-      return setError('Password must be at least 6 characters.');
-    }
-    if (needsDepartment && !userForm.department) {
-      return setError('Please select your department.');
-    }
-
+    if (userForm.password !== userForm.confirmPassword) return setError('Passwords do not match.');
+    if (userForm.password.length < 6) return setError('Password must be at least 6 characters.');
+    if (needsDept && !userForm.department) return setError('Please select your department.');
     setLoading(true);
     try {
-      await api.signupUser({
-        name: userForm.name,
-        email: userForm.email,
-        password: userForm.password,
-        role: userForm.role,
-        department: userForm.department || undefined,
-      });
+      await api.signupUser({ name: userForm.name, email: userForm.email, password: userForm.password, role: userForm.role, department: userForm.department || undefined });
       setSubmitted(true);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
+    } catch (err) { setError(err.message); }
+    finally { setLoading(false); }
   };
 
-  // ── Vendor Signup ────────────────────────────────────────────────────────────
-  const handleVendorSignup = async (e) => {
-    e.preventDefault();
-    setError('');
-
-    if (!vendorForm.name || !vendorForm.email || !vendorForm.password || !vendorForm.phone || !vendorForm.address) {
+  const handleVendorSignup = async e => {
+    e.preventDefault(); setError('');
+    if (!vendorForm.name || !vendorForm.email || !vendorForm.password || !vendorForm.phone || !vendorForm.address)
       return setError('Company name, email, password, phone, and address are required.');
-    }
-    if (vendorForm.password !== vendorForm.confirmPassword) {
-      return setError('Passwords do not match.');
-    }
-    if (vendorForm.password.length < 6) {
-      return setError('Password must be at least 6 characters.');
-    }
-
+    if (vendorForm.password !== vendorForm.confirmPassword) return setError('Passwords do not match.');
+    if (vendorForm.password.length < 6) return setError('Password must be at least 6 characters.');
     setLoading(true);
     try {
-      await api.signupVendor({
-        name: vendorForm.name,
-        contact_person: vendorForm.contact_person,
-        email: vendorForm.email,
-        password: vendorForm.password,
-        phone: vendorForm.phone,
-        category: vendorForm.category,
-        gst_number: vendorForm.gst_number,
-        address: vendorForm.address,
-        website: vendorForm.website,
-      });
+      await api.signupVendor({ name: vendorForm.name, contact_person: vendorForm.contact_person, email: vendorForm.email, password: vendorForm.password, phone: vendorForm.phone, category: vendorForm.category, gst_number: vendorForm.gst_number, address: vendorForm.address, website: vendorForm.website });
       setSubmitted(true);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
+    } catch (err) { setError(err.message); }
+    finally { setLoading(false); }
   };
 
-  const selectedRoleData = ROLES.find(r => r.value === userForm.role);
-
-  // ── Pending Approval Screen ──────────────────────────────────────────────────
+  /* ── Pending approval screen ── */
   if (submitted) {
     return (
       <div className="auth-root">
-        <div className="auth-left">
-          <div className="auth-left-content">
-            <div className="auth-logo">
-              <div className="auth-logo-icon">
-                <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
-                  <path d="M4 8L14 3L24 8V20L14 25L4 20V8Z" stroke="white" strokeWidth="1.5" strokeLinejoin="round"/>
-                  <path d="M14 3V25M4 8L24 20M24 8L4 20" stroke="white" strokeWidth="1.5" opacity="0.5"/>
-                </svg>
-              </div>
-              <span className="auth-logo-text">VendorBridge</span>
-            </div>
-            <div className="auth-left-hero">
-              <h1 className="auth-hero-title">Almost there!</h1>
-              <p className="auth-hero-sub">Your application is under review. Our admin team typically processes requests within 24 hours.</p>
+        <div className="auth-dots" aria-hidden="true">
+          {DOTS.map((d,i) => <span key={i} className="auth-dot" style={{width:d.size,height:d.size,top:d.top,left:d.left,animationDelay:d.delay,animationDuration:d.dur}} />)}
+        </div>
+        <div className="auth-card auth-pending-card">
+          <div className="auth-pending-icon-ring">
+            <svg width="30" height="30" viewBox="0 0 32 32" fill="none">
+              <circle cx="16" cy="16" r="14" stroke="#d97706" strokeWidth="2"/>
+              <path d="M16 9v8l5 3" stroke="#d97706" strokeWidth="2" strokeLinecap="round"/>
+            </svg>
+          </div>
+
+          <div className="auth-header" style={{marginBottom:0}}>
+            <div className="auth-brand">VendorBridge</div>
+            <div className="auth-title">Application Submitted</div>
+            <div className="auth-subtitle">
+              Your account is <span className="auth-text-warning">pending admin verification</span>. You will be notified once your access is approved.
             </div>
           </div>
-          <div className="auth-left-glow" />
-          <div className="auth-left-grid" />
-        </div>
-        <div className="auth-right">
-          <div className="auth-form-card" style={{textAlign:'center', gap: 24}}>
-            <div className="auth-pending-icon">
-              <svg width="56" height="56" viewBox="0 0 56 56" fill="none">
-                <circle cx="28" cy="28" r="27" stroke="#f59e0b" strokeWidth="2"/>
-                <path d="M28 16v14l8 5" stroke="#f59e0b" strokeWidth="2.5" strokeLinecap="round"/>
-              </svg>
+
+          <div className="auth-pending-steps">
+            <div className="auth-pending-step auth-pending-step--done">
+              <span className="auth-step-dot">
+                <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              </span>
+              Application submitted
             </div>
-            <div>
-              <h2 className="auth-form-title" style={{textAlign:'center'}}>Application Submitted!</h2>
-              <p className="auth-form-sub" style={{textAlign:'center', marginTop:8}}>
-                Your account is <strong style={{color:'#f59e0b'}}>pending admin verification</strong>.
-                You will be able to log in once approved.
-              </p>
+            <div className="auth-pending-step auth-pending-step--active">
+              <span className="auth-step-dot">
+                <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="4" stroke="currentColor" strokeWidth="1.8"/><path d="M6 4v2.5l1.5 1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+              </span>
+              Admin verification in progress
             </div>
-            <div className="auth-pending-steps">
-              <div className="auth-pending-step auth-pending-step--done">
-                <span className="auth-step-dot">✓</span>
-                <span>Application submitted</span>
-              </div>
-              <div className="auth-pending-step auth-pending-step--active">
-                <span className="auth-step-dot">⏳</span>
-                <span>Admin verification (in progress)</span>
-              </div>
-              <div className="auth-pending-step">
-                <span className="auth-step-dot">○</span>
-                <span>Account activated</span>
-              </div>
+            <div className="auth-pending-step">
+              <span className="auth-step-dot">
+                <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="4" stroke="currentColor" strokeWidth="1.8"/></svg>
+              </span>
+              Account activated
             </div>
-            <button
-              className="auth-btn-primary"
-              onClick={onNavigateLogin}
-              style={{marginTop: 8}}
-            >
-              Back to Login
+          </div>
+
+          <button className="auth-submit-btn" onClick={onNavigateLogin} style={{marginTop:8}}>
+            Return to Sign In
+          </button>
+
+          <div className="auth-footer" style={{marginTop:12}}>
+            <button className="auth-back-btn" onClick={onNavigateLogin}>
+              <Ico.Back /> Return to home
             </button>
           </div>
         </div>
@@ -207,435 +193,244 @@ export default function SignupPage({ onNavigateLogin }) {
     );
   }
 
+  /* ── Banner ── */
+  const Banner = () => (
+    <>
+      {error && (
+        <div className="auth-banner auth-banner--error">
+          <div className="auth-banner__icon"><Ico.Info /></div>
+          <div className="auth-banner__body">{error}</div>
+        </div>
+      )}
+      {success && (
+        <div className="auth-banner auth-banner--success">
+          <div className="auth-banner__icon"><Ico.Info /></div>
+          <div className="auth-banner__body">{success}</div>
+        </div>
+      )}
+    </>
+  );
+
   return (
     <div className="auth-root">
-      {/* Left panel */}
-      <div className="auth-left">
-        <div className="auth-left-content">
-          <div className="auth-logo">
-            <div className="auth-logo-icon">
-              <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
-                <path d="M4 8L14 3L24 8V20L14 25L4 20V8Z" stroke="white" strokeWidth="1.5" strokeLinejoin="round"/>
-                <path d="M14 3V25M4 8L24 20M24 8L4 20" stroke="white" strokeWidth="1.5" opacity="0.5"/>
-              </svg>
-            </div>
-            <span className="auth-logo-text">VendorBridge</span>
-          </div>
-
-          <div className="auth-left-hero">
-            <h1 className="auth-hero-title">Join the <br />procurement <br />ecosystem.</h1>
-            <p className="auth-hero-sub">
-              Whether you're an internal team member or a vendor, 
-              VendorBridge connects everyone in one seamless workflow.
-            </p>
-          </div>
-
-          <div className="auth-role-pills">
-            <div className="auth-role-pill">
-              <span>📋</span> Procurement Officer
-            </div>
-            <div className="auth-role-pill">
-              <span>✅</span> Manager
-            </div>
-            <div className="auth-role-pill">
-              <span>💳</span> Finance
-            </div>
-            <div className="auth-role-pill">
-              <span>🏭</span> Vendor
-            </div>
-          </div>
-        </div>
-        <div className="auth-left-glow" />
-        <div className="auth-left-grid" />
+      {/* Floating dots */}
+      <div className="auth-dots" aria-hidden="true">
+        {DOTS.map((d,i) => <span key={i} className="auth-dot" style={{width:d.size,height:d.size,top:d.top,left:d.left,animationDelay:d.delay,animationDuration:d.dur}} />)}
       </div>
 
-      {/* Right panel */}
-      <div className="auth-right">
-        <div className="auth-form-card auth-form-card--signup">
+      <div className="auth-card auth-card--wide">
 
-          <div className="auth-form-header">
-            <h2 className="auth-form-title">Create your account</h2>
-            <p className="auth-form-sub">Choose your account type to get started</p>
-          </div>
-
-          {/* Account type toggle */}
-          <div className="auth-type-toggle">
-            <button
-              id="type-internal-btn"
-              className={`auth-type-btn ${accountType === 'user' ? 'auth-type-btn--active' : ''}`}
-              onClick={() => switchAccountType('user')}
-            >
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                <circle cx="8" cy="5" r="3" stroke="currentColor" strokeWidth="1.4"/>
-                <path d="M2 14c0-3.3 2.7-6 6-6s6 2.7 6 6" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
-              </svg>
-              Internal User
-            </button>
-            <button
-              id="type-vendor-btn"
-              className={`auth-type-btn ${accountType === 'vendor' ? 'auth-type-btn--active' : ''}`}
-              onClick={() => switchAccountType('vendor')}
-            >
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                <rect x="2" y="6" width="12" height="8" rx="1.5" stroke="currentColor" strokeWidth="1.4"/>
-                <path d="M5 6V4a3 3 0 016 0v2" stroke="currentColor" strokeWidth="1.4"/>
-                <path d="M8 10v2" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
-              </svg>
-              Vendor Company
-            </button>
-          </div>
-
-          {/* Error / Success banners */}
-          {error && (
-            <div className="auth-error-banner">
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                <circle cx="8" cy="8" r="7" stroke="#ef4444" strokeWidth="1.5"/>
-                <path d="M8 5v3M8 11v.5" stroke="#ef4444" strokeWidth="1.5" strokeLinecap="round"/>
-              </svg>
-              {error}
-            </div>
-          )}
-          {success && (
-            <div className="auth-success-banner">
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                <circle cx="8" cy="8" r="7" stroke="#22c55e" strokeWidth="1.5"/>
-                <path d="M5 8l2 2 4-4" stroke="#22c55e" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-              {success}
-            </div>
-          )}
-
-          {/* ─── INTERNAL USER FORM ─── */}
-          {accountType === 'user' && (
-            <form className="auth-form" onSubmit={handleUserSignup} noValidate>
-              <div className="auth-form-grid">
-                {/* Full Name */}
-                <div className="auth-field-group auth-field-full">
-                  <label className="auth-label" htmlFor="user-name">Full Name <span className="auth-required">*</span></label>
-                  <div className="auth-input-wrap">
-                    <svg className="auth-input-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
-                      <circle cx="8" cy="5" r="3" stroke="currentColor" strokeWidth="1.4"/>
-                      <path d="M2 14c0-3.3 2.7-6 6-6s6 2.7 6 6" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
-                    </svg>
-                    <input id="user-name" className="auth-input" type="text" name="name"
-                      placeholder="Alex Mercer" value={userForm.name} onChange={handleUserChange} required />
-                  </div>
-                </div>
-
-                {/* Email */}
-                <div className="auth-field-group auth-field-full">
-                  <label className="auth-label" htmlFor="user-email">Work Email <span className="auth-required">*</span></label>
-                  <div className="auth-input-wrap">
-                    <svg className="auth-input-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
-                      <rect x="1" y="3" width="14" height="10" rx="2" stroke="currentColor" strokeWidth="1.4"/>
-                      <path d="M1 5.5l7 4 7-4" stroke="currentColor" strokeWidth="1.4"/>
-                    </svg>
-                    <input id="user-email" className="auth-input" type="email" name="email"
-                      placeholder="you@company.com" value={userForm.email} onChange={handleUserChange} required />
-                  </div>
-                </div>
-
-                {/* Role */}
-                <div className="auth-field-group auth-field-full">
-                  <label className="auth-label" htmlFor="user-role">Role <span className="auth-required">*</span></label>
-                  <div className="auth-input-wrap">
-                    <svg className="auth-input-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
-                      <path d="M8 2l1.5 3 3.5.5-2.5 2.5.5 3.5L8 10l-3 1.5.5-3.5L3 5.5 6.5 5 8 2z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round"/>
-                    </svg>
-                    <select id="user-role" className="auth-input auth-select" name="role"
-                      value={userForm.role} onChange={handleUserChange} required>
-                      <option value="">Select your role…</option>
-                      {ROLES.map(r => (
-                        <option key={r.value} value={r.value}>{r.icon} {r.label}</option>
-                      ))}
-                    </select>
-                  </div>
-                  {selectedRoleData && (
-                    <p className="auth-field-hint">
-                      <span className="auth-hint-dot" /> {selectedRoleData.desc}
-                    </p>
-                  )}
-                </div>
-
-                {/* Department — hidden for manager */}
-                {needsDepartment && (
-                  <div className="auth-field-group auth-field-full auth-field-animate">
-                    <label className="auth-label" htmlFor="user-dept">
-                      Department <span className="auth-required">*</span>
-                    </label>
-                    <div className="auth-input-wrap">
-                      <svg className="auth-input-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
-                        <path d="M2 13V6l6-4 6 4v7" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round"/>
-                        <rect x="6" y="9" width="4" height="4" rx="0.5" stroke="currentColor" strokeWidth="1.4"/>
-                      </svg>
-                      <select id="user-dept" className="auth-input auth-select" name="department"
-                        value={userForm.department} onChange={handleUserChange} required>
-                        <option value="">
-                          {loadingDepts ? 'Loading departments…' : 'Select department…'}
-                        </option>
-                        {departments.map(d => (
-                          <option key={d.id} value={d.id}>{d.name} ({d.code})</option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-                )}
-
-                {/* Manager notice */}
-                {userForm.role === 'manager' && (
-                  <div className="auth-info-box auth-field-full auth-field-animate">
-                    <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
-                      <circle cx="8" cy="8" r="7" stroke="#3b82f6" strokeWidth="1.5"/>
-                      <path d="M8 7v5M8 5v.5" stroke="#3b82f6" strokeWidth="1.5" strokeLinecap="round"/>
-                    </svg>
-                    Managers oversee all departments — no department assignment needed.
-                  </div>
-                )}
-
-                {/* Password */}
-                <div className="auth-field-group">
-                  <label className="auth-label" htmlFor="user-password">Password <span className="auth-required">*</span></label>
-                  <div className="auth-input-wrap">
-                    <svg className="auth-input-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
-                      <rect x="3" y="7" width="10" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.4"/>
-                      <path d="M5 7V5a3 3 0 016 0v2" stroke="currentColor" strokeWidth="1.4"/>
-                    </svg>
-                    <input id="user-password" className="auth-input" type={showPassword ? 'text' : 'password'}
-                      name="password" placeholder="Min. 6 characters" value={userForm.password}
-                      onChange={handleUserChange} required />
-                    <button type="button" className="auth-toggle-pw" onClick={() => setShowPassword(!showPassword)}>
-                      {showPassword ? (
-                        <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M2 2l12 12M6.5 6.6A2 2 0 009.4 9.5M3 7s1.5-3 5-3c.7 0 1.4.1 2 .4M13 7s-.5 1.2-1.5 2.1" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg>
-                      ) : (
-                        <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M1 8s2.5-5 7-5 7 5 7 5-2.5 5-7 5-7-5-7-5z" stroke="currentColor" strokeWidth="1.4"/><circle cx="8" cy="8" r="2" stroke="currentColor" strokeWidth="1.4"/></svg>
-                      )}
-                    </button>
-                  </div>
-                </div>
-
-                {/* Confirm Password */}
-                <div className="auth-field-group">
-                  <label className="auth-label" htmlFor="user-confirm-password">Confirm Password <span className="auth-required">*</span></label>
-                  <div className="auth-input-wrap">
-                    <svg className="auth-input-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
-                      <path d="M5 8l2 2 4-4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
-                      <rect x="3" y="7" width="10" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.4"/>
-                      <path d="M5 7V5a3 3 0 016 0v2" stroke="currentColor" strokeWidth="1.4"/>
-                    </svg>
-                    <input id="user-confirm-password" className="auth-input" type={showConfirm ? 'text' : 'password'}
-                      name="confirmPassword" placeholder="Re-enter password" value={userForm.confirmPassword}
-                      onChange={handleUserChange} required />
-                    <button type="button" className="auth-toggle-pw" onClick={() => setShowConfirm(!showConfirm)}>
-                      {showConfirm ? (
-                        <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M2 2l12 12M6.5 6.6A2 2 0 009.4 9.5M3 7s1.5-3 5-3c.7 0 1.4.1 2 .4M13 7s-.5 1.2-1.5 2.1" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg>
-                      ) : (
-                        <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M1 8s2.5-5 7-5 7 5 7 5-2.5 5-7 5-7-5-7-5z" stroke="currentColor" strokeWidth="1.4"/><circle cx="8" cy="8" r="2" stroke="currentColor" strokeWidth="1.4"/></svg>
-                      )}
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              <button id="user-signup-submit" type="submit" className="auth-btn-primary" disabled={loading}>
-                {loading ? <span className="auth-spinner" /> : (
-                  <>
-                    Create Account
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                      <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                  </>
-                )}
-              </button>
-            </form>
-          )}
-
-          {/* ─── VENDOR COMPANY FORM ─── */}
-          {accountType === 'vendor' && (
-            <form className="auth-form" onSubmit={handleVendorSignup} noValidate>
-              <div className="auth-form-grid">
-                {/* Company Name */}
-                <div className="auth-field-group auth-field-full">
-                  <label className="auth-label" htmlFor="vendor-name">Company Name <span className="auth-required">*</span></label>
-                  <div className="auth-input-wrap">
-                    <svg className="auth-input-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
-                      <rect x="2" y="6" width="12" height="8" rx="1.5" stroke="currentColor" strokeWidth="1.4"/>
-                      <path d="M5 6V4a3 3 0 016 0v2" stroke="currentColor" strokeWidth="1.4"/>
-                    </svg>
-                    <input id="vendor-name" className="auth-input" type="text" name="name"
-                      placeholder="Acme Technologies Pvt. Ltd." value={vendorForm.name} onChange={handleVendorChange} required />
-                  </div>
-                </div>
-
-                {/* Contact Person */}
-                <div className="auth-field-group">
-                  <label className="auth-label" htmlFor="vendor-contact">Contact Person</label>
-                  <div className="auth-input-wrap">
-                    <svg className="auth-input-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
-                      <circle cx="8" cy="5" r="3" stroke="currentColor" strokeWidth="1.4"/>
-                      <path d="M2 14c0-3.3 2.7-6 6-6s6 2.7 6 6" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
-                    </svg>
-                    <input id="vendor-contact" className="auth-input" type="text" name="contact_person"
-                      placeholder="Rajesh Sharma" value={vendorForm.contact_person} onChange={handleVendorChange} />
-                  </div>
-                </div>
-
-                {/* Phone */}
-                <div className="auth-field-group">
-                  <label className="auth-label" htmlFor="vendor-phone">Phone <span className="auth-required">*</span></label>
-                  <div className="auth-input-wrap">
-                    <svg className="auth-input-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
-                      <path d="M3 2h3l1 3-2 1a10 10 0 004 4l1-2 3 1v3a1 1 0 01-1 1A13 13 0 012 3a1 1 0 011-1z" stroke="currentColor" strokeWidth="1.3"/>
-                    </svg>
-                    <input id="vendor-phone" className="auth-input" type="tel" name="phone"
-                      placeholder="+91-98765-43210" value={vendorForm.phone} onChange={handleVendorChange} required />
-                  </div>
-                </div>
-
-                {/* Email */}
-                <div className="auth-field-group">
-                  <label className="auth-label" htmlFor="vendor-email">Business Email <span className="auth-required">*</span></label>
-                  <div className="auth-input-wrap">
-                    <svg className="auth-input-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
-                      <rect x="1" y="3" width="14" height="10" rx="2" stroke="currentColor" strokeWidth="1.4"/>
-                      <path d="M1 5.5l7 4 7-4" stroke="currentColor" strokeWidth="1.4"/>
-                    </svg>
-                    <input id="vendor-email" className="auth-input" type="email" name="email"
-                      placeholder="sales@company.com" value={vendorForm.email} onChange={handleVendorChange} required />
-                  </div>
-                </div>
-
-                {/* Category */}
-                <div className="auth-field-group">
-                  <label className="auth-label" htmlFor="vendor-category">Category</label>
-                  <div className="auth-input-wrap">
-                    <svg className="auth-input-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
-                      <rect x="1" y="1" width="6" height="6" rx="1" stroke="currentColor" strokeWidth="1.4"/>
-                      <rect x="9" y="1" width="6" height="6" rx="1" stroke="currentColor" strokeWidth="1.4"/>
-                      <rect x="1" y="9" width="6" height="6" rx="1" stroke="currentColor" strokeWidth="1.4"/>
-                      <rect x="9" y="9" width="6" height="6" rx="1" stroke="currentColor" strokeWidth="1.4"/>
-                    </svg>
-                    <select id="vendor-category" className="auth-input auth-select" name="category"
-                      value={vendorForm.category} onChange={handleVendorChange}>
-                      <option value="">Select category…</option>
-                      {VENDOR_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-                    </select>
-                  </div>
-                </div>
-
-                {/* GST Number */}
-                <div className="auth-field-group">
-                  <label className="auth-label" htmlFor="vendor-gst">GST Number</label>
-                  <div className="auth-input-wrap">
-                    <svg className="auth-input-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
-                      <rect x="2" y="3" width="12" height="10" rx="1.5" stroke="currentColor" strokeWidth="1.4"/>
-                      <path d="M5 7h6M5 10h4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
-                    </svg>
-                    <input id="vendor-gst" className="auth-input" type="text" name="gst_number"
-                      placeholder="27AABCD1234F1Z5" value={vendorForm.gst_number} onChange={handleVendorChange} />
-                  </div>
-                </div>
-
-                {/* Address */}
-                <div className="auth-field-group auth-field-full">
-                  <label className="auth-label" htmlFor="vendor-address">Business Address <span className="auth-required">*</span></label>
-                  <div className="auth-input-wrap auth-textarea-wrap">
-                    <svg className="auth-input-icon auth-textarea-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
-                      <path d="M8 1C5.8 1 4 2.8 4 5c0 3 4 9 4 9s4-6 4-9c0-2.2-1.8-4-4-4z" stroke="currentColor" strokeWidth="1.4"/>
-                      <circle cx="8" cy="5" r="1.5" stroke="currentColor" strokeWidth="1.4"/>
-                    </svg>
-                    <textarea id="vendor-address" className="auth-input auth-textarea" name="address"
-                      placeholder="Plot 42, Industrial Area, Mumbai, Maharashtra 400001"
-                      value={vendorForm.address} onChange={handleVendorChange} required rows={2} />
-                  </div>
-                </div>
-
-                {/* Website */}
-                <div className="auth-field-group auth-field-full">
-                  <label className="auth-label" htmlFor="vendor-website">Website <span className="auth-optional">(optional)</span></label>
-                  <div className="auth-input-wrap">
-                    <svg className="auth-input-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
-                      <circle cx="8" cy="8" r="6" stroke="currentColor" strokeWidth="1.4"/>
-                      <path d="M8 2c0 0-3 2-3 6s3 6 3 6" stroke="currentColor" strokeWidth="1.4"/>
-                      <path d="M8 2c0 0 3 2 3 6s-3 6-3 6M2 8h12" stroke="currentColor" strokeWidth="1.4"/>
-                    </svg>
-                    <input id="vendor-website" className="auth-input" type="url" name="website"
-                      placeholder="https://www.company.com" value={vendorForm.website} onChange={handleVendorChange} />
-                  </div>
-                </div>
-
-                {/* Password */}
-                <div className="auth-field-group">
-                  <label className="auth-label" htmlFor="vendor-password">Password <span className="auth-required">*</span></label>
-                  <div className="auth-input-wrap">
-                    <svg className="auth-input-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
-                      <rect x="3" y="7" width="10" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.4"/>
-                      <path d="M5 7V5a3 3 0 016 0v2" stroke="currentColor" strokeWidth="1.4"/>
-                    </svg>
-                    <input id="vendor-password" className="auth-input" type={showPassword ? 'text' : 'password'}
-                      name="password" placeholder="Min. 6 characters" value={vendorForm.password}
-                      onChange={handleVendorChange} required />
-                    <button type="button" className="auth-toggle-pw" onClick={() => setShowPassword(!showPassword)}>
-                      {showPassword ? (
-                        <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M2 2l12 12M6.5 6.6A2 2 0 009.4 9.5M3 7s1.5-3 5-3c.7 0 1.4.1 2 .4M13 7s-.5 1.2-1.5 2.1" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg>
-                      ) : (
-                        <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M1 8s2.5-5 7-5 7 5 7 5-2.5 5-7 5-7-5-7-5z" stroke="currentColor" strokeWidth="1.4"/><circle cx="8" cy="8" r="2" stroke="currentColor" strokeWidth="1.4"/></svg>
-                      )}
-                    </button>
-                  </div>
-                </div>
-
-                {/* Confirm Password */}
-                <div className="auth-field-group">
-                  <label className="auth-label" htmlFor="vendor-confirm-password">Confirm Password <span className="auth-required">*</span></label>
-                  <div className="auth-input-wrap">
-                    <svg className="auth-input-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
-                      <path d="M5 8l2 2 4-4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
-                      <rect x="3" y="7" width="10" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.4"/>
-                      <path d="M5 7V5a3 3 0 016 0v2" stroke="currentColor" strokeWidth="1.4"/>
-                    </svg>
-                    <input id="vendor-confirm-password" className="auth-input" type={showConfirm ? 'text' : 'password'}
-                      name="confirmPassword" placeholder="Re-enter password" value={vendorForm.confirmPassword}
-                      onChange={handleVendorChange} required />
-                    <button type="button" className="auth-toggle-pw" onClick={() => setShowConfirm(!showConfirm)}>
-                      {showConfirm ? (
-                        <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M2 2l12 12M6.5 6.6A2 2 0 009.4 9.5M3 7s1.5-3 5-3c.7 0 1.4.1 2 .4M13 7s-.5 1.2-1.5 2.1" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg>
-                      ) : (
-                        <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M1 8s2.5-5 7-5 7 5 7 5-2.5 5-7 5-7-5-7-5z" stroke="currentColor" strokeWidth="1.4"/><circle cx="8" cy="8" r="2" stroke="currentColor" strokeWidth="1.4"/></svg>
-                      )}
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              <div className="auth-vendor-code-note">
-                <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
-                  <circle cx="8" cy="8" r="7" stroke="#a78bfa" strokeWidth="1.5"/>
-                  <path d="M8 7v5M8 5v.5" stroke="#a78bfa" strokeWidth="1.5" strokeLinecap="round"/>
-                </svg>
-                A unique vendor code (e.g. <strong>VND-7821</strong>) will be auto-assigned after registration.
-              </div>
-
-              <button id="vendor-signup-submit" type="submit" className="auth-btn-primary" disabled={loading}>
-                {loading ? <span className="auth-spinner" /> : (
-                  <>
-                    Register as Vendor
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                      <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                  </>
-                )}
-              </button>
-            </form>
-          )}
-
-          <div className="auth-divider">
-            <span>Already have an account?</span>
-          </div>
-
-          <button id="goto-login-btn" className="auth-btn-secondary" onClick={onNavigateLogin}>
-            Sign in instead
+        {/* Tabs */}
+        <div className="auth-tabs" role="tablist">
+          <button id="type-internal-btn" role="tab" aria-selected={accountType==='user'}
+            className={`auth-tab-btn ${accountType==='user'?'auth-tab-btn--active':''}`}
+            onClick={() => switchType('user')}>
+            <Ico.User /> Internal User
+          </button>
+          <button id="type-vendor-btn" role="tab" aria-selected={accountType==='vendor'}
+            className={`auth-tab-btn ${accountType==='vendor'?'auth-tab-btn--active':''}`}
+            onClick={() => switchType('vendor')}>
+            <Ico.Vendor /> Vendor Company
           </button>
         </div>
+
+        {/* Header */}
+        <div className="auth-header">
+          <div className="auth-brand">VendorBridge</div>
+          <div className="auth-title">Create Account</div>
+          <div className="auth-subtitle">
+            {accountType === 'user'
+              ? 'Create a new internal user account.'
+              : 'Register your vendor company for procurement access.'}
+          </div>
+        </div>
+
+        <Banner />
+
+        {/* ═══ INTERNAL USER FORM ═══ */}
+        {accountType === 'user' && (
+          <form className="auth-form" onSubmit={handleUserSignup} noValidate>
+
+            <Field id="user-name" label="Full Name" required>
+              <div className="auth-input-wrap">
+                <span className="auth-input-icon"><Ico.User /></span>
+                <input id="user-name" className="auth-input" type="text" name="name"
+                  placeholder="Alex Mercer" value={userForm.name} onChange={onUserChange} required />
+              </div>
+            </Field>
+
+            <Field id="user-email" label="Work Email" required>
+              <div className="auth-input-wrap">
+                <span className="auth-input-icon"><Ico.Email /></span>
+                <input id="user-email" className="auth-input" type="email" name="email"
+                  placeholder="you@company.com" value={userForm.email} onChange={onUserChange} required />
+              </div>
+            </Field>
+
+            <Field id="user-role" label="Role" required>
+              <div className="auth-input-wrap">
+                <span className="auth-input-icon"><Ico.Star /></span>
+                <select id="user-role" className="auth-input auth-select auth-input--bare" name="role"
+                  value={userForm.role} onChange={onUserChange} required
+                  style={{paddingLeft:'38px'}}>
+                  <option value="">Select your role…</option>
+                  {ROLES.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
+                </select>
+              </div>
+              {selRole && (
+                <div style={{fontSize:'0.76rem',color:'#6b7280',marginTop:'4px',display:'flex',alignItems:'center',gap:5}}>
+                  <span style={{width:4,height:4,borderRadius:'50%',background:'#2563eb',flexShrink:0,display:'inline-block'}} />
+                  {selRole.desc}
+                </div>
+              )}
+            </Field>
+
+            {needsDept && (
+              <div className="auth-field-animate">
+                <Field id="user-dept" label="Department" required>
+                  <div className="auth-input-wrap">
+                    <span className="auth-input-icon"><Ico.Bldg /></span>
+                    <select id="user-dept" className="auth-input auth-select auth-input--bare" name="department"
+                      value={userForm.department} onChange={onUserChange} required style={{paddingLeft:'38px'}}>
+                      <option value="">{loadingDepts ? 'Loading…' : 'Select department…'}</option>
+                      {departments.map(d => <option key={d.id} value={d.id}>{d.name} ({d.code})</option>)}
+                    </select>
+                  </div>
+                </Field>
+              </div>
+            )}
+
+            {userForm.role === 'manager' && (
+              <div className="auth-info-box auth-field-animate">
+                <Ico.Info />
+                Managers oversee all departments — no department assignment needed.
+              </div>
+            )}
+
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
+              <Field id="user-password" label="Password" required>
+                <PwInput id="user-password" name="password" placeholder="Min. 6 chars"
+                  value={userForm.password} onChange={onUserChange} show={showPw} onToggle={() => setShowPw(s=>!s)} />
+              </Field>
+              <Field id="user-confirm-password" label="Confirm Password" required>
+                <PwInput id="user-confirm-password" name="confirmPassword" placeholder="Re-enter"
+                  value={userForm.confirmPassword} onChange={onUserChange} show={showCPw} onToggle={() => setShowCPw(s=>!s)} />
+              </Field>
+            </div>
+
+            <button id="user-signup-submit" type="submit" className="auth-submit-btn" disabled={loading}>
+              {loading ? <span className="auth-spinner" /> : <><span>Create Account</span><Ico.Arrow /></>}
+            </button>
+          </form>
+        )}
+
+        {/* ═══ VENDOR COMPANY FORM ═══ */}
+        {accountType === 'vendor' && (
+          <form className="auth-form" onSubmit={handleVendorSignup} noValidate>
+
+            <Field id="vendor-name" label="Company Name" required>
+              <div className="auth-input-wrap">
+                <span className="auth-input-icon"><Ico.Vendor /></span>
+                <input id="vendor-name" className="auth-input" type="text" name="name"
+                  placeholder="Acme Technologies Pvt. Ltd." value={vendorForm.name} onChange={onVendorChange} required />
+              </div>
+            </Field>
+
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
+              <Field id="vendor-contact" label="Contact Person">
+                <div className="auth-input-wrap">
+                  <span className="auth-input-icon"><Ico.User /></span>
+                  <input id="vendor-contact" className="auth-input" type="text" name="contact_person"
+                    placeholder="Rajesh Sharma" value={vendorForm.contact_person} onChange={onVendorChange} />
+                </div>
+              </Field>
+              <Field id="vendor-phone" label="Phone" required>
+                <div className="auth-input-wrap">
+                  <span className="auth-input-icon"><Ico.Phone /></span>
+                  <input id="vendor-phone" className="auth-input" type="tel" name="phone"
+                    placeholder="+91-98765-43210" value={vendorForm.phone} onChange={onVendorChange} required />
+                </div>
+              </Field>
+            </div>
+
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
+              <Field id="vendor-email" label="Business Email" required>
+                <div className="auth-input-wrap">
+                  <span className="auth-input-icon"><Ico.Email /></span>
+                  <input id="vendor-email" className="auth-input" type="email" name="email"
+                    placeholder="sales@company.com" value={vendorForm.email} onChange={onVendorChange} required />
+                </div>
+              </Field>
+              <Field id="vendor-category" label="Category">
+                <div className="auth-input-wrap">
+                  <span className="auth-input-icon"><Ico.Grid /></span>
+                  <select id="vendor-category" className="auth-input auth-select auth-input--bare" name="category"
+                    value={vendorForm.category} onChange={onVendorChange} style={{paddingLeft:'38px'}}>
+                    <option value="">Select…</option>
+                    {VENDOR_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </div>
+              </Field>
+            </div>
+
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
+              <Field id="vendor-gst" label="GST Number">
+                <div className="auth-input-wrap">
+                  <span className="auth-input-icon"><Ico.Doc /></span>
+                  <input id="vendor-gst" className="auth-input" type="text" name="gst_number"
+                    placeholder="27AABCD1234F1Z5" value={vendorForm.gst_number} onChange={onVendorChange} />
+                </div>
+              </Field>
+              <Field id="vendor-website" label="Website" optional>
+                <div className="auth-input-wrap">
+                  <span className="auth-input-icon"><Ico.Globe /></span>
+                  <input id="vendor-website" className="auth-input" type="url" name="website"
+                    placeholder="https://company.com" value={vendorForm.website} onChange={onVendorChange} />
+                </div>
+              </Field>
+            </div>
+
+            <Field id="vendor-address" label="Business Address" required>
+              <div className="auth-input-wrap" style={{alignItems:'flex-start'}}>
+                <span className="auth-input-icon" style={{top:12,position:'absolute'}}><Ico.Pin /></span>
+                <textarea id="vendor-address" className="auth-input auth-textarea" name="address"
+                  placeholder="Plot 42, Industrial Area, Mumbai, Maharashtra 400001"
+                  value={vendorForm.address} onChange={onVendorChange} required rows={2} />
+              </div>
+            </Field>
+
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
+              <Field id="vendor-password" label="Password" required>
+                <PwInput id="vendor-password" name="password" placeholder="Min. 6 chars"
+                  value={vendorForm.password} onChange={onVendorChange} show={showPw} onToggle={() => setShowPw(s=>!s)} />
+              </Field>
+              <Field id="vendor-confirm-password" label="Confirm Password" required>
+                <PwInput id="vendor-confirm-password" name="confirmPassword" placeholder="Re-enter"
+                  value={vendorForm.confirmPassword} onChange={onVendorChange} show={showCPw} onToggle={() => setShowCPw(s=>!s)} />
+              </Field>
+            </div>
+
+            <div className="auth-vendor-code-note">
+              <Ico.Info />
+              A unique vendor code (e.g. <strong>VND-7821</strong>) will be auto-assigned after registration.
+            </div>
+
+            <button id="vendor-signup-submit" type="submit" className="auth-submit-btn" disabled={loading}>
+              {loading ? <span className="auth-spinner" /> : <><span>Register as Vendor</span><Ico.Arrow /></>}
+            </button>
+          </form>
+        )}
+
+        {/* Footer */}
+        <div className="auth-footer">
+          Have an account?{' '}
+          <button id="goto-login-btn" className="auth-toggle-link" onClick={onNavigateLogin}>Sign In</button>
+        </div>
+
+        <button className="auth-back-btn" onClick={onNavigateLogin}>
+          <Ico.Back /> Return to home
+        </button>
+
       </div>
     </div>
   );
