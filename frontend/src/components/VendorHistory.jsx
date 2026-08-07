@@ -1,18 +1,30 @@
 import React, { useState } from 'react';
 
-export default function VendorHistory({ quotations }) {
+export default function VendorHistory({ quotations = [], rfqs = [] }) {
   const [statusFilter, setStatusFilter] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
 
-  // Only show submitted/selected/rejected (not drafts)
-  const historicalQuotations = quotations.filter(q => q.status !== 'draft');
+  const getIdStr = (obj) => {
+    if (!obj) return '';
+    if (typeof obj === 'string') return obj;
+    if (typeof obj === 'object') return obj.id || obj.uuid || String(obj);
+    return String(obj);
+  };
+
+  // Map all vendor proposals with linked RFQ details
+  const historicalQuotations = (quotations || [])
+    .map(q => {
+      const rfqId = getIdStr(q.rfq || q.rfq_details);
+      const rfqObj = (rfqs || []).find(r => getIdStr(r) === rfqId) || q.rfq_details || {};
+      return { ...q, rfq_info: rfqObj };
+    });
 
   const filtered = historicalQuotations.filter(q => {
-    const matchesStatus = !statusFilter || q.status === statusFilter;
+    const matchesStatus = !statusFilter || q.status === statusFilter || (statusFilter === 'selected' && (q.status === 'awarded' || q.status === 'completed'));
     let matchesDate = true;
     if (startDate || endDate) {
-      const submitted = new Date(q.submitted_at || q.created_at);
+      const submitted = new Date(q.submitted_at || q.created_at || Date.now());
       if (startDate && submitted < new Date(startDate)) matchesDate = false;
       if (endDate && submitted > new Date(endDate + 'T23:59:59')) matchesDate = false;
     }
@@ -21,10 +33,19 @@ export default function VendorHistory({ quotations }) {
 
   const getStatusBadge = (s) => {
     switch (s) {
-      case 'submitted': return 'badge badge-status-pending_approval';
-      case 'selected': return 'badge badge-status-open';
-      case 'rejected': return 'badge badge-status-rejected';
-      default: return 'badge badge-status-draft';
+      case 'submitted':
+      case 'under_review':
+        return <span className="badge badge-status-pending_approval" style={{ background: '#3b82f6', color: '#fff' }}>⏳ Submitted</span>;
+      case 'selected':
+      case 'awarded':
+      case 'completed':
+        return <span className="badge badge-status-open" style={{ background: '#10b981', color: '#fff' }}>🏆 Selected & Awarded</span>;
+      case 'rejected':
+        return <span className="badge badge-status-rejected" style={{ background: '#ef4444', color: '#fff' }}>❌ Rejected</span>;
+      case 'draft':
+        return <span className="badge badge-status-draft" style={{ background: '#94a3b8', color: '#fff' }}>📝 Draft</span>;
+      default:
+        return <span className="badge badge-status-draft">{(s || 'SUBMITTED').toUpperCase()}</span>;
     }
   };
 
@@ -33,11 +54,11 @@ export default function VendorHistory({ quotations }) {
       <section className="toolbar history-toolbar" style={{ marginBottom: '20px' }}>
         <div className="filter-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
           <div className="field">
-            <label>Status</label>
+            <label>Status Filter</label>
             <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
-              <option value="">All Statuses</option>
-              <option value="submitted">Submitted</option>
-              <option value="selected">Selected</option>
+              <option value="">All Historical Proposals ({historicalQuotations.length})</option>
+              <option value="submitted">Submitted / Under Review</option>
+              <option value="selected">Selected / Awarded</option>
               <option value="rejected">Rejected</option>
             </select>
           </div>
@@ -54,7 +75,7 @@ export default function VendorHistory({ quotations }) {
 
       <section className="table-card">
         <div className="table-header-bar">
-          <span className="table-title">Quotation History</span>
+          <span className="table-title">Quotation History Log</span>
           <span className="table-count">{filtered.length} records</span>
         </div>
         <div className="table-scroll">
@@ -62,35 +83,37 @@ export default function VendorHistory({ quotations }) {
             <thead>
               <tr>
                 <th>Quotation #</th>
-                <th>RFQ Number</th>
+                <th>RFQ Number & Title</th>
                 <th>Department</th>
                 <th>Unit Price</th>
                 <th>Total Price</th>
-                <th>Decision</th>
-                <th>Submitted Date</th>
+                <th>Status / Decision</th>
+                <th>Submission Date</th>
               </tr>
             </thead>
             <tbody>
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan="7" className="empty-state"><p>No historical quotations match your filters.</p></td>
+                  <td colSpan="7" className="empty-state">
+                    <p>No historical quotations found matching your criteria.</p>
+                  </td>
                 </tr>
               ) : (
                 filtered.map(q => (
                   <tr key={q.id}>
-                    <td><span className="mono-text">{q.quotation_number}</span></td>
+                    <td><span className="mono-text">{q.quotation_number || `QTN-${q.id?.slice(0, 6)}`}</span></td>
                     <td>
-                      <span className="cell-primary">{q.rfq_details?.rfq_number}</span>
-                      <span className="cell-sub">{q.rfq_details?.title}</span>
+                      <span className="cell-primary">{q.rfq_info?.rfq_number || 'RFQ'}</span>
+                      <span className="cell-sub">{q.rfq_info?.title || 'Supply Proposal'}</span>
                     </td>
-                    <td><span className="dept-chip">{q.rfq_details?.department_details?.code || '—'}</span></td>
-                    <td className="num-cell">₹{parseFloat(q.unit_price).toLocaleString('en-IN')}</td>
-                    <td className="num-cell">₹{parseFloat(q.total_price).toLocaleString('en-IN')}</td>
-                    <td><span className={getStatusBadge(q.status)}>{q.status}</span></td>
+                    <td><span className="dept-chip">{q.rfq_info?.department_details?.code || q.rfq_info?.department || 'IT'}</span></td>
+                    <td className="num-cell">₹{parseFloat(q.unit_price || 0).toLocaleString('en-IN')}</td>
+                    <td className="num-cell" style={{ fontWeight: 600, color: 'var(--accent)' }}>₹{parseFloat(q.total_price || (q.unit_price * (q.rfq_info?.quantity || 1))).toLocaleString('en-IN')}</td>
+                    <td>{getStatusBadge(q.status)}</td>
                     <td className="date-cell">
-                      {q.submitted_at ? new Date(q.submitted_at).toLocaleDateString('en-IN', {
+                      {q.submitted_at || q.created_at ? new Date(q.submitted_at || q.created_at).toLocaleDateString('en-IN', {
                         day: '2-digit', month: 'short', year: 'numeric'
-                      }) : '—'}
+                      }) : 'Recent'}
                     </td>
                   </tr>
                 ))

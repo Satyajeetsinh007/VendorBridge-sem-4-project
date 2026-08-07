@@ -121,12 +121,27 @@ export default function VendorDashboard({ onLogout, currentUser }) {
     return String(obj);
   };
 
-  const currentVendorId = getIdStr(currentVendor);
+  const isMatchingVendor = (vendorRef, targetVendor) => {
+    if (!vendorRef || !targetVendor) return false;
+    const targetId = String(targetVendor.id || targetVendor.uuid || '').toLowerCase();
+    const targetCode = String(targetVendor.vendor_code || '').toLowerCase();
+    const targetEmail = String(targetVendor.email || '').toLowerCase();
 
-  const vendorQuotations = quotations.filter(q => {
-    const qVendorId = getIdStr(q.vendor) || getIdStr(q.vendor_details);
-    return qVendorId && currentVendorId && qVendorId === currentVendorId;
-  });
+    if (typeof vendorRef === 'object') {
+      const refId = String(vendorRef.id || vendorRef.uuid || '').toLowerCase();
+      const refCode = String(vendorRef.vendor_code || '').toLowerCase();
+      const refEmail = String(vendorRef.email || '').toLowerCase();
+      return (targetId && refId === targetId) || (targetCode && refCode === targetCode) || (targetEmail && refEmail === targetEmail);
+    }
+    
+    const refStr = String(vendorRef).toLowerCase();
+    return (targetId && refStr === targetId) || (targetCode && refStr === targetCode) || (targetEmail && refStr === targetEmail);
+  };
+
+  const vendorQuotations = quotations.filter(q => 
+    isMatchingVendor(q.vendor, currentVendor) || 
+    isMatchingVendor(q.vendor_details, currentVendor)
+  );
 
   const quotedRfqIds = new Set(vendorQuotations.map(q => getIdStr(q.rfq) || getIdStr(q.rfq_details)));
 
@@ -134,8 +149,6 @@ export default function VendorDashboard({ onLogout, currentUser }) {
   const openRfqs = rfqs.filter(r => 
     (r.status === 'open' || r.status === 'under_review') && 
     !isPastDeadline(r.deadline) && 
-    r.status !== 'closed' &&
-    r.status !== 'completed' &&
     !quotedRfqIds.has(r.id)
   );
 
@@ -144,8 +157,10 @@ export default function VendorDashboard({ onLogout, currentUser }) {
     r.status === 'open' || r.status === 'under_review' || r.status === 'closed' || r.status === 'completed' || quotedRfqIds.has(r.id)
   );
 
-  const submittedCount = vendorQuotations.filter(q => q.status === 'submitted').length;
-  const selectedCount = vendorQuotations.filter(q => q.status === 'selected').length;
+  // Real live counts from DB for the active vendor:
+  const openRfqCount = rfqs.filter(r => (r.status === 'open' || r.status === 'under_review') && !isPastDeadline(r.deadline)).length;
+  const submittedCount = vendorQuotations.filter(q => q.status === 'submitted' || q.status === 'under_review').length;
+  const selectedCount = vendorQuotations.filter(q => q.status === 'selected' || q.status === 'awarded' || q.status === 'completed').length;
   const rejectedCount = vendorQuotations.filter(q => q.status === 'rejected').length;
 
   const filteredOpenRfqs = openRfqs.filter(r =>
@@ -348,7 +363,7 @@ export default function VendorDashboard({ onLogout, currentUser }) {
                         <span className="stat-label">Open RFQs</span>
                         <div className="stat-icon-wrap"><Icons.FileText /></div>
                       </div>
-                      <div className="stat-value">{openRfqs.length}</div>
+                      <div className="stat-value">{openRfqCount}</div>
                       <span className="stat-sub">Available for bidding</span>
                     </div>
                     <div className="stat-card stat-amber">
@@ -556,7 +571,7 @@ export default function VendorDashboard({ onLogout, currentUser }) {
 
               {/* Quotation History */}
               {currentView === 'history' && (
-                <VendorHistory quotations={vendorQuotations} />
+                <VendorHistory quotations={vendorQuotations} rfqs={rfqs} />
               )}
 
               {/* Notifications */}
