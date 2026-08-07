@@ -566,18 +566,22 @@
 }
 
 .pill-count {
-  background: rgba(0,0,0,0.06);
-  padding: 0 5px;
-  border-radius: 4px;
-  font-size: 0.72rem;
-  font-weight: 600;
-  line-height: 18px;
-  color: var(--text-secondary);
+  background: rgba(15, 23, 42, 0.08) !important;
+  color: var(--text-secondary) !important;
+  box-shadow: none !important;
+  padding: 0 6px;
+  border-radius: 99px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 17px;
+  height: 17px;
+  min-width: 17px;
 }
 
 .pill-active .pill-count {
-  background: rgba(0,0,0,0.08);
-  color: var(--text-primary);
+  background: var(--accent) !important;
+  color: #ffffff !important;
+  box-shadow: 0 1px 3px rgba(37, 99, 235, 0.2) !important;
 }
 
 /* ── Buttons ── */
