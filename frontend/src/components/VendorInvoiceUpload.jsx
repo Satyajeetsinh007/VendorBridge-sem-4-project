@@ -68,7 +68,7 @@ export default function VendorInvoiceUpload({ po, vendor, onBack, onInvoiceSubmi
   const handleSaveDraft = async () => {
     setSavingDraft(true);
     try {
-      setSuccessBanner('💾 Invoice draft saved successfully!');
+      setSuccessBanner('Invoice draft saved successfully.');
       setTimeout(() => setSuccessBanner(''), 4000);
     } catch (err) {
       alert(`Save draft failed: ${err.message}`);
@@ -118,7 +118,7 @@ export default function VendorInvoiceUpload({ po, vendor, onBack, onInvoiceSubmi
 
       setInvoiceStatus('pending_verification');
       setShowSubmitModal(false);
-      const msg = `🎉 Invoice submitted successfully. Your invoice ${invoiceNumber} has been sent to the Finance Team for verification.`;
+      const msg = `Invoice submitted successfully. Your invoice ${invoiceNumber} has been sent to the Finance Team for verification.`;
       setSuccessBanner(msg);
 
       if (onNotify) {
@@ -144,18 +144,20 @@ export default function VendorInvoiceUpload({ po, vendor, onBack, onInvoiceSubmi
         <button className="btn-secondary" onClick={onBack}>← Back to Purchase Orders</button>
         <div style={{ display: 'flex', gap: '10px' }}>
           <button className="btn-secondary" onClick={() => setShowPreviewModal(true)}>
-            👁 Preview PDF
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{marginRight:5,verticalAlign:'middle'}}><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            Preview PDF
           </button>
           <button className="btn-secondary" onClick={() => alert(`Downloading ${invoiceNumber}.pdf...`)}>
-            📥 Download Invoice
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{marginRight:5,verticalAlign:'middle'}}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Download Invoice
           </button>
           {!isSubmitted && (
             <>
               <button className="btn-secondary" onClick={handleSaveDraft} disabled={savingDraft}>
-                {savingDraft ? 'Saving…' : '💾 Save Draft'}
+                {savingDraft ? 'Saving…' : 'Save Draft'}
               </button>
               <button className="btn-primary" onClick={() => setShowSubmitModal(true)} style={{ background: '#22c55e', borderColor: '#22c55e' }}>
-                🚀 Submit Invoice
+                Submit Invoice
               </button>
             </>
           )}
@@ -203,7 +205,7 @@ export default function VendorInvoiceUpload({ po, vendor, onBack, onInvoiceSubmi
         {/* Buyer Info */}
         <div className="table-card info-card" style={{ padding: '20px' }}>
           <div className="table-header-bar" style={{ paddingBottom: '10px', marginBottom: '12px', borderBottom: '1px solid var(--border-subtle)' }}>
-            <span className="table-title" style={{ fontSize: '14px' }}>🏢 Buyer Information (Read Only)</span>
+            <span className="table-title" style={{ fontSize: '14px' }}>Buyer Information (Read Only)</span>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '13px' }}>
             <div className="info-row"><span className="info-label">Company Name</span><span className="info-val" style={{ fontWeight: 700 }}>VendorBridge Enterprise Systems Pvt Ltd</span></div>
@@ -217,7 +219,7 @@ export default function VendorInvoiceUpload({ po, vendor, onBack, onInvoiceSubmi
         {/* Vendor Info */}
         <div className="table-card info-card" style={{ padding: '20px' }}>
           <div className="table-header-bar" style={{ paddingBottom: '10px', marginBottom: '12px', borderBottom: '1px solid var(--border-subtle)' }}>
-            <span className="table-title" style={{ fontSize: '14px' }}>🏬 Vendor Information (Read Only)</span>
+            <span className="table-title" style={{ fontSize: '14px' }}>Vendor Information (Read Only)</span>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '13px' }}>
             <div className="info-row"><span className="info-label">Vendor Name</span><span className="info-val" style={{ fontWeight: 700, color: 'var(--accent)' }}>{vendor?.name || 'Dell Technologies'}</span></div>
@@ -265,7 +267,7 @@ export default function VendorInvoiceUpload({ po, vendor, onBack, onInvoiceSubmi
         {/* Editable Invoice Details */}
         <div className="table-card info-card" style={{ padding: '20px' }}>
           <div className="table-header-bar" style={{ paddingBottom: '10px', marginBottom: '16px', borderBottom: '1px solid var(--border-subtle)' }}>
-            <span className="table-title">📝 Editable Invoice & Payment Details</span>
+            <span className="table-title">Editable Invoice & Payment Details</span>
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
@@ -355,7 +357,7 @@ export default function VendorInvoiceUpload({ po, vendor, onBack, onInvoiceSubmi
         {/* Financial Summary Card */}
         <div className="table-card decision-card" style={{ padding: '20px' }}>
           <div className="table-header-bar" style={{ paddingBottom: '10px', marginBottom: '16px', borderBottom: '1px solid var(--border-subtle)' }}>
-            <span className="table-title">💰 Financial Summary</span>
+            <span className="table-title">Financial Summary</span>
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '13.5px' }}>
@@ -399,7 +401,7 @@ export default function VendorInvoiceUpload({ po, vendor, onBack, onInvoiceSubmi
         {/* File Uploads */}
         <div className="table-card info-card" style={{ padding: '20px' }}>
           <div className="table-header-bar" style={{ paddingBottom: '10px', marginBottom: '14px', borderBottom: '1px solid var(--border-subtle)' }}>
-            <span className="table-title">📎 Supporting Documents Upload</span>
+            <span className="table-title">Supporting Documents Upload</span>
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
@@ -440,7 +442,7 @@ export default function VendorInvoiceUpload({ po, vendor, onBack, onInvoiceSubmi
         {/* Vendor Notes */}
         <div className="table-card info-card" style={{ padding: '20px' }}>
           <div className="table-header-bar" style={{ paddingBottom: '10px', marginBottom: '14px', borderBottom: '1px solid var(--border-subtle)' }}>
-            <span className="table-title">📝 Vendor Billing Notes</span>
+            <span className="table-title">Vendor Billing Notes</span>
           </div>
 
           <div className="field">
@@ -460,7 +462,7 @@ export default function VendorInvoiceUpload({ po, vendor, onBack, onInvoiceSubmi
       {/* ── Updated 9-Step Purchase Order Timeline ── */}
       <section className="table-card" style={{ padding: '24px', marginBottom: '20px' }}>
         <div className="table-header-bar" style={{ marginBottom: '20px' }}>
-          <span className="table-title">⏳ Purchase & Invoice Lifecycle Timeline</span>
+          <span className="table-title">Purchase & Invoice Lifecycle Timeline</span>
         </div>
 
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'relative' }}>
@@ -483,7 +485,9 @@ export default function VendorInvoiceUpload({ po, vendor, onBack, onInvoiceSubmi
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 fontWeight: 700, fontSize: '13px', marginBottom: '8px'
               }}>
-                {item.done ? '✓' : item.step}
+                {item.done ? (
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                ) : item.step}
               </div>
               <span style={{ fontSize: '11px', fontWeight: item.current ? 700 : 500, color: item.current ? 'var(--accent)' : 'var(--text-primary)', textAlign: 'center' }}>
                 {item.title}
@@ -521,7 +525,7 @@ export default function VendorInvoiceUpload({ po, vendor, onBack, onInvoiceSubmi
           <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '520px' }}>
             <div className="modal-head">
               <h2 className="modal-title">Submit Invoice</h2>
-              <button className="modal-close" onClick={() => setShowSubmitModal(false)}>✕</button>
+              <button className="modal-close" onClick={() => setShowSubmitModal(false)}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
             </div>
             <div className="modal-body" style={{ fontSize: '13.5px', color: 'var(--text-secondary)', lineHeight: '1.6' }}>
               <p style={{ margin: '0 0 10px', fontSize: '15px', fontWeight: 700, color: 'var(--accent)' }}>
@@ -550,7 +554,7 @@ export default function VendorInvoiceUpload({ po, vendor, onBack, onInvoiceSubmi
                 <h2 className="modal-title" style={{ color: '#0f172a' }}>Invoice Preview ({invoiceNumber})</h2>
                 <p className="modal-subtitle" style={{ color: '#64748b' }}>Tax Invoice Document Preview</p>
               </div>
-              <button className="modal-close" style={{ color: '#64748b' }} onClick={() => setShowPreviewModal(false)}>✕</button>
+              <button className="modal-close" style={{ color: '#64748b' }} onClick={() => setShowPreviewModal(false)}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
             </div>
 
             <div className="modal-body" style={{ maxHeight: '75vh', overflowY: 'auto', padding: '30px', color: '#0f172a', fontFamily: 'Inter, sans-serif' }}>

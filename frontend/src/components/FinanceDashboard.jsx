@@ -277,6 +277,10 @@ export default function FinanceDashboard({ onLogout, currentUser, onToggleRole }
     fetchData();
   }, []);
 
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }, [currentView, selectedInvoice]);
+
   // Filtered Invoices
   const filteredInvoices = invoices.filter(inv => {
     const q = searchQuery.toLowerCase();
@@ -338,7 +342,7 @@ export default function FinanceDashboard({ onLogout, currentUser, onToggleRole }
       };
       setSelectedInvoice(updated);
       setInvoices(prev => prev.map(i => i.id === updated.id ? updated : i));
-      alert('✅ Invoice approved successfully! You can now record the payment.');
+      alert('Invoice approved successfully. You can now record the payment.');
     } catch (err) {
       alert(`Approval failed: ${err.message}`);
     } finally {
@@ -349,7 +353,7 @@ export default function FinanceDashboard({ onLogout, currentUser, onToggleRole }
   const handleRejectInvoice = async () => {
     if (!selectedInvoice) return;
     if (!financeRemarks.trim()) {
-      alert('⚠ Rejection reason is mandatory in Finance Remarks before rejecting an invoice.');
+      alert('Rejection reason is mandatory in Finance Remarks before rejecting an invoice.');
       return;
     }
     setSubmitting(true);
@@ -374,7 +378,7 @@ export default function FinanceDashboard({ onLogout, currentUser, onToggleRole }
       };
       setSelectedInvoice(updated);
       setInvoices(prev => prev.map(i => i.id === updated.id ? updated : i));
-      alert('❌ Invoice rejected by Finance. Purchase Order status updated to REJECTED BY FINANCE across all portals.');
+      alert('Invoice rejected by Finance. Purchase Order status updated to REJECTED BY FINANCE across all portals.');
     } catch (err) {
       alert(`Rejection failed: ${err.message}`);
     } finally {
@@ -386,7 +390,7 @@ export default function FinanceDashboard({ onLogout, currentUser, onToggleRole }
     e.preventDefault();
     if (!selectedInvoice) return;
     if (!paymentData.transaction_ref.trim()) {
-      alert('⚠ Please provide a valid Transaction Reference / UTR Number.');
+      alert('Please provide a valid Transaction Reference / UTR Number.');
       return;
     }
     setSubmitting(true);
@@ -417,7 +421,7 @@ export default function FinanceDashboard({ onLogout, currentUser, onToggleRole }
       };
       setSelectedInvoice(updated);
       setInvoices(prev => prev.map(i => i.id === updated.id ? updated : i));
-      alert(`🎉 Payment of ₹${parseFloat(updated.amount).toLocaleString('en-IN')} marked as PAID!\nPurchase Order status updated to PAID & COMPLETED across all portals.\nNotifications sent to Vendor & Procurement Officer.`);
+      alert(`Payment of ₹${parseFloat(updated.amount).toLocaleString('en-IN')} marked as PAID!\nPurchase Order status updated to PAID & COMPLETED across all portals.\nNotifications sent to Vendor & Procurement Officer.`);
     } catch (err) {
       alert(`Payment processing failed: ${err.message}`);
     } finally {
@@ -547,7 +551,7 @@ export default function FinanceDashboard({ onLogout, currentUser, onToggleRole }
         </header>
 
         {/* Page Content */}
-        <main className="content">
+        <main key={selectedInvoice ? `inv-${selectedInvoice.id}` : currentView} className="content">
           {selectedInvoice ? (
             /* ════════════════════════════════════════
                INVOICE REVIEW & PAYMENT PAGE
@@ -583,7 +587,7 @@ export default function FinanceDashboard({ onLogout, currentUser, onToggleRole }
                 {/* Vendor Info */}
                 <div className="table-card" style={{ padding: '20px' }}>
                   <span className="table-title" style={{ fontSize: '14px', marginBottom: '12px', display: 'block', color: '#10b981' }}>
-                    🏢 Vendor Info
+                    Vendor Info
                   </span>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '13px' }}>
                     <div><span style={{ color: 'var(--text-secondary)' }}>Vendor Name:</span> <strong>{selectedInvoice.vendor_name || 'Dell Technologies'}</strong></div>
@@ -597,7 +601,7 @@ export default function FinanceDashboard({ onLogout, currentUser, onToggleRole }
                 {/* Invoice Info */}
                 <div className="table-card" style={{ padding: '20px' }}>
                   <span className="table-title" style={{ fontSize: '14px', marginBottom: '12px', display: 'block', color: '#f59e0b' }}>
-                    📄 Invoice Details
+                    Invoice Details
                   </span>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '13px' }}>
                     <div><span style={{ color: 'var(--text-secondary)' }}>Invoice Number:</span> <strong>{selectedInvoice.invoice_number}</strong></div>
@@ -676,18 +680,18 @@ export default function FinanceDashboard({ onLogout, currentUser, onToggleRole }
 
                 {/* Supporting Documents */}
                 <div className="table-card" style={{ padding: '20px' }}>
-                  <span className="table-title" style={{ marginBottom: '16px', display: 'block' }}>📎 Supporting Documents</span>
+                  <span className="table-title" style={{ marginBottom: '16px', display: 'block' }}>Supporting Documents</span>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                     <button className="btn-secondary" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '10px 14px' }} onClick={() => alert('Downloading Tax Invoice PDF...')}>
-                      <span>📄 Vendor Tax Invoice PDF</span>
+                      <span>Vendor Tax Invoice PDF</span>
                       <Icons.Download />
                     </button>
                     <button className="btn-secondary" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '10px 14px' }} onClick={() => alert('Downloading Purchase Order PDF...')}>
-                      <span>📋 Issued Purchase Order PDF</span>
+                      <span>Issued Purchase Order PDF</span>
                       <Icons.Download />
                     </button>
                     <button className="btn-secondary" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', padding: '10px 14px' }} onClick={() => alert('Downloading Signed Delivery Challan...')}>
-                      <span>🚚 Signed Delivery Challan / Proof</span>
+                      <span>Signed Delivery Challan / Proof</span>
                       <Icons.Download />
                     </button>
                   </div>
@@ -696,7 +700,7 @@ export default function FinanceDashboard({ onLogout, currentUser, onToggleRole }
 
               {/* ── Verification Checklist ── */}
               <div className="table-card" style={{ padding: '20px', marginBottom: '20px' }}>
-                <span className="table-title" style={{ marginBottom: '14px', display: 'block' }}>✅ Audit & Verification Checklist</span>
+                <span className="table-title" style={{ marginBottom: '14px', display: 'block' }}>Audit &amp; Verification Checklist</span>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
                   {[
                     { key: 'amountMatch', label: 'Invoice amount matches Purchase Order & Quote' },
@@ -736,10 +740,10 @@ export default function FinanceDashboard({ onLogout, currentUser, onToggleRole }
               {selectedInvoice.status !== 'approved' && selectedInvoice.status !== 'paid' && (
                 <div style={{ display: 'flex', gap: '16px', justifyContent: 'flex-end', marginBottom: '20px' }}>
                   <button className="btn-secondary" style={{ padding: '10px 24px', color: '#f87171', borderColor: 'rgba(239, 68, 68, 0.4)' }} onClick={handleRejectInvoice} disabled={submitting}>
-                    {submitting ? 'Rejecting…' : '❌ Reject Invoice'}
+                    Reject Invoice
                   </button>
                   <button className="btn-primary" style={{ padding: '10px 28px', background: '#10b981', borderColor: '#10b981' }} onClick={handleApproveInvoice} disabled={submitting}>
-                    {submitting ? 'Approving…' : '✅ Approve Invoice'}
+                    Approve Invoice
                   </button>
                 </div>
               )}
@@ -749,7 +753,7 @@ export default function FinanceDashboard({ onLogout, currentUser, onToggleRole }
                 <div className="table-card info-card" style={{ padding: '24px', background: 'rgba(16, 185, 129, 0.05)', border: '1px solid rgba(16, 185, 129, 0.3)' }}>
                   <div className="table-header-bar" style={{ borderBottom: '1px solid rgba(16, 185, 129, 0.2)', marginBottom: '16px', paddingBottom: '8px' }}>
                     <span className="table-title" style={{ fontSize: '16px', color: '#10b981' }}>
-                      💳 Record Corporate Payment & Disburse Funds
+                       Record Corporate Payment &amp; Disburse Funds
                     </span>
                     <span className="badge badge-status-approved" style={{ background: '#10b981' }}>
                       {selectedInvoice.status === 'paid' ? 'PAID & DISBURSED' : 'READY FOR PAYMENT'}
@@ -893,7 +897,7 @@ export default function FinanceDashboard({ onLogout, currentUser, onToggleRole }
                               <td><span className="badge badge-status-open">PENDING</span></td>
                               <td className="actions-cell">
                                 <button className="btn-action btn-submit" style={{ background: '#10b981', borderColor: '#10b981' }} onClick={() => openInvoiceReview(inv)}>
-                                  🔍 Review
+                                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{marginRight: 4, verticalAlign: 'middle'}}><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>Review
                                 </button>
                               </td>
                             </tr>
@@ -999,16 +1003,16 @@ export default function FinanceDashboard({ onLogout, currentUser, onToggleRole }
                NOTIFICATIONS VIEW
                ════════════════════════════════════════ */
             <div className="table-card" style={{ padding: '24px' }}>
-              <span className="table-title" style={{ marginBottom: '20px', display: 'block' }}>🔔 Finance Activity & Notifications</span>
+              <span className="table-title" style={{ marginBottom: '20px', display: 'block' }}>Finance Activity &amp; Notifications</span>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                 {[
-                  { title: 'New Invoice Submitted', time: '10 mins ago', desc: 'Vendor Dell Technologies submitted INV-2026-0089 for PO-2026-0042.', icon: '📄', color: '#60a5fa' },
-                  { title: 'Invoice Approved Successfully', time: '2 hours ago', desc: 'Invoice INV-2026-0042 (HP Inc.) verified and ready for payment disbursement.', icon: '✅', color: '#4ade80' },
-                  { title: 'Payment Completed', time: '1 day ago', desc: 'Disbursed ₹88,500 via NEFT to Lenovo Commercial for INV-2026-0012. UTR: UTR982347102938.', icon: '💳', color: '#10b981' },
-                  { title: 'Tax Audit Alert', time: '3 days ago', desc: 'Q3 GST reconciliation report generated successfully for Finance Lead approval.', icon: '📑', color: '#fbbf24' },
+                  { title: 'New Invoice Submitted', time: '10 mins ago', desc: 'Vendor Dell Technologies submitted INV-2026-0089 for PO-2026-0042.', icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>, color: '#60a5fa' },
+                  { title: 'Invoice Approved Successfully', time: '2 hours ago', desc: 'Invoice INV-2026-0042 (HP Inc.) verified and ready for payment disbursement.', icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4ade80" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>, color: '#4ade80' },
+                  { title: 'Payment Completed', time: '1 day ago', desc: 'Disbursed ₹88,500 via NEFT to Lenovo Commercial for INV-2026-0012. UTR: UTR982347102938.', icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>, color: '#10b981' },
+                  { title: 'Tax Audit Alert', time: '3 days ago', desc: 'Q3 GST reconciliation report generated successfully for Finance Lead approval.', icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>, color: '#fbbf24' },
                 ].map((item, idx) => (
                   <div key={idx} style={{ display: 'flex', gap: '16px', alignItems: 'flex-start', padding: '14px', borderRadius: 'var(--radius-sm)', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border-subtle)' }}>
-                    <div style={{ fontSize: '20px', background: 'rgba(255,255,255,0.06)', width: '40px', height: '40px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div style={{ background: 'rgba(255,255,255,0.06)', width: '40px', height: '40px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       {item.icon}
                     </div>
                     <div style={{ flex: 1 }}>
@@ -1028,7 +1032,7 @@ export default function FinanceDashboard({ onLogout, currentUser, onToggleRole }
                ════════════════════════════════════════ */
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
               <div className="table-card" style={{ padding: '24px' }}>
-                <span className="table-title" style={{ marginBottom: '20px', display: 'block' }}>👤 Finance Officer Profile</span>
+                <span className="table-title" style={{ marginBottom: '20px', display: 'block' }}>Finance Officer Profile</span>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '13.5px' }}>
                   <div><span style={{ color: 'var(--text-secondary)' }}>Full Name:</span> <strong>{currentUser?.name || 'Sarah Jenkins'}</strong></div>
                   <div><span style={{ color: 'var(--text-secondary)' }}>Employee ID:</span> <span className="mono-text">FIN-EMP-2026-08</span></div>
@@ -1040,7 +1044,7 @@ export default function FinanceDashboard({ onLogout, currentUser, onToggleRole }
               </div>
 
               <div className="table-card info-card" style={{ padding: '24px' }}>
-                <span className="table-title" style={{ marginBottom: '16px', display: 'block' }}>🔒 Change Password</span>
+                <span className="table-title" style={{ marginBottom: '16px', display: 'block' }}>Change Password</span>
                 <form onSubmit={e => { e.preventDefault(); alert('Password updated successfully!'); setPassData({ old_pass: '', new_pass: '', confirm_pass: '' }); }} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                   <div className="field">
                     <label>Current Password</label>
@@ -1165,7 +1169,7 @@ export default function FinanceDashboard({ onLogout, currentUser, onToggleRole }
                               <td><span className="badge badge-status-open">PENDING VERIFICATION</span></td>
                               <td className="actions-cell">
                                 <button className="btn-action btn-submit" style={{ background: '#10b981', borderColor: '#10b981' }} onClick={() => openInvoiceReview(inv)}>
-                                  🔍 Review
+                                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{marginRight: 4, verticalAlign: 'middle'}}><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>Review
                                 </button>
                               </td>
                             </tr>

@@ -68,6 +68,10 @@ export default function AdminDashboard({ onLogout, currentUser }) {
     fetchDashboardData();
   }, []);
 
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }, [tab, subTab]);
+
   const handleApprove = async (item, type) => {
     if (!window.confirm(`Are you sure you want to approve ${item.name}?`)) return;
     try {
@@ -198,7 +202,7 @@ export default function AdminDashboard({ onLogout, currentUser }) {
         </header>
 
       {/* Main Body */}
-      <main className="admin-main">
+      <main key={`${tab}-${subTab}`} className="admin-main">
         {/* Stats Grid */}
         <section className="admin-stats-grid">
           <div className="admin-stat-card">
@@ -220,7 +224,7 @@ export default function AdminDashboard({ onLogout, currentUser }) {
 
         {error && (
           <div className="admin-error-box">
-            <span>⚠️ {error}</span>
+            <span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{marginRight:6,verticalAlign:'middle'}}><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>{error}</span>
             <button onClick={fetchDashboardData}>Retry</button>
           </div>
         )}
@@ -260,7 +264,7 @@ export default function AdminDashboard({ onLogout, currentUser }) {
                   {subTab === 'users' ? (
                     pendingUsers.length === 0 ? (
                       <div className="empty-panel">
-                        <span>🎉</span>
+                        <span><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--success)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 11 11 13 15 9"/></svg></span>
                         <h4>No Pending Users</h4>
                         <p>All internal user signups have been verified.</p>
                       </div>
@@ -312,7 +316,7 @@ export default function AdminDashboard({ onLogout, currentUser }) {
                   ) : (
                     pendingVendors.length === 0 ? (
                       <div className="empty-panel">
-                        <span>🎉</span>
+                        <span><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--success)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 11 11 13 15 9"/></svg></span>
                         <h4>No Pending Vendors</h4>
                         <p>All external vendor applications have been verified.</p>
                       </div>

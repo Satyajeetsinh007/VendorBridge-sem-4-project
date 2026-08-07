@@ -78,7 +78,9 @@ function ComparisonBarChart({ title, dataPoints, color, suffix = '', reverseIsBe
               }} />
             </div>
             <span style={{ width: '60px', textAlign: 'right', fontWeight: 600, color: i === bestIdx ? color : 'var(--text-secondary)' }}>
-              {d.value}{suffix} {i === bestIdx ? '⭐' : ''}
+              {d.value}{suffix} {i === bestIdx ? (
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="#f59e0b" style={{verticalAlign:'middle',marginLeft:3}}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+              ) : ''}
             </span>
           </div>
         ))}
@@ -158,7 +160,7 @@ export default function QuotationComparison({ rfq, quotations, vendors, currentU
                 <div>
                   <h4>Quoted By Vendor</h4>
                   <p>${q.vendor.name}</p>
-                  <p style="font-weight: normal; color: #475569; font-size: 13px;">Code: ${q.vendor.vendor_code} | Rating: ⭐ ${q.vendor.rating}</p>
+                  <p style="font-weight: normal; color: #475569; font-size: 13px;">Code: ${q.vendor.vendor_code} | Rating: ${q.vendor.rating} / 5</p>
                 </div>
                 <div>
                   <h4>Quotation Summary</h4>
@@ -300,8 +302,8 @@ export default function QuotationComparison({ rfq, quotations, vendors, currentU
       {/* View-Only Banner for another Officer's RFQ */}
       {!isOwn && (
         <div className="state-banner info" style={{ marginBottom: '20px', padding: '14px 18px', background: 'rgba(59, 130, 246, 0.08)', border: '1px solid rgba(59, 130, 246, 0.25)' }}>
-          <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '4px' }}>
-            ℹ This RFQ was created by <span style={{ color: 'var(--accent)' }}>{rfq.created_by_details?.name || rfq.created_by_name || 'Priya Shah'}</span>
+          <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{color:'var(--accent)'}}><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg> This RFQ was created by <span style={{ color: 'var(--accent)' }}>{rfq.created_by_details?.name || rfq.created_by_name || 'Priya Shah'}</span>
           </div>
           <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
             Department: <strong>{rfq.department_details?.name || rfq.department_details?.code || 'Human Resources'}</strong>
@@ -340,7 +342,7 @@ export default function QuotationComparison({ rfq, quotations, vendors, currentU
       {recommended && (
         <div className="qc-ai-card">
           <div className="qc-ai-left">
-            <div className="qc-ai-badge">🤖 AI RECOMMENDATION</div>
+            <div className="qc-ai-badge" style={{ display: 'inline-flex', alignItems: 'center', gap: '4.5px' }}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{verticalAlign:'middle'}}><rect x="4" y="4" width="16" height="16" rx="2" ry="2"/><rect x="9" y="9" width="6" height="6"/><line x1="9" y1="1" x2="9" y2="4"/><line x1="15" y1="1" x2="15" y2="4"/><line x1="9" y1="20" x2="9" y2="23"/><line x1="15" y1="20" x2="15" y2="23"/><line x1="20" y1="9" x2="23" y2="9"/><line x1="20" y1="15" x2="23" y2="15"/><line x1="1" y1="9" x2="4" y2="9"/><line x1="1" y1="15" x2="4" y2="15"/></svg> AI RECOMMENDATION</div>
             <div className="qc-ai-vendor">
               <div className="qc-ai-logo" style={{ background: logoColors[recommended.vendor.vendor_code] || '#3b82f6' }}>
                 {initials(recommended.vendor.name)}
@@ -352,7 +354,10 @@ export default function QuotationComparison({ rfq, quotations, vendors, currentU
             </div>
             <div className="qc-ai-reasons">
               {recommended.ml.strengths.map((s, i) => (
-                <span key={i} className="qc-strength-tag">✓ {s}</span>
+                <span key={i} className="qc-strength-tag">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{marginRight:4,verticalAlign:'middle'}}><polyline points="20 6 9 17 4 12"/></svg>
+                  {s}
+                </span>
               ))}
             </div>
           </div>
@@ -451,7 +456,11 @@ export default function QuotationComparison({ rfq, quotations, vendors, currentU
                       <tr className={isRecommended ? 'qc-recommended-row' : ''}>
                         <td style={{ textAlign: 'center', cursor: 'pointer' }} onClick={() => toggleRow(q.id)}>
                           <span style={{ fontSize: '13px', color: 'var(--text-secondary)', display: 'block', padding: '4px' }}>
-                            {expandedRows[q.id] ? '▼' : '▶'}
+                            {expandedRows[q.id] ? (
+                              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{verticalAlign:'middle'}}><polyline points="6 9 12 15 18 9"/></svg>
+                            ) : (
+                              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{verticalAlign:'middle'}}><polyline points="9 18 15 12 9 6"/></svg>
+                            )}
                           </span>
                         </td>
                         <td style={{ position: 'sticky', left: 0, background: isRecommended ? 'rgba(37, 99, 235, 0.04)' : '#ffffff', zIndex: 1, minWidth: '180px' }}>
@@ -492,7 +501,7 @@ export default function QuotationComparison({ rfq, quotations, vendors, currentU
                           </div>
                         </td>
                         <td className="actions-cell" style={{ whiteSpace: 'nowrap' }}>
-                          {isRecommended && <span className="qc-rec-badge" style={{ verticalAlign: 'middle', marginRight: '6px' }}>⭐ Recommended</span>}
+                          {isRecommended && <span className="qc-rec-badge" style={{ verticalAlign: 'middle', marginRight: '6px', display: 'inline-flex', alignItems: 'center', gap: '3px' }}><svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" stroke="none" style={{color:'#fff'}}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>Recommended</span>}
                           <div style={{ display: 'inline-flex', gap: '6px' }}>
                             <button className="btn-secondary" style={{ padding: '4px 8px', fontSize: '11px' }} onClick={() => setSelectedVendorProfile(q)}>
                               Profile
@@ -508,7 +517,7 @@ export default function QuotationComparison({ rfq, quotations, vendors, currentU
                               </span>
                             )}
                             {isClosed && (
-                              <span style={{ fontSize: '11px', color: 'var(--text-muted)', alignSelf: 'center' }}>🔒 Closed</span>
+                              <span style={{ fontSize: '11px', color: 'var(--text-muted)', alignSelf: 'center', display: 'inline-flex', alignItems: 'center', gap: '3px' }}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Closed</span>
                             )}
                           </div>
                         </td>
@@ -559,8 +568,8 @@ export default function QuotationComparison({ rfq, quotations, vendors, currentU
                                   </div>
                                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '2px' }}>
                                     <span style={{ color: 'var(--text-secondary)' }}>Quotation Attachment:</span>
-                                    <a href="#" onClick={(e) => handleDownloadPDF(e, q)} className="badge badge-status-draft" style={{ background: 'rgba(37, 99, 235, 0.05)', color: 'var(--accent)', border: '1px solid rgba(37, 99, 235, 0.12)', textDecoration: 'none', padding: '3px 8px', fontSize: '11px', display: 'inline-block' }}>
-                                      📄 PDF Document
+                                    <a href="#" onClick={(e) => handleDownloadPDF(e, q)} className="badge badge-status-draft" style={{ background: 'rgba(37, 99, 235, 0.05)', color: 'var(--accent)', border: '1px solid rgba(37, 99, 235, 0.12)', textDecoration: 'none', padding: '3px 8px', fontSize: '11px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> PDF Document
                                     </a>
                                   </div>
                                 </div>
@@ -572,7 +581,7 @@ export default function QuotationComparison({ rfq, quotations, vendors, currentU
                                 <div style={{ fontSize: '13px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                                     <span style={{ color: 'var(--text-secondary)' }}>Vendor Rating:</span>
-                                    <span style={{ fontWeight: 700, color: '#eab308' }}>⭐ {q.vendor.rating} / 5.0</span>
+                                    <span style={{ fontWeight: 700, color: '#eab308', display: 'inline-flex', alignItems: 'center', gap: '4px' }}><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="none" style={{color:'#eab308'}}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> {q.vendor.rating} / 5.0</span>
                                   </div>
                                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                                     <span style={{ color: 'var(--text-secondary)' }}>Quote Success Rate:</span>
@@ -610,32 +619,32 @@ export default function QuotationComparison({ rfq, quotations, vendors, currentU
       {enrichedQuotations.length > 1 && (
         <div className="qc-charts-grid">
           <ComparisonBarChart
-            title="💰 Price Comparison (Unit Price ₹)"
+            title="Price Comparison (Unit Price ₹)"
             dataPoints={enrichedQuotations.map(q => ({ label: q.vendor.name, value: parseFloat(q.unit_price) }))}
             color="#3b82f6" reverseIsBetter={true}
           />
           <ComparisonBarChart
-            title="🚚 Delivery Time (Days)"
+            title="Delivery Time (Days)"
             dataPoints={enrichedQuotations.map(q => ({ label: q.vendor.name, value: q.delivery_days }))}
             color="#10b981" reverseIsBetter={true}
           />
           <ComparisonBarChart
-            title="⭐ Vendor Rating"
+            title="Vendor Rating"
             dataPoints={enrichedQuotations.map(q => ({ label: q.vendor.name, value: parseFloat(q.vendor.rating || 0) }))}
             color="#f59e0b" suffix=""
           />
           <ComparisonBarChart
-            title="📊 Quote Success Rate (%)"
+            title="Quote Success Rate (%)"
             dataPoints={enrichedQuotations.map(q => ({ label: q.vendor.name, value: q.ml.quoteSuccessRate }))}
             color="#8b5cf6" suffix="%"
           />
           <ComparisonBarChart
-            title="✅ On-time Delivery (%)"
+            title="On-time Delivery (%)"
             dataPoints={enrichedQuotations.map(q => ({ label: q.vendor.name, value: q.ml.onTimeDelivery }))}
             color="#06b6d4" suffix="%"
           />
           <ComparisonBarChart
-            title="🤖 AI Score"
+            title="AI Score"
             dataPoints={enrichedQuotations.map(q => ({ label: q.vendor.name, value: q.ml.aiScore }))}
             color="#ec4899"
           />
@@ -646,7 +655,7 @@ export default function QuotationComparison({ rfq, quotations, vendors, currentU
       <div className="table-card" style={{ padding: '24px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
           <div>
-            <span className="table-title">🧠 Feature Importance — Random Forest Model</span>
+            <span className="table-title">Feature Importance — Random Forest Model</span>
             <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '4px 0 0' }}>
               How the AI weighted each feature in its recommendation decision
             </p>
@@ -681,7 +690,7 @@ export default function QuotationComparison({ rfq, quotations, vendors, currentU
                   {selectedVendorProfile.vendor.name} · <span className="mono-text">{selectedVendorProfile.vendor.vendor_code}</span>
                 </p>
               </div>
-              <button className="modal-close" onClick={() => setSelectedVendorProfile(null)}>✕</button>
+              <button className="modal-close" onClick={() => setSelectedVendorProfile(null)}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
             </div>
             <div className="modal-body" style={{ maxHeight: '70vh', overflowY: 'auto' }}>
               {/* Company Info */}
@@ -689,7 +698,7 @@ export default function QuotationComparison({ rfq, quotations, vendors, currentU
                 <div className="qc-profile-logo">{initials(selectedVendorProfile.vendor.name)}</div>
                 <div>
                   <h3 style={{ color: '#fff', margin: 0, fontSize: '18px' }}>{selectedVendorProfile.vendor.name}</h3>
-                  <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '13px' }}>{selectedVendorProfile.vendor.category} · ⭐ {selectedVendorProfile.vendor.rating}</span>
+                  <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '13px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>{selectedVendorProfile.vendor.category} · <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="none" style={{color:'#fff'}}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> {selectedVendorProfile.vendor.rating}</span>
                 </div>
               </div>
 
@@ -703,7 +712,7 @@ export default function QuotationComparison({ rfq, quotations, vendors, currentU
               </div>
               <div className="field-row">
                 <div className="field"><label>GST Number</label><p style={{ fontSize: '13px' }} className="mono-text">{selectedVendorProfile.vendor.gst_number || '—'}</p></div>
-                <div className="field"><label>Rating</label><p style={{ fontSize: '13px' }}>⭐ {selectedVendorProfile.vendor.rating}/5.00</p></div>
+                <div className="field"><label>Rating</label><p style={{ fontSize: '13px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="none" style={{color:'#f59e0b'}}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg> {selectedVendorProfile.vendor.rating}/5.00</p></div>
               </div>
               <div className="field full">
                 <label>Address</label>
@@ -718,8 +727,9 @@ export default function QuotationComparison({ rfq, quotations, vendors, currentU
                   <div className="field"><label>Quotation Valid Until</label><p style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>{selectedVendorProfile.valid_until || '20 Aug 2026'}</p></div>
                   <div className="field">
                     <label>Quotation Attachment</label>
-                    <a href="#" onClick={(e) => handleDownloadPDF(e, selectedVendorProfile)} className="download-link" style={{ fontSize: '13px' }}>
-                      📄 Download quotation.pdf
+                    <a href="#" onClick={(e) => handleDownloadPDF(e, selectedVendorProfile)} className="download-link" style={{ fontSize: '13px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                      Download quotation.pdf
                     </a>
                   </div>
                 </div>
@@ -772,7 +782,7 @@ export default function QuotationComparison({ rfq, quotations, vendors, currentU
                 <h2 className="modal-title">Confirm Vendor Selection</h2>
                 <p className="modal-subtitle">This action will finalize the RFQ procurement decision</p>
               </div>
-              <button className="modal-close" onClick={() => setSelectionModal(null)}>✕</button>
+              <button className="modal-close" onClick={() => setSelectionModal(null)}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
             </div>
             <div className="modal-body">
               <div className="qc-selection-preview">
@@ -787,8 +797,9 @@ export default function QuotationComparison({ rfq, quotations, vendors, currentU
                 </div>
               </div>
 
-              <div className="state-banner info" style={{ margin: '16px 0', padding: '10px 14px' }}>
-                ⚠ Selecting this vendor will mark their quotation as <strong>Selected</strong> and reject all other quotations.
+              <div className="state-banner info" style={{ margin: '16px 0', padding: '10px 14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{color:'var(--accent)'}}><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                Selecting this vendor will mark their quotation as <strong>Selected</strong> and reject all other quotations.
               </div>
 
               <div className="field full">
@@ -810,7 +821,7 @@ export default function QuotationComparison({ rfq, quotations, vendors, currentU
                   disabled={submitting || !selectionReason.trim()}
                   onClick={handleSelectVendor}
                 >
-                  {submitting ? 'Processing…' : '✓ Confirm Selection'}
+                  {submitting ? 'Processing…' : 'Confirm Selection'}
                 </button>
               </div>
             </div>

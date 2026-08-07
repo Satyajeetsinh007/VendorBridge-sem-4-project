@@ -219,15 +219,15 @@ export default function VendorProfile({ vendor, vendors, onVendorSwitch }) {
               </span>
             </div>
             <div className="vendor-hero-contact">
-              <span>👤 {vendor?.contact_person || '—'}</span>
-              <span>✉ {vendor?.email}</span>
-              <span>📞 {vendor?.phone}</span>
+              <span><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{marginRight:5,verticalAlign:'middle'}}><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>{vendor?.contact_person || '—'}</span>
+              <span><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{marginRight:5,verticalAlign:'middle'}}><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>{vendor?.email}</span>
+              <span><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{marginRight:5,verticalAlign:'middle'}}><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.36 2 2 0 0 1 3.58 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.79a16 16 0 0 0 6.29 6.29l.87-.87a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>{vendor?.phone}</span>
             </div>
           </div>
         </div>
         <div className="vendor-hero-right">
           <div className="vendor-rating-box">
-            <span className="rating-value">⭐ {vendor?.rating || '0.00'}</span>
+            <span className="rating-value"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none" style={{marginRight:4,verticalAlign:'middle',color:'#f59e0b'}}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>{vendor?.rating || '0.00'}</span>
             <span className="rating-label">Overall Rating</span>
           </div>
         </div>
