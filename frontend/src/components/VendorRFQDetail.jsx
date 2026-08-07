@@ -6,9 +6,13 @@ export default function VendorRFQDetail({ rfq, vendor, existingQuotation, onBack
   const defaultValidUntil = new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0];
 
   const isDeadlinePassed = rfq.deadline ? rfq.deadline < todayStr : false;
-  const isClosed = rfq.status === 'closed' || isDeadlinePassed;
+  const isCompleted = rfq.status === 'completed';
+  const isClosed = rfq.status === 'closed' || isDeadlinePassed || isCompleted;
   const hasExisting = !!existingQuotation;
-  const isReadOnly = isClosed || (hasExisting && existingQuotation.status !== 'draft');
+  const isRejected = existingQuotation?.status === 'rejected';
+  const isSelected = existingQuotation?.status === 'selected';
+  const isSubmitted = existingQuotation?.status === 'submitted';
+  const isReadOnly = isClosed || isRejected || isSelected || (hasExisting && existingQuotation.status !== 'draft');
 
   const [formData, setFormData] = useState({
     unit_price: existingQuotation?.unit_price || '',
@@ -187,28 +191,45 @@ export default function VendorRFQDetail({ rfq, vendor, existingQuotation, onBack
           <div className="table-card decision-card">
             <div className="table-header-bar">
               <span className="table-title">
-                {isClosed ? 'RFQ Closed' : isReadOnly ? 'Quotation (Submitted)' : hasExisting ? 'Edit Quotation' : 'Submit Quotation'}
+                {isRejected ? 'Quotation Status: REJECTED' : isSelected ? 'Quotation Status: SELECTED (WON)' : isCompleted ? 'RFQ COMPLETED' : isClosed ? 'RFQ CLOSED' : isSubmitted ? 'Quotation (Submitted)' : hasExisting ? 'Edit Quotation' : 'Submit Quotation'}
               </span>
             </div>
 
             {isClosed && !hasExisting ? (
               <div className="decision-body">
                 <div className="state-banner error" style={{ margin: 0, padding: '12px' }}>
-                  🔒 The deadline for this RFQ has been reached. Quotation submission is closed.
+                  🔒 {isCompleted ? 'This RFQ has been COMPLETED. Quotation submission is closed.' : 'The deadline for this RFQ has been reached. Quotation submission is closed.'}
                 </div>
               </div>
             ) : (
               <div className="decision-body">
-                {isClosed && hasExisting && (
-                  <div className="state-banner error" style={{ margin: 0, padding: '10px 12px' }}>
-                    🔒 The deadline for this RFQ has been reached. No further edits are allowed.
+                {isRejected && (
+                  <div className="state-banner error" style={{ margin: '0 0 14px 0', padding: '12px 14px', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)' }}>
+                    <strong style={{ color: '#f87171' }}>❌ Quotation Status: REJECTED</strong><br />
+                    <span style={{ fontSize: '12.5px', color: 'var(--text-primary)', marginTop: '4px', display: 'block' }}>
+                      Your quotation was not selected by the Procurement Officer for this RFQ. Bidding is closed and no further quotations can be sent.
+                    </span>
                   </div>
                 )}
-                {isReadOnly && !isClosed && (
-                  <div className="state-banner info" style={{ margin: 0, padding: '8px 12px' }}>
-                    This quotation has been submitted and is read-only.
-                    {existingQuotation.status === 'selected' && ' 🎉 Your quotation was selected!'}
-                    {existingQuotation.status === 'rejected' && ' This quotation was not selected.'}
+                {isSelected && (
+                  <div className="state-banner info" style={{ margin: '0 0 14px 0', padding: '12px 14px', background: 'rgba(59, 130, 246, 0.1)', border: '1px solid rgba(59, 130, 246, 0.3)' }}>
+                    <strong style={{ color: '#60a5fa' }}>⏳ Quotation Status: SELECTED — WAITING FOR PO</strong><br />
+                    <span style={{ fontSize: '12.5px', color: 'var(--text-primary)', marginTop: '4px', display: 'block' }}>
+                      Congratulations! Your quotation was selected by the Procurement Officer. Waiting for the Procurement Officer to officially review & issue the Purchase Order.
+                    </span>
+                  </div>
+                )}
+                {isCompleted && !isRejected && !isSelected && (
+                  <div className="state-banner info" style={{ margin: '0 0 14px 0', padding: '12px 14px', background: 'rgba(59, 130, 246, 0.1)', border: '1px solid rgba(59, 130, 246, 0.3)' }}>
+                    <strong style={{ color: 'var(--accent)' }}>🔒 RFQ Status: COMPLETED</strong><br />
+                    <span style={{ fontSize: '12.5px', color: 'var(--text-primary)', marginTop: '4px', display: 'block' }}>
+                      This RFQ process has been completed by the Procurement Officer. Quotation submission is closed.
+                    </span>
+                  </div>
+                )}
+                {isClosed && !isCompleted && !isRejected && !isSelected && (
+                  <div className="state-banner error" style={{ margin: '0 0 14px 0', padding: '10px 12px' }}>
+                    🔒 The deadline for this RFQ has been reached. No further edits are allowed.
                   </div>
                 )}
 
@@ -352,7 +373,11 @@ export default function VendorRFQDetail({ rfq, vendor, existingQuotation, onBack
                   />
                 </div>
 
-                {!isReadOnly && (
+                {isReadOnly ? (
+                  <div style={{ textAlign: 'center', padding: '12px', fontSize: '13px', color: isRejected ? '#f87171' : 'var(--text-muted)', background: isRejected ? 'rgba(239, 68, 68, 0.08)' : 'rgba(255,255,255,0.03)', border: '1px solid var(--border-subtle)', borderRadius: '6px', marginTop: '10px' }}>
+                    🔒 Bidding Locked ({isRejected ? 'Quotation Rejected' : isSelected ? 'Quotation Selected' : isCompleted ? 'RFQ Completed' : 'Closed for Edits'})
+                  </div>
+                ) : (
                   <div className="decision-actions">
                     <button className="btn-secondary" onClick={() => handleSave(true)} disabled={submitting} style={{ width: '100%', justifyContent: 'center' }}>
                       {submitting ? 'Saving…' : '💾 Save as Draft'}

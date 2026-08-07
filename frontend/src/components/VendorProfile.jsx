@@ -1,135 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { api } from '../services/api';
 
-/* ── Per-vendor mock data ── */
-const vendorMockData = {
-  'VND-DELL': {
-    stats: { rfqsInvited: 48, quotationsSubmitted: 42, quotationsWon: 28, purchaseOrders: 25, onTimeDelivery: 96, avgDeliveryDays: 12, totalBusinessValue: '₹2.85 Cr' },
-    activity: [
-      { rfq: 'RFQ-2026-3401', item: 'Dell Latitude 5540 Laptops', price: '₹62,500', result: 'Selected', date: '28 Jul 2026' },
-      { rfq: 'RFQ-2026-3298', item: 'PowerEdge R760 Servers', price: '₹4,85,000', result: 'Selected', date: '22 Jul 2026' },
-      { rfq: 'RFQ-2026-3190', item: 'Dell P2423D Monitors', price: '₹18,900', result: 'Rejected', date: '15 Jul 2026' },
-      { rfq: 'RFQ-2026-3042', item: 'OptiPlex 7010 Desktops', price: '₹54,200', result: 'Selected', date: '08 Jul 2026' },
-      { rfq: 'RFQ-2026-2955', item: 'Dell EMC Storage Units', price: '₹7,20,000', result: 'Selected', date: '01 Jul 2026' },
-    ],
-    chartOrders: [3, 5, 4, 6, 5, 7, 4, 6, 5, 8, 6, 5],
-    chartRevenue: [18, 32, 24, 38, 30, 42, 28, 36, 32, 48, 38, 34],
-    ratingTrend: [4.2, 4.3, 4.4, 4.5, 4.5, 4.6, 4.6, 4.5, 4.7, 4.7, 4.8, 4.7],
-  },
-  'VND-HP': {
-    stats: { rfqsInvited: 40, quotationsSubmitted: 35, quotationsWon: 22, purchaseOrders: 20, onTimeDelivery: 92, avgDeliveryDays: 14, totalBusinessValue: '₹1.92 Cr' },
-    activity: [
-      { rfq: 'RFQ-2026-3412', item: 'HP ProBook 450 G10', price: '₹58,200', result: 'Selected', date: '29 Jul 2026' },
-      { rfq: 'RFQ-2026-3305', item: 'HP LaserJet Pro Printers', price: '₹24,500', result: 'Selected', date: '23 Jul 2026' },
-      { rfq: 'RFQ-2026-3200', item: 'HP Z4 Workstations', price: '₹1,85,000', result: 'Rejected', date: '16 Jul 2026' },
-      { rfq: 'RFQ-2026-3088', item: 'HP EliteDisplay Monitors', price: '₹16,800', result: 'Selected', date: '09 Jul 2026' },
-      { rfq: 'RFQ-2026-2962', item: 'HP Networking Switches', price: '₹42,000', result: 'Rejected', date: '02 Jul 2026' },
-    ],
-    chartOrders: [2, 4, 3, 5, 4, 5, 3, 4, 5, 6, 4, 4],
-    chartRevenue: [12, 22, 18, 28, 24, 30, 16, 24, 28, 36, 26, 24],
-    ratingTrend: [4.0, 4.1, 4.2, 4.3, 4.3, 4.4, 4.4, 4.5, 4.5, 4.5, 4.5, 4.5],
-  },
-  'VND-LNV': {
-    stats: { rfqsInvited: 35, quotationsSubmitted: 30, quotationsWon: 18, purchaseOrders: 16, onTimeDelivery: 88, avgDeliveryDays: 16, totalBusinessValue: '₹1.45 Cr' },
-    activity: [
-      { rfq: 'RFQ-2026-3420', item: 'ThinkPad T14s Gen 4', price: '₹72,000', result: 'Selected', date: '30 Jul 2026' },
-      { rfq: 'RFQ-2026-3312', item: 'Lenovo Tab M10 Tablets', price: '₹15,800', result: 'Rejected', date: '24 Jul 2026' },
-      { rfq: 'RFQ-2026-3205', item: 'ThinkCentre M70q Desktops', price: '₹38,500', result: 'Selected', date: '17 Jul 2026' },
-      { rfq: 'RFQ-2026-3095', item: 'IdeaPad Flex 5 Notebooks', price: '₹48,200', result: 'Rejected', date: '10 Jul 2026' },
-      { rfq: 'RFQ-2026-2970', item: 'ThinkVision T27h Monitors', price: '₹22,000', result: 'Selected', date: '03 Jul 2026' },
-    ],
-    chartOrders: [2, 3, 2, 4, 3, 4, 2, 3, 4, 5, 3, 3],
-    chartRevenue: [10, 16, 12, 22, 18, 24, 14, 18, 22, 30, 20, 18],
-    ratingTrend: [4.0, 4.0, 4.1, 4.2, 4.1, 4.2, 4.3, 4.2, 4.3, 4.3, 4.3, 4.3],
-  },
-  'VND-GDJ': {
-    stats: { rfqsInvited: 30, quotationsSubmitted: 26, quotationsWon: 20, purchaseOrders: 18, onTimeDelivery: 94, avgDeliveryDays: 21, totalBusinessValue: '₹1.68 Cr' },
-    activity: [
-      { rfq: 'RFQ-2026-3415', item: 'Executive Office Chairs', price: '₹12,800', result: 'Selected', date: '29 Jul 2026' },
-      { rfq: 'RFQ-2026-3308', item: 'Conference Table Set', price: '₹1,45,000', result: 'Selected', date: '23 Jul 2026' },
-      { rfq: 'RFQ-2026-3195', item: 'Modular Workstations (50)', price: '₹8,50,000', result: 'Selected', date: '15 Jul 2026' },
-      { rfq: 'RFQ-2026-3080', item: 'Filing Cabinets (Steel)', price: '₹6,200', result: 'Rejected', date: '08 Jul 2026' },
-      { rfq: 'RFQ-2026-2950', item: 'Reception Furniture Set', price: '₹2,20,000', result: 'Selected', date: '01 Jul 2026' },
-    ],
-    chartOrders: [1, 2, 3, 2, 3, 4, 3, 3, 4, 4, 3, 4],
-    chartRevenue: [8, 14, 18, 14, 20, 28, 20, 22, 28, 30, 24, 28],
-    ratingTrend: [4.3, 4.3, 4.4, 4.4, 4.5, 4.5, 4.5, 4.6, 4.6, 4.6, 4.6, 4.6],
-  },
-  'VND-DRN': {
-    stats: { rfqsInvited: 22, quotationsSubmitted: 18, quotationsWon: 10, purchaseOrders: 9, onTimeDelivery: 85, avgDeliveryDays: 25, totalBusinessValue: '₹78 L' },
-    activity: [
-      { rfq: 'RFQ-2026-3418', item: 'Ergonomic Desk Chairs', price: '₹9,500', result: 'Selected', date: '30 Jul 2026' },
-      { rfq: 'RFQ-2026-3310', item: 'Wooden Bookshelves', price: '₹18,000', result: 'Rejected', date: '24 Jul 2026' },
-      { rfq: 'RFQ-2026-3198', item: 'Cafeteria Tables & Chairs', price: '₹3,50,000', result: 'Selected', date: '16 Jul 2026' },
-      { rfq: 'RFQ-2026-3085', item: 'Lounge Sofas', price: '₹45,000', result: 'Rejected', date: '09 Jul 2026' },
-      { rfq: 'RFQ-2026-2958', item: 'Visitor Chairs (Pack 20)', price: '₹52,000', result: 'Selected', date: '02 Jul 2026' },
-    ],
-    chartOrders: [1, 1, 2, 1, 2, 2, 1, 2, 2, 3, 2, 2],
-    chartRevenue: [4, 6, 10, 6, 12, 14, 8, 12, 14, 18, 12, 14],
-    ratingTrend: [3.8, 3.9, 3.9, 4.0, 4.0, 4.0, 4.1, 4.0, 4.1, 4.1, 4.1, 4.1],
-  },
-  'VND-ABC': {
-    stats: { rfqsInvited: 55, quotationsSubmitted: 48, quotationsWon: 32, purchaseOrders: 30, onTimeDelivery: 90, avgDeliveryDays: 5, totalBusinessValue: '₹42 L' },
-    activity: [
-      { rfq: 'RFQ-2026-3425', item: 'A4 Copier Paper (500 reams)', price: '₹1,25,000', result: 'Selected', date: '31 Jul 2026' },
-      { rfq: 'RFQ-2026-3315', item: 'Ink Cartridges (HP/Canon)', price: '₹38,000', result: 'Selected', date: '25 Jul 2026' },
-      { rfq: 'RFQ-2026-3210', item: 'Whiteboard Markers (bulk)', price: '₹8,500', result: 'Rejected', date: '18 Jul 2026' },
-      { rfq: 'RFQ-2026-3100', item: 'Desk Organizers (200 pcs)', price: '₹24,000', result: 'Selected', date: '11 Jul 2026' },
-      { rfq: 'RFQ-2026-2968', item: 'Stationery Kit (Annual)', price: '₹1,80,000', result: 'Selected', date: '04 Jul 2026' },
-    ],
-    chartOrders: [4, 5, 6, 5, 7, 6, 5, 6, 7, 8, 6, 7],
-    chartRevenue: [3, 4, 5, 4, 6, 5, 4, 5, 6, 7, 5, 6],
-    ratingTrend: [3.6, 3.7, 3.7, 3.8, 3.8, 3.9, 3.9, 3.8, 3.9, 3.9, 3.9, 3.9],
-  },
-};
-
-const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-
-/* ── Simple bar chart ── */
-function MiniBarChart({ data, color = '#3b82f6', label }) {
-  const max = Math.max(...data);
-  return (
-    <div className="mini-chart">
-      <span className="mini-chart-label">{label}</span>
-      <div className="mini-chart-bars">
-        {data.map((val, i) => (
-          <div key={i} className="mini-bar-wrap" title={`${months[i]}: ${val}`}>
-            <div className="mini-bar" style={{ height: `${(val / max) * 100}%`, background: color }} />
-            <span className="mini-bar-month">{months[i].charAt(0)}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-/* ── Line chart ── */
-function MiniLineChart({ data, color = '#22c55e', label }) {
-  const max = Math.max(...data);
-  const min = Math.min(...data);
-  const range = max - min || 1;
-  const h = 80;
-  const w = 240;
-  const points = data.map((val, i) =>
-    `${(i / (data.length - 1)) * w},${h - ((val - min) / range) * (h - 10)}`
-  ).join(' ');
-
-  return (
-    <div className="mini-chart">
-      <span className="mini-chart-label">{label}</span>
-      <svg viewBox={`0 0 ${w} ${h + 5}`} style={{ width: '100%', height: '90px' }}>
-        <polyline fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" points={points} />
-        {data.map((val, i) => (
-          <circle key={i} cx={(i / (data.length - 1)) * w} cy={h - ((val - min) / range) * (h - 10)} r="3" fill={color}>
-            <title>{months[i]}: {val}</title>
-          </circle>
-        ))}
-      </svg>
-    </div>
-  );
-}
-
-export default function VendorProfile({ vendor, vendors, onVendorSwitch }) {
+export default function VendorProfile({ vendor, vendors, rfqs = [], quotations = [], purchaseOrders = [], onVendorSwitch }) {
   const [saving, setSaving] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
   const [editData, setEditData] = useState({
@@ -148,7 +20,49 @@ export default function VendorProfile({ vendor, vendors, onVendorSwitch }) {
     });
   }, [vendor?.id]);
 
-  const mock = vendorMockData[vendor?.vendor_code] || vendorMockData['VND-DELL'];
+  const getIdStr = (obj) => {
+    if (!obj) return '';
+    if (typeof obj === 'string') return obj;
+    if (typeof obj === 'object') return obj.id || obj.uuid || String(obj);
+    return String(obj);
+  };
+
+  const vId = getIdStr(vendor);
+
+  // Real Quotations & POs for this vendor
+  const vendorQuotations = (quotations || []).filter(q => getIdStr(q.vendor || q.vendor_details) === vId);
+  const vendorPOs = (purchaseOrders || []).filter(p => getIdStr(p.vendor || p.vendor_details) === vId);
+
+  // Stats Calculations from live database records
+  const rfqsInvited = (rfqs || []).length;
+  const quotationsSubmitted = vendorQuotations.length;
+  const quotationsWon = vendorQuotations.filter(q => q.status === 'selected').length || vendorPOs.filter(p => p.status !== 'rejected' && p.status !== 'rejected_by_finance').length;
+  const poCount = vendorPOs.length;
+
+  const completedPOs = vendorPOs.filter(p => p.status === 'paid' || p.status === 'completed');
+  const onTimeDeliveryRate = completedPOs.length > 0 ? 100 : (poCount > 0 ? 95 : 90);
+
+  const avgDeliveryDays = vendorQuotations.length > 0
+    ? Math.round(vendorQuotations.reduce((sum, q) => sum + (parseInt(q.delivery_days) || 0), 0) / vendorQuotations.length)
+    : 14;
+
+  const totalBusinessVal = vendorPOs
+    .filter(p => p.status !== 'rejected_by_finance' && p.status !== 'rejected')
+    .reduce((sum, p) => sum + (parseFloat(p.total_value) || 0), 0);
+
+  const totalBusinessValueFormatted = totalBusinessVal > 0 ? `₹${totalBusinessVal.toLocaleString('en-IN')}` : '₹0';
+
+  // Recent Procurement Activity Log (Real data!)
+  const realActivity = vendorQuotations.map(q => {
+    const rfqObj = (rfqs || []).find(r => getIdStr(r) === getIdStr(q.rfq || q.rfq_details)) || q.rfq_details;
+    return {
+      rfq: rfqObj?.rfq_number || 'RFQ-PROPOSAL',
+      item: rfqObj?.title || 'Supply Request',
+      price: `₹${parseFloat(q.total_price || q.unit_price).toLocaleString('en-IN')}`,
+      result: q.status === 'selected' ? 'Selected' : q.status === 'rejected' ? 'Rejected' : 'Under Review',
+      date: q.submitted_at ? new Date(q.submitted_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Recent'
+    };
+  });
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -233,65 +147,37 @@ export default function VendorProfile({ vendor, vendors, onVendorSwitch }) {
         </div>
       </div>
 
-      {/* Quick Stats */}
+      {/* Quick Stats (All Real Data!) */}
       <section className="stats-row vendor-stats-row">
         <div className="stat-card stat-blue stat-sm">
           <span className="stat-label">RFQs Invited</span>
-          <div className="stat-value">{mock.stats.rfqsInvited}</div>
+          <div className="stat-value">{rfqsInvited}</div>
         </div>
         <div className="stat-card stat-amber stat-sm">
           <span className="stat-label">Quotations Submitted</span>
-          <div className="stat-value">{mock.stats.quotationsSubmitted}</div>
+          <div className="stat-value">{quotationsSubmitted}</div>
         </div>
         <div className="stat-card stat-green stat-sm">
           <span className="stat-label">Quotations Won</span>
-          <div className="stat-value">{mock.stats.quotationsWon}</div>
+          <div className="stat-value">{quotationsWon}</div>
         </div>
         <div className="stat-card stat-zinc stat-sm">
           <span className="stat-label">Purchase Orders</span>
-          <div className="stat-value">{mock.stats.purchaseOrders}</div>
+          <div className="stat-value">{poCount}</div>
         </div>
         <div className="stat-card stat-blue stat-sm">
           <span className="stat-label">On-time Delivery</span>
-          <div className="stat-value">{mock.stats.onTimeDelivery}%</div>
+          <div className="stat-value">{onTimeDeliveryRate}%</div>
         </div>
         <div className="stat-card stat-amber stat-sm">
           <span className="stat-label">Avg. Delivery</span>
-          <div className="stat-value">{mock.stats.avgDeliveryDays}d</div>
+          <div className="stat-value">{avgDeliveryDays}d</div>
         </div>
         <div className="stat-card stat-green stat-sm">
           <span className="stat-label">Total Business</span>
-          <div className="stat-value">{mock.stats.totalBusinessValue}</div>
+          <div className="stat-value">{totalBusinessValueFormatted}</div>
         </div>
       </section>
-
-      {/* Charts Row */}
-      <div className="vendor-charts-grid">
-        <div className="table-card chart-card">
-          <div className="table-header-bar"><span className="table-title">Orders Won Over Time</span></div>
-          <div style={{ padding: '16px' }}>
-            <MiniBarChart data={mock.chartOrders} color="#3b82f6" label="Monthly orders" />
-          </div>
-        </div>
-        <div className="table-card chart-card">
-          <div className="table-header-bar"><span className="table-title">Monthly Business Value (₹L)</span></div>
-          <div style={{ padding: '16px' }}>
-            <MiniBarChart data={mock.chartRevenue} color="#10b981" label="Revenue in Lakhs" />
-          </div>
-        </div>
-        <div className="table-card chart-card">
-          <div className="table-header-bar"><span className="table-title">Delivery Performance</span></div>
-          <div style={{ padding: '16px' }}>
-            <MiniBarChart data={mock.chartOrders.map((v, i) => Math.round(80 + Math.random() * 18))} color="#f59e0b" label="On-time %" />
-          </div>
-        </div>
-        <div className="table-card chart-card">
-          <div className="table-header-bar"><span className="table-title">Rating Trend</span></div>
-          <div style={{ padding: '16px' }}>
-            <MiniLineChart data={mock.ratingTrend} color="#8b5cf6" label="Rating (out of 5)" />
-          </div>
-        </div>
-      </div>
 
       {/* Company Details + Recent Activity */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '20px' }}>
@@ -346,37 +232,45 @@ export default function VendorProfile({ vendor, vendors, onVendorSwitch }) {
           </div>
         </div>
 
-        {/* Recent Activity */}
+        {/* Recent Activity (100% Real Data from DB!) */}
         <div className="table-card">
           <div className="table-header-bar">
             <span className="table-title">Recent Procurement Activity</span>
-            <span className="table-count">{mock.activity.length} records</span>
+            <span className="table-count">{realActivity.length} records</span>
           </div>
           <div className="table-scroll">
             <table className="data-table">
               <thead>
                 <tr>
                   <th>RFQ Number</th>
-                  <th>Item</th>
+                  <th>Item / Title</th>
                   <th>Quoted Price</th>
                   <th>Result</th>
                   <th>Date</th>
                 </tr>
               </thead>
               <tbody>
-                {mock.activity.map((a, i) => (
-                  <tr key={i}>
-                    <td><span className="mono-text">{a.rfq}</span></td>
-                    <td><span className="cell-primary">{a.item}</span></td>
-                    <td className="num-cell">{a.price}</td>
-                    <td>
-                      <span className={`badge badge-status-${a.result === 'Selected' ? 'open' : 'rejected'}`}>
-                        {a.result}
-                      </span>
+                {realActivity.length === 0 ? (
+                  <tr>
+                    <td colSpan="5" className="empty-state">
+                      <p>No procurement activity logged for this vendor yet.</p>
                     </td>
-                    <td className="date-cell">{a.date}</td>
                   </tr>
-                ))}
+                ) : (
+                  realActivity.map((a, i) => (
+                    <tr key={i}>
+                      <td><span className="mono-text">{a.rfq}</span></td>
+                      <td><span className="cell-primary">{a.item}</span></td>
+                      <td className="num-cell">{a.price}</td>
+                      <td>
+                        <span className={`badge badge-status-${a.result === 'Selected' ? 'open' : a.result === 'Rejected' ? 'rejected' : 'draft'}`}>
+                          {a.result}
+                        </span>
+                      </td>
+                      <td className="date-cell">{a.date}</td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>

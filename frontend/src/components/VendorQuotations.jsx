@@ -1,19 +1,30 @@
 import React, { useState } from 'react';
 
-export default function VendorQuotations({ quotations, onEditQuotation, onViewRFQ }) {
+export default function VendorQuotations({ quotations, purchaseOrders = [], onEditQuotation, onViewRFQ }) {
   const [statusFilter, setStatusFilter] = useState('ALL');
 
   const filtered = quotations.filter(q =>
     statusFilter === 'ALL' || q.status === statusFilter.toLowerCase()
   );
 
-  const getStatusBadge = (s) => {
+  const renderStatusBadge = (q) => {
+    const s = q.status;
     switch (s) {
-      case 'draft': return 'badge badge-status-draft';
-      case 'submitted': return 'badge badge-status-pending_approval';
-      case 'selected': return 'badge badge-status-open';
-      case 'rejected': return 'badge badge-status-rejected';
-      default: return 'badge';
+      case 'draft': return <span className="badge badge-status-draft">Draft</span>;
+      case 'submitted': return <span className="badge badge-status-pending_approval">Submitted</span>;
+      case 'selected': {
+        const issuedPo = purchaseOrders.find(p =>
+          (p.quotation === q.id || p.rfq === q.rfq) &&
+          p.status &&
+          p.status !== 'draft'
+        );
+        if (issuedPo) {
+          return <span className="badge badge-status-approved" style={{ background: '#10b981', color: '#fff' }}>PO Received</span>;
+        }
+        return <span className="badge badge-priority-medium" style={{ background: '#3b82f6', color: '#fff' }}>Waiting for PO</span>;
+      }
+      case 'rejected': return <span className="badge badge-status-rejected" style={{ background: '#ef4444', color: '#fff' }}>Rejected</span>;
+      default: return <span className="badge">{s}</span>;
     }
   };
 
@@ -76,7 +87,7 @@ export default function VendorQuotations({ quotations, onEditQuotation, onViewRF
                     <td className="date-cell">
                       {q.submitted_at ? new Date(q.submitted_at).toLocaleDateString() : '—'}
                     </td>
-                    <td><span className={getStatusBadge(q.status)}>{q.status}</span></td>
+                    <td>{renderStatusBadge(q)}</td>
                     <td className="actions-cell">
                       {canEdit(q) ? (
                         <button className="btn-action btn-submit" onClick={() => onEditQuotation(q)}>

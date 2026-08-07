@@ -333,17 +333,17 @@ class VendorViewSet(viewsets.ModelViewSet):
 
 
 class QuotationViewSet(viewsets.ModelViewSet):
-    queryset = Quotation.objects.all().order_by('-created_at')
+    queryset = Quotation.objects.all().order_by('-submitted_at')
     serializer_class = QuotationSerializer
 
 
 class PurchaseOrderViewSet(viewsets.ModelViewSet):
-    queryset = PurchaseOrder.objects.all().order_by('-created_at')
+    queryset = PurchaseOrder.objects.all().order_by('-generated_at')
     serializer_class = PurchaseOrderSerializer
 
 
 class InvoiceViewSet(viewsets.ModelViewSet):
-    queryset = Invoice.objects.all().order_by('-created_at')
+    queryset = Invoice.objects.all().order_by('-uploaded_at')
     serializer_class = InvoiceSerializer
 
 

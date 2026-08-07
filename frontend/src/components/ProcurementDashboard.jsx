@@ -169,6 +169,36 @@ export default function ProcurementDashboard({ onLogout, currentUser, onToggleRo
     return false;
   };
 
+  const getRfqIdStr = (obj) => {
+    if (!obj) return '';
+    if (typeof obj === 'string') return obj;
+    if (typeof obj === 'object') return obj.id || obj.uuid || String(obj);
+    return String(obj);
+  };
+
+  const checkWinnerDeclared = (targetRfq) => {
+    if (!targetRfq) return false;
+    if (targetRfq.status === 'completed' || targetRfq.status === 'closed') return true;
+
+    const targetId = getRfqIdStr(targetRfq);
+
+    // 1. Check if any quotation for this RFQ has status 'selected'
+    const hasSelectedQuot = quotations.some(q => {
+      const qRfqId = getRfqIdStr(q.rfq) || getRfqIdStr(q.rfq_details);
+      return qRfqId === targetId && q.status === 'selected';
+    });
+    if (hasSelectedQuot) return true;
+
+    // 2. Check if any Purchase Order exists for this RFQ
+    const hasPoForRfq = purchaseOrders.some(p => {
+      const pRfqId = getRfqIdStr(p.rfq) || getRfqIdStr(p.rfq_details);
+      return pRfqId === targetId;
+    });
+    if (hasPoForRfq) return true;
+
+    return false;
+  };
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
@@ -304,12 +334,14 @@ export default function ProcurementDashboard({ onLogout, currentUser, onToggleRo
   const openCount = rfqs.filter(r => r.status === 'open' || r.status === 'under_review').length;
   const draftCount = rfqs.filter(r => r.status === 'draft').length;
 
-  // RFQs that have at least one submitted quotation
+  // RFQs that have at least one quotation (submitted, selected, rejected, or draft)
   const rfqIdsWithQuotations = new Set(
-    quotations.filter(q => q.status !== 'draft').map(q => q.rfq)
+    quotations
+      .map(q => getRfqIdStr(q.rfq) || getRfqIdStr(q.rfq_details))
+      .filter(Boolean)
   );
-  const rfqsWithQuotations = rfqs.filter(r => rfqIdsWithQuotations.has(r.id));
-  const hasQuotations = (rfqId) => rfqIdsWithQuotations.has(rfqId);
+  const rfqsWithQuotations = rfqs.filter(r => rfqIdsWithQuotations.has(getRfqIdStr(r)));
+  const hasQuotations = (rfqId) => rfqIdsWithQuotations.has(getRfqIdStr(rfqId));
 
   const statusLabel = (s) => (s || '').replace(/_/g, ' ');
 
@@ -466,6 +498,7 @@ export default function ProcurementDashboard({ onLogout, currentUser, onToggleRo
               rfq={comparisonRfq}
               quotations={quotations}
               vendors={vendors}
+              purchaseOrders={purchaseOrders}
               currentUser={currentUser}
               onBack={() => { setComparisonRfq(null); }}
               onRefresh={async () => { setComparisonRfq(null); await fetchData(); }}
@@ -548,8 +581,8 @@ export default function ProcurementDashboard({ onLogout, currentUser, onToggleRo
                       ) : (
                         purchaseOrders
                           .filter(po => {
-                            const rfqObj = rfqs.find(r => r.id === po.rfq) || po.rfq_details;
-                            const vendorObj = vendors.find(v => v.id === po.vendor) || po.vendor_details;
+                            const rfqObj = rfqs.find(r => getRfqIdStr(r) === getRfqIdStr(po.rfq || po.rfq_details)) || po.rfq_details;
+                            const vendorObj = vendors.find(v => getRfqIdStr(v) === getRfqIdStr(po.vendor || po.vendor_details)) || po.vendor_details;
                             const creatorName = rfqObj?.created_by_details?.name || rfqObj?.created_by_name || '';
                             const q = searchQuery.toLowerCase();
                             const matchesSearch = !q || po.po_number?.toLowerCase().includes(q) || vendorObj?.name?.toLowerCase().includes(q) || rfqObj?.title?.toLowerCase().includes(q) || creatorName.toLowerCase().includes(q);
@@ -557,9 +590,9 @@ export default function ProcurementDashboard({ onLogout, currentUser, onToggleRo
                             return matchesSearch && matchesOwn;
                           })
                           .map(po => {
-                            const rfqObj = rfqs.find(r => r.id === po.rfq) || po.rfq_details;
-                            const vendorObj = vendors.find(v => v.id === po.vendor) || po.vendor_details;
-                            const quotObj = quotations.find(q => q.id === po.quotation) || po.quotation_details;
+                            const rfqObj = rfqs.find(r => getRfqIdStr(r) === getRfqIdStr(po.rfq || po.rfq_details)) || po.rfq_details;
+                            const vendorObj = vendors.find(v => getRfqIdStr(v) === getRfqIdStr(po.vendor || po.vendor_details)) || po.vendor_details;
+                            const quotObj = quotations.find(q => getRfqIdStr(q) === getRfqIdStr(po.quotation || po.quotation_details)) || po.quotation_details;
                             const isOwn = isOwnRfq(po) || isOwnRfq(rfqObj);
                             const creatorName = rfqObj?.created_by_details?.name || rfqObj?.created_by_name || (isOwn ? (currentUser?.name || 'Alex Mercer') : 'Priya Shah');
                             return (
@@ -689,9 +722,15 @@ export default function ProcurementDashboard({ onLogout, currentUser, onToggleRo
                             return matchesSearch && matchesOwn;
                           })
                           .map(rfq => {
-                            const rfqQuots = quotations.filter(q => q.rfq === rfq.id);
+                            const rfqQuots = quotations.filter(q => {
+                              const qRfqId = getRfqIdStr(q.rfq) || getRfqIdStr(q.rfq_details);
+                              const targetRfqId = getRfqIdStr(rfq);
+                              return qRfqId === targetRfqId;
+                            });
                             const isOwn = isOwnRfq(rfq);
                             const creatorName = rfq.created_by_details?.name || rfq.created_by_name || (isOwn ? (currentUser?.name || 'Alex Mercer') : 'Priya Shah');
+                            const hasWinnerSelected = checkWinnerDeclared(rfq);
+
                             return (
                               <tr key={rfq.id}>
                                 <td><span className="mono-text">{rfq.rfq_number}</span></td>
@@ -718,8 +757,12 @@ export default function ProcurementDashboard({ onLogout, currentUser, onToggleRo
                                 </td>
                                 <td className="actions-cell">
                                   {isOwn ? (
-                                    <button className="btn-action btn-submit" onClick={() => setComparisonRfq(rfq)}>
-                                      📊 Compare & Select Winner
+                                    <button
+                                      className={hasWinnerSelected ? "btn-secondary" : "btn-action btn-submit"}
+                                      style={{ padding: '4px 12px', fontSize: '12px' }}
+                                      onClick={() => setComparisonRfq(rfq)}
+                                    >
+                                      {hasWinnerSelected ? '📊 View Comparison & Winner' : '📊 Compare & Select Winner'}
                                     </button>
                                   ) : (
                                     <button className="btn-secondary" style={{ padding: '4px 12px', fontSize: '12px' }} onClick={() => setComparisonRfq(rfq)}>
@@ -1069,8 +1112,8 @@ export default function ProcurementDashboard({ onLogout, currentUser, onToggleRo
                                         <span className="awaiting-text">Awaiting Approval</span>
                                       )}
                                       {(rfq.status === 'open' || rfq.status === 'under_review') && hasQuotations(rfq.id) && (
-                                        <button className="btn-action btn-submit" onClick={() => setComparisonRfq(rfq)}>
-                                          📊 Compare Quotations
+                                        <button className={checkWinnerDeclared(rfq) ? "btn-secondary" : "btn-action btn-submit"} style={{ padding: '4px 10px', fontSize: '11px' }} onClick={() => setComparisonRfq(rfq)}>
+                                          {checkWinnerDeclared(rfq) ? '📊 View Comparison & Winner' : '📊 Compare Quotations'}
                                         </button>
                                       )}
                                       {rfq.status === 'open' && !hasQuotations(rfq.id) && (
@@ -1080,11 +1123,18 @@ export default function ProcurementDashboard({ onLogout, currentUser, onToggleRo
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                           <span style={{ color: '#34d399', fontWeight: '600', fontSize: '12px' }}>✓ Completed</span>
                                           <button className="btn-action btn-submit" style={{ padding: '3px 8px', fontSize: '11px' }} onClick={() => {
-                                            const matchedPo = purchaseOrders.find(p => p.rfq === rfq.id);
-                                            const matchedQuot = quotations.find(q => q.rfq === rfq.id && q.status === 'selected');
-                                            const matchedVend = vendors.find(v => v.id === matchedQuot?.vendor);
+                                            const matchedPo = purchaseOrders.find(p => getRfqIdStr(p.rfq || p.rfq_details) === getRfqIdStr(rfq));
+                                            const matchedQuot = quotations.find(q => getRfqIdStr(q.rfq || q.rfq_details) === getRfqIdStr(rfq) && q.status === 'selected') || quotations.find(q => getRfqIdStr(q.rfq || q.rfq_details) === getRfqIdStr(rfq));
+                                            const matchedVend = vendors.find(v => getRfqIdStr(v) === getRfqIdStr(matchedQuot?.vendor || matchedQuot?.vendor_details)) || matchedQuot?.vendor_details;
                                             setActivePOInfo({
-                                              po: matchedPo || { po_number: 'PO-2026-0042', status: 'issued', rfq: rfq.id },
+                                              po: matchedPo || {
+                                                po_number: `PO-2026-${rfq.rfq_number?.replace(/\D/g, '').slice(-4) || '0042'}`,
+                                                status: 'issued',
+                                                rfq: rfq.id,
+                                                quotation: matchedQuot?.id,
+                                                vendor: matchedVend?.id,
+                                                total_value: matchedQuot?.total_price || (matchedQuot?.unit_price * rfq.quantity) || 0,
+                                              },
                                               rfq: rfq,
                                               quotation: matchedQuot,
                                               vendor: matchedVend
