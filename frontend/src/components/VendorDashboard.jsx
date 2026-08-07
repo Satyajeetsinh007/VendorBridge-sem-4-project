@@ -66,14 +66,17 @@ export default function VendorDashboard({ onLogout, currentUser }) {
     { id: 5, text: 'New RFQ invitation received — High-Performance Laptops', time: '4d ago', priority: 'medium' },
   ]);
 
+  const [purchaseOrders, setPurchaseOrders] = useState([]);
+
   const fetchData = async () => {
     setLoading(true);
     setError(null);
     try {
-      let [vendorsData, rfqsData, quotationsData] = await Promise.all([
+      let [vendorsData, rfqsData, quotationsData, posData] = await Promise.all([
         api.getVendors().catch(() => []),
         api.getRFQs().catch(() => []),
         api.getQuotations().catch(() => []),
+        api.getPurchaseOrders().catch(() => []),
       ]);
 
       if (vendorsData.length < 6) {
@@ -92,6 +95,7 @@ export default function VendorDashboard({ onLogout, currentUser }) {
       setRfqs(rfqsData);
 
       setQuotations(quotationsData);
+      setPurchaseOrders(posData);
     } catch (err) {
       setError(err.message || 'Failed to load vendor data');
     } finally {
@@ -114,14 +118,41 @@ export default function VendorDashboard({ onLogout, currentUser }) {
   const todayStr = new Date().toISOString().split('T')[0];
   const isPastDeadline = (d) => d && d < todayStr;
 
-  const vendorQuotations = quotations.filter(q => q.vendor === currentVendor?.id);
-  const quotedRfqIds = new Set(vendorQuotations.map(q => q.rfq));
+  const getIdStr = (obj) => {
+    if (!obj) return '';
+    if (typeof obj === 'string') return obj;
+    if (typeof obj === 'object') return obj.id || obj.uuid || String(obj);
+    return String(obj);
+  };
 
-  // Open RFQs tab: available for bidding (excluding closed, past-deadline, or already quoted RFQs)
+  const isMatchingVendor = (vendorRef, targetVendor) => {
+    if (!vendorRef || !targetVendor) return false;
+    const targetId = String(targetVendor.id || targetVendor.uuid || '').toLowerCase();
+    const targetCode = String(targetVendor.vendor_code || '').toLowerCase();
+    const targetEmail = String(targetVendor.email || '').toLowerCase();
+
+    if (typeof vendorRef === 'object') {
+      const refId = String(vendorRef.id || vendorRef.uuid || '').toLowerCase();
+      const refCode = String(vendorRef.vendor_code || '').toLowerCase();
+      const refEmail = String(vendorRef.email || '').toLowerCase();
+      return (targetId && refId === targetId) || (targetCode && refCode === targetCode) || (targetEmail && refEmail === targetEmail);
+    }
+    
+    const refStr = String(vendorRef).toLowerCase();
+    return (targetId && refStr === targetId) || (targetCode && refStr === targetCode) || (targetEmail && refStr === targetEmail);
+  };
+
+  const vendorQuotations = quotations.filter(q => 
+    isMatchingVendor(q.vendor, currentVendor) || 
+    isMatchingVendor(q.vendor_details, currentVendor)
+  );
+
+  const quotedRfqIds = new Set(vendorQuotations.map(q => getIdStr(q.rfq) || getIdStr(q.rfq_details)));
+
+  // Open RFQs tab: available for bidding (excluding closed, completed, past-deadline, or already quoted RFQs)
   const openRfqs = rfqs.filter(r => 
     (r.status === 'open' || r.status === 'under_review') && 
     !isPastDeadline(r.deadline) && 
-    r.status !== 'closed' &&
     !quotedRfqIds.has(r.id)
   );
 
@@ -130,8 +161,10 @@ export default function VendorDashboard({ onLogout, currentUser }) {
     r.status === 'open' || r.status === 'under_review' || r.status === 'closed' || r.status === 'completed' || quotedRfqIds.has(r.id)
   );
 
-  const submittedCount = vendorQuotations.filter(q => q.status === 'submitted').length;
-  const selectedCount = vendorQuotations.filter(q => q.status === 'selected').length;
+  // Real live counts from DB for the active vendor:
+  const openRfqCount = rfqs.filter(r => (r.status === 'open' || r.status === 'under_review') && !isPastDeadline(r.deadline)).length;
+  const submittedCount = vendorQuotations.filter(q => q.status === 'submitted' || q.status === 'under_review').length;
+  const selectedCount = vendorQuotations.filter(q => q.status === 'selected' || q.status === 'awarded' || q.status === 'completed').length;
   const rejectedCount = vendorQuotations.filter(q => q.status === 'rejected').length;
 
   const filteredOpenRfqs = openRfqs.filter(r =>
@@ -334,7 +367,7 @@ export default function VendorDashboard({ onLogout, currentUser }) {
                         <span className="stat-label">Open RFQs</span>
                         <div className="stat-icon-wrap"><Icons.FileText /></div>
                       </div>
-                      <div className="stat-value">{openRfqs.length}</div>
+                      <div className="stat-value">{openRfqCount}</div>
                       <span className="stat-sub">Available for bidding</span>
                     </div>
                     <div className="stat-card stat-amber">
@@ -385,28 +418,53 @@ export default function VendorDashboard({ onLogout, currentUser }) {
                             {allDashboardRfqs.slice(0, 6).length === 0 ? (
                               <tr><td colSpan="5" className="empty-state"><p>No RFQs available yet.</p></td></tr>
                             ) : (
-                              allDashboardRfqs.slice(0, 6).map(rfq => {
+                              allDashboardRfqs.slice(0, 8).map(rfq => {
                                 const isClosed = rfq.status === 'closed' || isPastDeadline(rfq.deadline);
-                                const isQuoted = quotedRfqIds.has(rfq.id);
+                                const existingQuot = vendorQuotations.find(q => q.rfq === rfq.id);
+                                const isRejected = existingQuot?.status === 'rejected';
+                                const isSelected = existingQuot?.status === 'selected';
+                                const isSubmitted = existingQuot?.status === 'submitted';
+                                const isCompleted = rfq.status === 'completed';
+
+                                // Check if an ISSUED PO (status !== 'draft') has been received for this RFQ/quotation
+                                const issuedPo = purchaseOrders.find(p =>
+                                  (p.rfq === rfq.id || p.quotation === existingQuot?.id) &&
+                                  p.status &&
+                                  p.status !== 'draft'
+                                );
+                                const isPoReceived = !!issuedPo;
+
                                 return (
                                   <tr key={rfq.id}>
                                     <td><span className="mono-text">{rfq.rfq_number}</span></td>
                                     <td><span className="cell-primary">{rfq.title}</span></td>
                                     <td className="date-cell">{rfq.deadline}</td>
                                     <td>
-                                      {isClosed ? (
-                                        <span className="badge badge-status-closed">Closed</span>
-                                      ) : rfq.status === 'completed' ? (
-                                        <span className="badge badge-status-completed">Completed</span>
-                                      ) : isQuoted ? (
-                                        <span className="badge badge-status-pending_approval">Quoted</span>
+                                      {isRejected ? (
+                                        <span className="badge badge-status-rejected" style={{ background: '#ef4444', color: '#fff' }}>REJECTED</span>
+                                      ) : isSelected ? (
+                                        isPoReceived ? (
+                                          <span className="badge badge-status-approved" style={{ background: '#10b981', color: '#fff' }}>PO RECEIVED</span>
+                                        ) : (
+                                          <span className="badge badge-priority-medium" style={{ background: '#3b82f6', color: '#fff' }}>WAITING FOR PO</span>
+                                        )
+                                      ) : isCompleted ? (
+                                        <span className="badge badge-status-completed" style={{ background: '#10b981', color: '#fff' }}>COMPLETED</span>
+                                      ) : isClosed ? (
+                                        <span className="badge badge-status-closed">CLOSED</span>
+                                      ) : isSubmitted ? (
+                                        <span className="badge badge-status-pending_approval">QUOTED</span>
                                       ) : (
-                                        <span className="badge badge-status-open">Open</span>
+                                        <span className="badge badge-status-open">OPEN</span>
                                       )}
                                     </td>
                                     <td>
-                                      <button className="btn-primary" style={{ padding: '4px 12px', fontSize: '12px' }} onClick={() => openRfqDetail(rfq)}>
-                                        View
+                                      <button
+                                        className={isRejected || isCompleted || isClosed || isSubmitted || isSelected ? "btn-secondary" : "btn-primary"}
+                                        style={{ padding: '4px 12px', fontSize: '12px', ...(isRejected ? { borderColor: 'rgba(239, 68, 68, 0.4)', color: '#f87171' } : isSelected && !isPoReceived ? { borderColor: 'rgba(59, 130, 246, 0.4)', color: '#60a5fa' } : {}) }}
+                                        onClick={() => openRfqDetail(rfq)}
+                                      >
+                                        {isRejected ? 'View (Rejected)' : isSelected ? (isPoReceived ? 'View (PO Received)' : 'View (Waiting for PO)') : isCompleted ? 'View (Completed)' : isClosed ? 'View (Closed)' : isSubmitted ? 'View Quote' : 'Send Quote'}
                                       </button>
                                     </td>
                                   </tr>
@@ -496,6 +554,7 @@ export default function VendorDashboard({ onLogout, currentUser }) {
               {currentView === 'quotations' && (
                 <VendorQuotations
                   quotations={vendorQuotations}
+                  purchaseOrders={purchaseOrders}
                   onEditQuotation={handleEditQuotation}
                   onViewRFQ={openRfqDetail}
                 />
@@ -516,7 +575,7 @@ export default function VendorDashboard({ onLogout, currentUser }) {
 
               {/* Quotation History */}
               {currentView === 'history' && (
-                <VendorHistory quotations={vendorQuotations} />
+                <VendorHistory quotations={vendorQuotations} rfqs={rfqs} />
               )}
 
               {/* Notifications */}
@@ -544,6 +603,9 @@ export default function VendorDashboard({ onLogout, currentUser }) {
                 <VendorProfile
                   vendor={currentVendor}
                   vendors={vendors}
+                  rfqs={rfqs}
+                  quotations={quotations}
+                  purchaseOrders={purchaseOrders}
                   onVendorSwitch={(v) => setCurrentVendor(v)}
                 />
               )}

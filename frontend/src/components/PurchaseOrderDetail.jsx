@@ -28,8 +28,8 @@ export default function PurchaseOrderDetail({ po, rfq, quotation, vendor, curren
 
   // Delivery details state
   const [deliveryData, setDeliveryData] = useState({
-    delivery_address: po?.delivery_address || 'VendorBridge Tech Park, Gate #3, Central Warehouse, Sector 62, Noida, UP - 201309',
-    delivery_contact_person: po?.delivery_contact_person || 'Rajesh Sharma (Logistics Lead)',
+    delivery_address: po?.delivery_address || `${rfq?.department_details?.name || 'Central Warehouse'}, VendorBridge Corporate HQ, Sector 62, Noida, UP - 201309`,
+    delivery_contact_person: po?.delivery_contact_person || (currentUser?.name ? `${currentUser.name} (Procurement Lead)` : 'Procurement Officer'),
     delivery_phone: po?.delivery_phone || '+91 98112 34567',
     expected_delivery_date: po?.expected_delivery_date || new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0],
     delivery_instructions: po?.delivery_instructions || 'Deliver between 9:00 AM and 5:00 PM on working days. Requires Gate Pass & Quality Inspection on unloading.',
@@ -45,8 +45,8 @@ export default function PurchaseOrderDetail({ po, rfq, quotation, vendor, curren
   };
 
   // Item & Financial Breakdown Calculations
-  const qty = rfq?.quantity || quotation?.quantity || 10;
-  const unitPrice = parseFloat(quotation?.unit_price) || 12500;
+  const qty = rfq?.quantity || quotation?.quantity || 1;
+  const unitPrice = parseFloat(quotation?.unit_price) || (po?.total_value ? parseFloat(po.total_value) / (qty || 1) : 0);
   const subtotal = unitPrice * qty;
   const discount = parseFloat(deliveryData.discount_amount || 0);
   const taxType = quotation?.tax_type || 'GST_9_9';

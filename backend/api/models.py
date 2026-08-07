@@ -198,7 +198,15 @@ class Quotation(models.Model):
     rating = models.DecimalField(max_digits=3, decimal_places=2, null=True, blank=True)
     status = models.CharField(max_length=20, choices=StatusChoices.choices, default=StatusChoices.DRAFT)
     submitted_at = models.DateTimeField(null=True, blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        if self.status == 'selected' and self.rfq:
+            if self.rfq.status != 'completed':
+                self.rfq.status = 'completed'
+                self.rfq.save(update_fields=['status'])
+            other_quots = Quotation.objects.filter(rfq=self.rfq).exclude(id=self.id)
+            other_quots.exclude(status='rejected').update(status='rejected')
 
     def __str__(self):
         return f"{self.quotation_number} - {self.vendor.name}"
@@ -302,7 +310,16 @@ class PurchaseOrder(models.Model):
     issued_at = models.DateTimeField(null=True, blank=True)
     acknowledged_at = models.DateTimeField(null=True, blank=True)
     pdf_url = models.CharField(max_length=500, null=True, blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        if self.rfq:
+            if self.rfq.status != 'completed':
+                self.rfq.status = 'completed'
+                self.rfq.save(update_fields=['status'])
+            if self.quotation:
+                other_quots = Quotation.objects.filter(rfq=self.rfq).exclude(id=self.quotation.id)
+                other_quots.exclude(status='rejected').update(status='rejected')
 
     def __str__(self):
         return f"{self.po_number} - {self.vendor.name}"

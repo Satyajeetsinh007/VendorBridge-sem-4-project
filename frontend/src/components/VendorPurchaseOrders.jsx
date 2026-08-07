@@ -194,9 +194,9 @@ export default function VendorPurchaseOrders({ vendor, rfqs = [], quotations = [
     };
   };
 
-  // Filter real POs for active vendor
+  // Filter real POs for active vendor (EXCLUDING unissued draft POs)
   const realVendorOrders = dbOrders
-    .filter(p => !vendor || p.vendor === vendor.id || p.vendor_details?.id === vendor.id)
+    .filter(p => (!vendor || p.vendor === vendor.id || p.vendor_details?.id === vendor.id) && p.status && p.status !== 'draft')
     .map(mapRealPoToView);
 
   const realPoNumbers = new Set(realVendorOrders.map(o => o.po_number));
