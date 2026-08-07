@@ -21,11 +21,24 @@ class User(models.Model):
         VENDOR = 'vendor', 'Vendor'
         FINANCE = 'finance', 'Finance'
 
+    class VerificationStatusChoices(models.TextChoices):
+        PENDING = 'pending', 'Pending'
+        APPROVED = 'approved', 'Approved'
+        REJECTED = 'rejected', 'Rejected'
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=100)
     email = models.EmailField(max_length=150, unique=True)
+    password = models.CharField(max_length=128, default='changeme')
     role = models.CharField(max_length=30, choices=RoleChoices.choices)
     department = models.ForeignKey(Department, on_delete=models.SET_NULL, null=True, blank=True, related_name='users')
+    is_admin = models.BooleanField(default=False)
+    verification_status = models.CharField(
+        max_length=20,
+        choices=VerificationStatusChoices.choices,
+        default=VerificationStatusChoices.APPROVED  # existing rows stay approved
+    )
+    rejection_reason = models.TextField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
@@ -35,21 +48,39 @@ class User(models.Model):
 class Vendor(models.Model):
     class StatusChoices(models.TextChoices):
         ACTIVE = 'active', 'Active'
+        VERIFIED = 'verified', 'Verified'
         INACTIVE = 'inactive', 'Inactive'
         BLACKLISTED = 'blacklisted', 'Blacklisted'
+
+    class VerificationStatusChoices(models.TextChoices):
+        PENDING = 'pending', 'Pending'
+        APPROVED = 'approved', 'Approved'
+        REJECTED = 'rejected', 'Rejected'
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     vendor_code = models.CharField(max_length=20, unique=True)
     name = models.CharField(max_length=150)
+    password = models.CharField(max_length=128, default='changeme')
+    category = models.CharField(max_length=100, null=True, blank=True)
+    contact_person = models.CharField(max_length=100, null=True, blank=True)
     email = models.EmailField(max_length=150)
     phone = models.CharField(max_length=30)
+    gst_number = models.CharField(max_length=30, null=True, blank=True)
+    website = models.URLField(max_length=200, null=True, blank=True)
     address = models.TextField()
     rating = models.DecimalField(max_digits=3, decimal_places=2, default=0.00)
     status = models.CharField(max_length=20, choices=StatusChoices.choices, default=StatusChoices.ACTIVE)
+    verification_status = models.CharField(
+        max_length=20,
+        choices=VerificationStatusChoices.choices,
+        default=VerificationStatusChoices.APPROVED  # existing rows stay approved
+    )
+    rejection_reason = models.TextField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return f"{self.name} ({self.vendor_code})"
+
 
 
 # ==========================================
@@ -93,6 +124,8 @@ class RFQ(models.Model):
     class StatusChoices(models.TextChoices):
         DRAFT = 'draft', 'Draft'
         OPEN = 'open', 'Open'
+        UNDER_REVIEW = 'under_review', 'Under Review'
+        COMPLETED = 'completed', 'Completed'
         CLOSED = 'closed', 'Closed'
         PENDING_APPROVAL = 'pending_approval', 'Pending Approval'
         APPROVED = 'approved', 'Approved'
@@ -106,7 +139,7 @@ class RFQ(models.Model):
     rfq_number = models.CharField(max_length=20, unique=True)
     title = models.CharField(max_length=200)
     description = models.TextField()
-    department = models.ForeignKey(Department, on_delete=models.CASCADE, related_name='RFQ',null=True, blank=True)
+    department = models.ForeignKey(Department, on_delete=models.CASCADE, related_name='rfqs', null=True, blank=True)
     priority = models.CharField(max_length=10, choices=PriorityChoices.choices, default=PriorityChoices.MEDIUM)
     manager_remarks = models.TextField(null=True, blank=True)
     # requisition = models.ForeignKey(PurchaseRequisition, on_delete=models.CASCADE, related_name='rfqs')
@@ -115,7 +148,7 @@ class RFQ(models.Model):
     specs_file_url = models.CharField(max_length=500, null=True, blank=True)
     status = models.CharField(max_length=20, choices=StatusChoices.choices, default=StatusChoices.DRAFT)
     created_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='created_rfqs')
-    required_by_date = models.DateField(default=2023-5-26)
+    required_by_date = models.DateField(null=True, blank=True)
     published_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -139,6 +172,7 @@ class RFQVendor(models.Model):
 
 class Quotation(models.Model):
     class StatusChoices(models.TextChoices):
+        DRAFT = 'draft', 'Draft'
         SUBMITTED = 'submitted', 'Submitted'
         UNDER_REVIEW = 'under_review', 'Under Review'
         SELECTED = 'selected', 'Selected'
@@ -151,14 +185,24 @@ class Quotation(models.Model):
     unit_price = models.DecimalField(max_digits=12, decimal_places=2)
     total_price = models.DecimalField(max_digits=12, decimal_places=2)
     delivery_days = models.IntegerField()
+    payment_terms = models.CharField(max_length=200, null=True, blank=True)
+    warranty = models.CharField(max_length=200, null=True, blank=True)
+    subtotal = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
+    tax_type = models.CharField(max_length=20, default='GST_9_9')
+    cgst_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
+    sgst_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
+    igst_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
+    attachment_url = models.CharField(max_length=500, null=True, blank=True)
+    valid_until = models.DateField(null=True, blank=True)
     notes = models.TextField(null=True, blank=True)
     rating = models.DecimalField(max_digits=3, decimal_places=2, null=True, blank=True)
-    status = models.CharField(max_length=20, choices=StatusChoices.choices, default=StatusChoices.SUBMITTED)
-    submitted_at = models.DateTimeField(auto_now_add=True)
+    status = models.CharField(max_length=20, choices=StatusChoices.choices, default=StatusChoices.DRAFT)
+    submitted_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return f"{self.quotation_number} - {self.vendor.name}"
+
 
 
 # ==========================================
@@ -210,24 +254,53 @@ class Approval(models.Model):
 class PurchaseOrder(models.Model):
     class StatusChoices(models.TextChoices):
         DRAFT = 'draft', 'Draft'
-        GENERATED = 'generated', 'Generated'
+        ISSUED = 'issued', 'Issued'
         ACKNOWLEDGED = 'acknowledged', 'Acknowledged'
+        IN_PROGRESS = 'in_progress', 'In Progress'
         DELIVERED = 'delivered', 'Delivered'
+        INVOICED = 'invoiced', 'Invoiced'
+        PAID = 'paid', 'Paid'
+        COMPLETED = 'completed', 'Completed'
+        CLOSED = 'closed', 'Closed'
+        REJECTED_BY_FINANCE = 'rejected_by_finance', 'Rejected by Finance'
+        CANCELLED = 'cancelled', 'Cancelled'
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     po_number = models.CharField(max_length=20, unique=True)
     vendor = models.ForeignKey(Vendor, on_delete=models.CASCADE, related_name='purchase_orders')
     quotation = models.ForeignKey(Quotation, on_delete=models.CASCADE, related_name='purchase_orders')
     rfq = models.ForeignKey(RFQ, on_delete=models.CASCADE, related_name='purchase_orders')
-    delivery_address = models.TextField()
-    terms_and_conditions = models.TextField()
-    subtotal = models.DecimalField(max_digits=12, decimal_places=2)
-    tax_amount = models.DecimalField(max_digits=12, decimal_places=2)
-    total_value = models.DecimalField(max_digits=12, decimal_places=2)
+    
+    # Delivery Details
+    delivery_address = models.TextField(null=True, blank=True)
+    delivery_contact_person = models.CharField(max_length=100, null=True, blank=True)
+    delivery_phone = models.CharField(max_length=50, null=True, blank=True)
+    expected_delivery_date = models.DateField(null=True, blank=True)
+    delivery_instructions = models.TextField(null=True, blank=True)
+    
+    # Financials & Payment Information
+    subtotal = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
+    cgst_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
+    sgst_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
+    igst_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
+    discount_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
+    total_value = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
+    payment_terms = models.CharField(max_length=200, null=True, blank=True)
+    payment_due_days = models.IntegerField(default=30)
+    currency = models.CharField(max_length=10, default='INR (₹)')
+
+    # Warranty & Terms
+    warranty = models.CharField(max_length=200, null=True, blank=True)
+    return_policy = models.TextField(null=True, blank=True)
+    service_terms = models.TextField(null=True, blank=True)
+    procurement_notes = models.TextField(null=True, blank=True)
+    terms_and_conditions = models.TextField(null=True, blank=True)
+
     status = models.CharField(max_length=20, choices=StatusChoices.choices, default=StatusChoices.DRAFT)
-    generated_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='generated_pos')
+    generated_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='generated_pos')
     generated_at = models.DateTimeField(null=True, blank=True)
-    expected_delivery_date = models.DateField()
+    issued_at = models.DateTimeField(null=True, blank=True)
+    acknowledged_at = models.DateTimeField(null=True, blank=True)
     pdf_url = models.CharField(max_length=500, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -247,23 +320,48 @@ class POItem(models.Model):
 
 class Invoice(models.Model):
     class StatusChoices(models.TextChoices):
-        PENDING = 'pending', 'Pending'
-        VERIFIED = 'verified', 'Verified'
+        DRAFT = 'draft', 'Draft'
+        PENDING_VERIFICATION = 'pending_verification', 'Pending Verification'
+        APPROVED = 'approved', 'Approved'
         REJECTED = 'rejected', 'Rejected'
+        PAID = 'paid', 'Paid'
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    invoice_number = models.CharField(max_length=20, unique=True)
+    invoice_number = models.CharField(max_length=50, unique=True)
+    vendor_invoice_number = models.CharField(max_length=50, null=True, blank=True)
     po = models.ForeignKey(PurchaseOrder, on_delete=models.CASCADE, related_name='invoices')
     vendor = models.ForeignKey(Vendor, on_delete=models.CASCADE, related_name='invoices')
-    invoice_date = models.DateField()
-    amount = models.DecimalField(max_digits=12, decimal_places=2)
-    file_url = models.CharField(max_length=500)
-    status = models.CharField(max_length=20, choices=StatusChoices.choices, default=StatusChoices.PENDING)
+    invoice_date = models.DateField(null=True, blank=True)
+    due_date = models.DateField(null=True, blank=True)
+    subtotal = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
+    cgst_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
+    sgst_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
+    igst_amount = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
+    amount = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
+    bank_name = models.CharField(max_length=100, null=True, blank=True)
+    account_number = models.CharField(max_length=50, null=True, blank=True)
+    ifsc_code = models.CharField(max_length=20, null=True, blank=True)
+    upi_id = models.CharField(max_length=50, null=True, blank=True)
+    file_url = models.CharField(max_length=500, null=True, blank=True)
+    delivery_challan_url = models.CharField(max_length=500, null=True, blank=True)
+    eway_bill_url = models.CharField(max_length=500, null=True, blank=True)
+    other_docs_url = models.CharField(max_length=500, null=True, blank=True)
+    status = models.CharField(max_length=30, choices=StatusChoices.choices, default=StatusChoices.DRAFT)
     uploaded_at = models.DateTimeField(auto_now_add=True)
-    verified_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='verified_invoices')
-    verified_at = models.DateTimeField(null=True, blank=True)
     notes = models.TextField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        if self.po:
+            if self.status == 'paid' and self.po.status != 'paid':
+                self.po.status = 'paid'
+                self.po.save(update_fields=['status'])
+            elif self.status == 'rejected' and self.po.status != 'rejected_by_finance':
+                self.po.status = 'rejected_by_finance'
+                if self.notes:
+                    self.po.procurement_notes = self.notes
+                self.po.save(update_fields=['status', 'procurement_notes'])
 
     def __str__(self):
         return f"{self.invoice_number} - {self.vendor.name}"

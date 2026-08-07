@@ -1,122 +1,88 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+import React, { useState, useEffect } from 'react'
+import LoginPage from './components/LoginPage'
+import SignupPage from './components/SignupPage'
+import ProcurementDashboard from './components/ProcurementDashboard'
+import ManagerDashboard from './components/ManagerDashboard'
+import VendorDashboard from './components/VendorDashboard'
+import AdminDashboard from './components/AdminDashboard'
+import FinanceDashboard from './components/FinanceDashboard'
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [page, setPage] = useState('login') // 'login' | 'signup'
+  const [user, setUser] = useState(null)
 
+  // Restore session from localStorage on app load
+  useEffect(() => {
+    const stored = localStorage.getItem('vb_user')
+    if (stored) {
+      try {
+        setUser(JSON.parse(stored))
+      } catch {
+        localStorage.removeItem('vb_user')
+      }
+    }
+  }, [])
+
+  const handleLogin = (userData) => {
+    localStorage.setItem('vb_user', JSON.stringify(userData))
+    setUser(userData)
+  }
+
+  const handleLogout = () => {
+    localStorage.removeItem('vb_user')
+    setUser(null)
+    setPage('login')
+  }
+
+  // ── Not logged in → show auth pages ──
+  if (!user) {
+    if (page === 'signup') {
+      return (
+        <SignupPage
+          onNavigateLogin={() => setPage('login')}
+        />
+      )
+    }
+    return (
+      <LoginPage
+        onLogin={handleLogin}
+        onNavigateSignup={() => setPage('signup')}
+      />
+    )
+  }
+
+  // ── Logged in → check if admin first ──
+  if (user.is_admin) {
+    return <AdminDashboard onLogout={handleLogout} currentUser={user} />
+  }
+
+  // ── Logged in → route by role ──
+  const role = user.role
+
+
+  if (role === 'procurement_officer') {
+    return <ProcurementDashboard onLogout={handleLogout} currentUser={user} />
+  }
+  if (role === 'manager') {
+    return <ManagerDashboard onLogout={handleLogout} currentUser={user} />
+  }
+  if (role === 'vendor') {
+    return <VendorDashboard onLogout={handleLogout} currentUser={user} />
+  }
+  if (role === 'finance') {
+    return <FinanceDashboard onLogout={handleLogout} currentUser={user} />
+  }
+
+  // Fallback — unknown role
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
-
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', flexDirection: 'column', gap: 16 }}>
+      <p style={{ color: 'var(--text-secondary)' }}>Unknown role: <strong>{role}</strong></p>
+      <button onClick={handleLogout} style={{ padding: '8px 16px', borderRadius: 8, background: 'var(--bg-elevated)', border: '1px solid var(--border-default)', color: 'var(--text-primary)', cursor: 'pointer' }}>
+        Sign out
+      </button>
+    </div>
   )
 }
 
 export default App
+
