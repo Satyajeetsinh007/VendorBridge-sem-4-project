@@ -129,6 +129,10 @@ export default function ProcurementDashboard({ onLogout, currentUser, onToggleRo
 
   useEffect(() => { fetchData(); }, []);
 
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }, [currentView, activePOInfo, comparisonRfq]);
+
   // Helper to get officer's department ID
   const getOfficerDepartmentId = () => {
     if (!currentUser && departments.length > 0) return departments[0].id;
@@ -450,7 +454,7 @@ export default function ProcurementDashboard({ onLogout, currentUser, onToggleRo
         </header>
 
         {/* Content */}
-        <main className="content">
+        <main key={activePOInfo ? `po-${activePOInfo.po?.id}` : comparisonRfq ? `cmp-${comparisonRfq.id}` : currentView} className="content">
           {activePOInfo ? (
             <PurchaseOrderDetail
               po={activePOInfo.po}
@@ -493,14 +497,14 @@ export default function ProcurementDashboard({ onLogout, currentUser, onToggleRo
                     style={{ padding: '6px 16px', fontSize: '13px', borderRadius: '6px', cursor: 'pointer' }}
                     onClick={() => setOwnershipFilter('ALL')}
                   >
-                    🏢 All Purchase Orders ({purchaseOrders.length})
+                    All Purchase Orders ({purchaseOrders.length})
                   </button>
                   <button
                     className={`btn-ghost ${ownershipFilter === 'MY' ? 'btn-primary' : ''}`}
                     style={{ padding: '6px 16px', fontSize: '13px', borderRadius: '6px', cursor: 'pointer' }}
                     onClick={() => setOwnershipFilter('MY')}
                   >
-                    👤 My Purchase Orders ({purchaseOrders.filter(p => {
+                    My Purchase Orders ({purchaseOrders.filter(p => {
                       const rfqObj = rfqs.find(r => r.id === p.rfq) || p.rfq_details;
                       return isOwnRfq(p) || isOwnRfq(rfqObj);
                     }).length})
@@ -597,11 +601,11 @@ export default function ProcurementDashboard({ onLogout, currentUser, onToggleRo
                                 <td className="actions-cell">
                                   {isOwn ? (
                                     <button className="btn-action btn-submit" style={(po.status === 'rejected_by_finance' || po.status === 'rejected') ? { background: '#ef4444', borderColor: '#ef4444' } : undefined} onClick={() => setActivePOInfo({ po, rfq: rfqObj, quotation: quotObj, vendor: vendorObj })}>
-                                      {(po.status === 'rejected_by_finance' || po.status === 'rejected') ? '⚠️ View Rejected PO' : (po.status === 'paid' || po.status === 'completed' || po.status === 'closed') ? '📄 View Paid & Completed PO' : po.status === 'invoiced' ? '📄 View Invoiced PO' : po.status === 'delivered' ? '📄 View Delivered PO' : (po.status === 'issued' || po.status === 'acknowledged' || po.status === 'in_progress') ? '📄 View PO' : '📄 Review & Issue PO'}
+                                      {(po.status === 'rejected_by_finance' || po.status === 'rejected') ? 'View Rejected PO' : (po.status === 'paid' || po.status === 'completed' || po.status === 'closed') ? 'View Paid & Completed PO' : po.status === 'invoiced' ? 'View Invoiced PO' : po.status === 'delivered' ? 'View Delivered PO' : (po.status === 'issued' || po.status === 'acknowledged' || po.status === 'in_progress') ? 'View PO' : 'Review & Issue PO'}
                                     </button>
                                   ) : (
                                     <button className="btn-secondary" style={{ padding: '4px 12px', fontSize: '12px' }} onClick={() => setActivePOInfo({ po, rfq: rfqObj, quotation: quotObj, vendor: vendorObj })}>
-                                      👁 View PO (View Only)
+                                      View PO (View Only)
                                     </button>
                                   )}
                                 </td>
@@ -633,14 +637,14 @@ export default function ProcurementDashboard({ onLogout, currentUser, onToggleRo
                     style={{ padding: '6px 16px', fontSize: '13px', borderRadius: '6px', cursor: 'pointer' }}
                     onClick={() => setOwnershipFilter('ALL')}
                   >
-                    🏢 All Quotations ({rfqsWithQuotations.length})
+                    All Quotations ({rfqsWithQuotations.length})
                   </button>
                   <button
                     className={`btn-ghost ${ownershipFilter === 'MY' ? 'btn-primary' : ''}`}
                     style={{ padding: '6px 16px', fontSize: '13px', borderRadius: '6px', cursor: 'pointer' }}
                     onClick={() => setOwnershipFilter('MY')}
                   >
-                    👤 My RFQs Quotations ({rfqsWithQuotations.filter(r => isOwnRfq(r)).length})
+                    My RFQs ({rfqsWithQuotations.filter(r => isOwnRfq(r)).length})
                   </button>
                 </div>
               </div>
@@ -719,11 +723,11 @@ export default function ProcurementDashboard({ onLogout, currentUser, onToggleRo
                                 <td className="actions-cell">
                                   {isOwn ? (
                                     <button className="btn-action btn-submit" onClick={() => setComparisonRfq(rfq)}>
-                                      📊 Compare & Select Winner
+                                      Compare & Select Winner
                                     </button>
                                   ) : (
                                     <button className="btn-secondary" style={{ padding: '4px 12px', fontSize: '12px' }} onClick={() => setComparisonRfq(rfq)}>
-                                      👁 View Quotations (View Only)
+                                      View Quotations (View Only)
                                     </button>
                                   )}
                                 </td>
@@ -903,10 +907,10 @@ export default function ProcurementDashboard({ onLogout, currentUser, onToggleRo
                       <Icons.Plus /> New RFQ
                     </button>
                     <button className="btn-secondary" onClick={() => setCurrentView('quotations')} style={{ width: '100%', justifyContent: 'center' }}>
-                      📊 Compare Quotations ({rfqsWithQuotations.length})
+                      Compare Quotations ({rfqsWithQuotations.length})
                     </button>
                     <button className="btn-secondary" onClick={() => setCurrentView('purchase-orders')} style={{ width: '100%', justifyContent: 'center' }}>
-                      📄 View Purchase Orders ({purchaseOrders.length})
+                      View Purchase Orders ({purchaseOrders.length})
                     </button>
                   </div>
                 </div>
@@ -945,14 +949,14 @@ export default function ProcurementDashboard({ onLogout, currentUser, onToggleRo
                       style={{ padding: '6px 14px', fontSize: '0.82rem', cursor: 'pointer' }}
                       onClick={() => setOwnershipFilter('ALL')}
                     >
-                      🏢 All RFQs ({companyRfqsCount})
+                      All RFQs ({companyRfqsCount})
                     </button>
                     <button
                       className={ownershipFilter === 'MY' ? 'pill pill-active' : 'pill'}
                       style={{ padding: '6px 14px', fontSize: '0.82rem', cursor: 'pointer' }}
                       onClick={() => setOwnershipFilter('MY')}
                     >
-                      👤 My RFQs ({myRfqsCount})
+                      My RFQs ({myRfqsCount})
                     </button>
                   </div>
                 </div>
@@ -980,7 +984,7 @@ export default function ProcurementDashboard({ onLogout, currentUser, onToggleRo
               )}
               {error && (
                 <div className="state-banner error">
-                  <span>⚠ {error}</span>
+                  <span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{marginRight:6,verticalAlign:'middle'}}><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>{error}</span>
                   <button className="btn-ghost" onClick={fetchData}>Retry</button>
                 </div>
               )}
@@ -1070,15 +1074,15 @@ export default function ProcurementDashboard({ onLogout, currentUser, onToggleRo
                                       )}
                                       {(rfq.status === 'open' || rfq.status === 'under_review') && hasQuotations(rfq.id) && (
                                         <button className="btn-action btn-submit" onClick={() => setComparisonRfq(rfq)}>
-                                          📊 Compare Quotations
+                                          Compare Quotations
                                         </button>
                                       )}
                                       {rfq.status === 'open' && !hasQuotations(rfq.id) && (
-                                        <span style={{ color: 'var(--success)', fontWeight: '600', fontSize: '12px' }}>✓ Approved & Live</span>
+                                        <span style={{ color: 'var(--success)', fontWeight: '600', fontSize: '12px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Approved & Live</span>
                                       )}
                                       {rfq.status === 'completed' && (
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                          <span style={{ color: '#34d399', fontWeight: '600', fontSize: '12px' }}>✓ Completed</span>
+                                          <span style={{ color: '#34d399', fontWeight: '600', fontSize: '12px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Completed</span>
                                           <button className="btn-action btn-submit" style={{ padding: '3px 8px', fontSize: '11px' }} onClick={() => {
                                             const matchedPo = purchaseOrders.find(p => p.rfq === rfq.id);
                                             const matchedQuot = quotations.find(q => q.rfq === rfq.id && q.status === 'selected');
@@ -1090,23 +1094,23 @@ export default function ProcurementDashboard({ onLogout, currentUser, onToggleRo
                                               vendor: matchedVend
                                             });
                                           }}>
-                                            📄 View PO
+                                            View PO
                                           </button>
                                         </div>
                                       )}
                                       {rfq.status === 'closed' && (
-                                        <span style={{ color: 'var(--text-muted)', fontWeight: '600', fontSize: '12px' }}>🔒 Closed</span>
+                                        <span style={{ color: 'var(--text-muted)', fontWeight: '600', fontSize: '12px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Closed</span>
                                       )}
                                       {rfq.status === 'rejected' && (
                                         <button className="btn-action btn-publish" onClick={() => openRfqDetail(rfq)}>
-                                          ↻ Edit & Resubmit
+                                          Edit & Resubmit
                                         </button>
                                       )}
                                     </>
                                   ) : (
                                     /* Read-only view for another officer's RFQ */
                                     <button className="btn-secondary" style={{ padding: '4px 12px', fontSize: '12px' }} onClick={() => openRfqDetail(rfq)}>
-                                      👁 View Details
+                                      View Details
                                     </button>
                                   )}
                                 </td>

@@ -101,6 +101,10 @@ export default function VendorDashboard({ onLogout, currentUser }) {
 
   useEffect(() => { fetchData(); }, []);
 
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }, [currentView, selectedRfq]);
+
   const handleSeedClick = async () => {
     setLoading(true);
     try { await api.seedData(); await fetchData(); }
@@ -287,13 +291,13 @@ export default function VendorDashboard({ onLogout, currentUser }) {
           </div>
         </header>
 
-        <main className="content">
+        <main key={selectedRfq ? `rfq-${selectedRfq.id}` : currentView} className="content">
           {loading && (
             <div className="state-banner info"><div className="spinner" /> Loading vendor data…</div>
           )}
           {error && (
             <div className="state-banner error">
-              <span>⚠ {error}</span>
+              <span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{marginRight:6,verticalAlign:'middle'}}><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>{error}</span>
               <button className="btn-ghost" onClick={fetchData}>Retry</button>
             </div>
           )}

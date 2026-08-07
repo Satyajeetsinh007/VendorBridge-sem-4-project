@@ -92,6 +92,8 @@ export default function LoginPage({ onLogin, onNavigateSignup }) {
     setError(''); setErrorCode(''); setRejectionReason('');
     setLoading(true);
     try {
+      // 800ms premium processing delay for view transition
+      await new Promise(resolve => setTimeout(resolve, 800));
       const userData = await api.login(form.email, form.password);
       localStorage.setItem('vb_user', JSON.stringify(userData));
       onLogin(userData);

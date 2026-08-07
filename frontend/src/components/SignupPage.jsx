@@ -115,6 +115,8 @@ export default function SignupPage({ onNavigateLogin }) {
     if (needsDept && !userForm.department) return setError('Please select your department.');
     setLoading(true);
     try {
+      // 800ms premium processing delay for view transition
+      await new Promise(resolve => setTimeout(resolve, 800));
       await api.signupUser({ name: userForm.name, email: userForm.email, password: userForm.password, role: userForm.role, department: userForm.department || undefined });
       setSubmitted(true);
     } catch (err) { setError(err.message); }
@@ -129,6 +131,8 @@ export default function SignupPage({ onNavigateLogin }) {
     if (vendorForm.password.length < 6) return setError('Password must be at least 6 characters.');
     setLoading(true);
     try {
+      // 800ms premium processing delay for view transition
+      await new Promise(resolve => setTimeout(resolve, 800));
       await api.signupVendor({ name: vendorForm.name, contact_person: vendorForm.contact_person, email: vendorForm.email, password: vendorForm.password, phone: vendorForm.phone, category: vendorForm.category, gst_number: vendorForm.gst_number, address: vendorForm.address, website: vendorForm.website });
       setSubmitted(true);
     } catch (err) { setError(err.message); }

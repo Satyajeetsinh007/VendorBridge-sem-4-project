@@ -102,7 +102,7 @@ export default function PurchaseOrderDetail({ po, rfq, quotation, vendor, curren
         await api.patchPurchaseOrder(po.id, payload);
       }
       setPoStatus('issued');
-      setSuccessBanner(`🎉 Purchase Order PO-2026-${po?.po_number ? po.po_number.split('-').pop() : '0042'} has been successfully ISSUED to ${vendor?.name || 'Vendor'}! In-app notification sent.`);
+      setSuccessBanner(`Purchase Order PO-2026-${po?.po_number ? po.po_number.split('-').pop() : '0042'} has been successfully ISSUED to ${vendor?.name || 'Vendor'}. In-app notification sent.`);
       if (onUpdated) onUpdated();
     } catch (err) {
       alert(`Error issuing PO: ${err.message}`);
@@ -140,7 +140,8 @@ export default function PurchaseOrderDetail({ po, rfq, quotation, vendor, curren
         <button className="btn-secondary" onClick={onBack}>← Back to Dashboard</button>
         <div style={{ display: 'flex', gap: '10px' }}>
           <button className="btn-secondary" onClick={() => setShowPreviewModal(true)}>
-            👁 Preview Purchase Order
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{marginRight:5,verticalAlign:'middle'}}><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            Preview Purchase Order
           </button>
           <button className="btn-secondary" onClick={() => alert(`Downloading ${poNumberDisplay}.pdf ...`)}>
             📥 Download PDF
@@ -151,7 +152,7 @@ export default function PurchaseOrderDetail({ po, rfq, quotation, vendor, curren
                 {saving ? 'Saving…' : '💾 Save Draft'}
               </button>
               <button className="btn-primary" onClick={handleIssuePO} disabled={issuing} style={{ background: 'var(--success)', borderColor: 'var(--success)' }}>
-                {issuing ? 'Issuing…' : '🚀 Issue Purchase Order'}
+                {issuing ? 'Issuing…' : 'Issue Purchase Order'}
               </button>
             </>
           )}
@@ -214,7 +215,7 @@ export default function PurchaseOrderDetail({ po, rfq, quotation, vendor, curren
         {/* Buyer Company Info */}
         <div className="table-card info-card" style={{ padding: '20px' }}>
           <div className="table-header-bar" style={{ paddingBottom: '10px', marginBottom: '12px', borderBottom: '1px solid var(--border-subtle)' }}>
-            <span className="table-title" style={{ fontSize: '14px' }}>🏢 Buyer Information (Company)</span>
+            <span className="table-title" style={{ fontSize: '14px' }}>Buyer Information (Company)</span>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '13px' }}>
             <div className="info-row"><span className="info-label">Company Name</span><span className="info-val" style={{ fontWeight: 700 }}>VendorBridge Enterprise Systems Pvt Ltd</span></div>
@@ -228,7 +229,7 @@ export default function PurchaseOrderDetail({ po, rfq, quotation, vendor, curren
         {/* Supplier Vendor Info */}
         <div className="table-card info-card" style={{ padding: '20px' }}>
           <div className="table-header-bar" style={{ paddingBottom: '10px', marginBottom: '12px', borderBottom: '1px solid var(--border-subtle)' }}>
-            <span className="table-title" style={{ fontSize: '14px' }}>🏬 Supplier Information (Selected Vendor)</span>
+            <span className="table-title" style={{ fontSize: '14px' }}>Supplier Information (Selected Vendor)</span>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '13px' }}>
             <div className="info-row">
@@ -241,7 +242,7 @@ export default function PurchaseOrderDetail({ po, rfq, quotation, vendor, curren
             <div className="info-row"><span className="info-label">Contact Person</span><span className="info-val">{vendor?.contact_person || 'Rajesh Kumar (Enterprise Manager)'}</span></div>
             <div className="info-row"><span className="info-label">Email & Phone</span><span className="info-val">{vendor?.email || 'sales@dell.com'} · {vendor?.phone || '+91 98765 12345'}</span></div>
             <div className="info-row"><span className="info-label">GST Number</span><span className="info-val mono-text">{vendor?.gst_number || '27AAACD4567E1Z9'}</span></div>
-            <div className="info-row"><span className="info-label">Address & Rating</span><span className="info-val">{vendor?.address || 'Dell India Pvt Ltd, Inner Ring Rd, Bangalore'} · ⭐ {vendor?.rating || '4.85'}/5</span></div>
+            <div className="info-row"><span className="info-label">Address & Rating</span><span className="info-val">{vendor?.address || 'Dell India Pvt Ltd, Inner Ring Rd, Bangalore'} · <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" stroke="none" style={{color:'#f59e0b',marginRight:2,verticalAlign:'middle'}}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>{vendor?.rating || '4.85'} / 5</span></div>
           </div>
         </div>
       </div>
@@ -300,7 +301,7 @@ export default function PurchaseOrderDetail({ po, rfq, quotation, vendor, curren
         {/* Editable Delivery Details */}
         <div className="table-card info-card" style={{ padding: '20px' }}>
           <div className="table-header-bar" style={{ paddingBottom: '10px', marginBottom: '16px', borderBottom: '1px solid var(--border-subtle)' }}>
-            <span className="table-title">🚚 Delivery Details & Logistics (Editable)</span>
+            <span className="table-title">Delivery Details & Logistics (Editable)</span>
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
@@ -379,7 +380,7 @@ export default function PurchaseOrderDetail({ po, rfq, quotation, vendor, curren
         {/* Financial Summary Card */}
         <div className="table-card decision-card" style={{ padding: '20px' }}>
           <div className="table-header-bar" style={{ paddingBottom: '10px', marginBottom: '16px', borderBottom: '1px solid var(--border-subtle)' }}>
-            <span className="table-title">💰 Financial Summary</span>
+            <span className="table-title">Financial Summary</span>
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', fontSize: '13.5px' }}>
@@ -436,7 +437,7 @@ export default function PurchaseOrderDetail({ po, rfq, quotation, vendor, curren
         {/* Payment Information */}
         <div className="table-card info-card" style={{ padding: '20px' }}>
           <div className="table-header-bar" style={{ paddingBottom: '10px', marginBottom: '12px', borderBottom: '1px solid var(--border-subtle)' }}>
-            <span className="table-title">💳 Payment Information</span>
+            <span className="table-title">Payment Information</span>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '13px' }}>
             <div className="info-row">
@@ -452,7 +453,7 @@ export default function PurchaseOrderDetail({ po, rfq, quotation, vendor, curren
         {/* Warranty & Service */}
         <div className="table-card info-card" style={{ padding: '20px' }}>
           <div className="table-header-bar" style={{ paddingBottom: '10px', marginBottom: '12px', borderBottom: '1px solid var(--border-subtle)' }}>
-            <span className="table-title">🛡️ Warranty & Service Terms</span>
+            <span className="table-title">Warranty & Service Terms</span>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '13px' }}>
             <div className="info-row">
@@ -471,7 +472,7 @@ export default function PurchaseOrderDetail({ po, rfq, quotation, vendor, curren
         {/* Procurement Notes */}
         <div className="table-card info-card" style={{ padding: '20px' }}>
           <div className="table-header-bar" style={{ paddingBottom: '10px', marginBottom: '12px', borderBottom: '1px solid var(--border-subtle)' }}>
-            <span className="table-title">📝 Procurement Special Instructions & Notes</span>
+            <span className="table-title">Procurement Special Instructions & Notes</span>
           </div>
           <div className="field">
             <textarea
@@ -489,17 +490,20 @@ export default function PurchaseOrderDetail({ po, rfq, quotation, vendor, curren
         {/* Attachments */}
         <div className="table-card info-card" style={{ padding: '20px' }}>
           <div className="table-header-bar" style={{ paddingBottom: '10px', marginBottom: '12px', borderBottom: '1px solid var(--border-subtle)' }}>
-            <span className="table-title">📎 Associated Documents</span>
+            <span className="table-title">Associated Documents</span>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            <a href={rfq?.specs_file_url || '#'} target="_blank" rel="noreferrer" className="download-link" style={{ fontSize: '12.5px' }}>
-              📄 RFQ Specification Document.pdf
+            <a href={rfq?.specs_file_url || '#'} target="_blank" rel="noreferrer" className="download-link" style={{ fontSize: '12.5px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+              RFQ Specification Document.pdf
             </a>
-            <a href={quotation?.attachment_url || '#'} target="_blank" rel="noreferrer" className="download-link" style={{ fontSize: '12.5px' }}>
-              📄 Selected Vendor Quotation.pdf
+            <a href={quotation?.attachment_url || '#'} target="_blank" rel="noreferrer" className="download-link" style={{ fontSize: '12.5px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+              Selected Vendor Quotation.pdf
             </a>
-            <a href="#" onClick={(e) => { e.preventDefault(); alert('Downloading Technical Terms & SLA...'); }} className="download-link" style={{ fontSize: '12.5px' }}>
-              📄 Technical Terms & SLA Agreement.pdf
+            <a href="#" onClick={(e) => { e.preventDefault(); alert('Downloading Technical Terms & SLA...'); }} className="download-link" style={{ fontSize: '12.5px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+              Technical Terms & SLA Agreement.pdf
             </a>
           </div>
         </div>
@@ -507,8 +511,8 @@ export default function PurchaseOrderDetail({ po, rfq, quotation, vendor, curren
 
       {/* ── Rejection Alert Banner if Rejected by Finance ── */}
       {(poStatus === 'rejected_by_finance' || poStatus === 'rejected') && (
-        <div className="state-banner error" style={{ marginBottom: '20px', padding: '16px 20px', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: 'var(--radius-sm)' }}>
-          <strong style={{ fontSize: '15px', color: '#f87171' }}>⚠️ Invoice Rejected by Finance Department</strong><br />
+        <div className="state-banner error" style={{ marginBottom: '20px', padding: '16px 20px', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: 'var(--radius-sm)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <strong style={{ fontSize: '15px', color: '#f87171', display: 'inline-flex', alignItems: 'center', gap: '4px' }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{color:'#f87171'}}><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> Invoice Rejected by Finance Department</strong><br />
           <span style={{ fontSize: '13.5px', color: 'var(--text-primary)', marginTop: '4px', display: 'block' }}>
             Finance Rejection Remarks: <strong>{po?.procurement_notes || deliveryData?.procurement_notes || 'Invoice details / documentation did not match requirements.'}</strong>
           </span>
@@ -518,7 +522,7 @@ export default function PurchaseOrderDetail({ po, rfq, quotation, vendor, curren
       {/* ── Purchase Order Timeline ── */}
       <section className="table-card" style={{ padding: '24px' }}>
         <div className="table-header-bar" style={{ marginBottom: '20px' }}>
-          <span className="table-title">⏳ Purchase Order Lifecycle</span>
+          <span className="table-title">Purchase Order Lifecycle</span>
         </div>
 
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'relative', padding: '0 10px' }}>
@@ -556,7 +560,11 @@ export default function PurchaseOrderDetail({ po, rfq, quotation, vendor, curren
                 boxShadow: item.rejected ? '0 0 12px rgba(239, 68, 68, 0.5)' : item.current ? '0 0 12px rgba(59, 130, 246, 0.5)' : 'none',
                 marginBottom: '8px'
               }}>
-                {item.rejected ? '✕' : item.done ? '✓' : item.step}
+                {item.rejected ? (
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" style={{color:'#fff'}}><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                ) : item.done ? (
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" style={{color:'#fff'}}><polyline points="20 6 9 17 4 12"/></svg>
+                ) : item.step}
               </div>
               <span style={{ fontSize: '12px', fontWeight: item.current || item.rejected ? 700 : 600, color: item.rejected ? '#f87171' : item.current ? 'var(--accent)' : 'var(--text-primary)', textAlign: 'center' }}>
                 {item.title}
@@ -578,7 +586,7 @@ export default function PurchaseOrderDetail({ po, rfq, quotation, vendor, curren
                 <h2 className="modal-title" style={{ color: '#0f172a' }}>Purchase Order Preview ({poNumberDisplay})</h2>
                 <p className="modal-subtitle" style={{ color: '#64748b' }}>Official Document View for Issue & Printing</p>
               </div>
-              <button className="modal-close" style={{ color: '#64748b' }} onClick={() => setShowPreviewModal(false)}>✕</button>
+              <button className="modal-close" style={{ color: '#64748b' }} onClick={() => setShowPreviewModal(false)}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
             </div>
 
             <div className="modal-body" style={{ maxHeight: '75vh', overflowY: 'auto', padding: '30px', color: '#0f172a', fontFamily: 'Inter, sans-serif' }}>

@@ -150,7 +150,8 @@ export default function VendorRFQDetail({ rfq, vendor, existingQuotation, onBack
               <div className="info-section">
                 <span className="info-label">Attachments</span>
                 <a href={rfq.specs_file_url} target="_blank" rel="noreferrer" className="download-link">
-                  📎 View Specification Document
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{marginRight:4,verticalAlign:'middle'}}><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+                  View Specification Document
                 </a>
               </div>
             )}
@@ -194,20 +195,22 @@ export default function VendorRFQDetail({ rfq, vendor, existingQuotation, onBack
             {isClosed && !hasExisting ? (
               <div className="decision-body">
                 <div className="state-banner error" style={{ margin: 0, padding: '12px' }}>
-                  🔒 The deadline for this RFQ has been reached. Quotation submission is closed.
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{marginRight:6,verticalAlign:'middle'}}><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                  The deadline for this RFQ has been reached. Quotation submission is closed.
                 </div>
               </div>
             ) : (
               <div className="decision-body">
                 {isClosed && hasExisting && (
                   <div className="state-banner error" style={{ margin: 0, padding: '10px 12px' }}>
-                    🔒 The deadline for this RFQ has been reached. No further edits are allowed.
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{marginRight:6,verticalAlign:'middle'}}><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                    The deadline for this RFQ has been reached. No further edits are allowed.
                   </div>
                 )}
                 {isReadOnly && !isClosed && (
                   <div className="state-banner info" style={{ margin: 0, padding: '8px 12px' }}>
                     This quotation has been submitted and is read-only.
-                    {existingQuotation.status === 'selected' && ' 🎉 Your quotation was selected!'}
+                    {existingQuotation.status === 'selected' && ' Your quotation was selected.'}
                     {existingQuotation.status === 'rejected' && ' This quotation was not selected.'}
                   </div>
                 )}
@@ -330,12 +333,14 @@ export default function VendorRFQDetail({ rfq, vendor, existingQuotation, onBack
                     <input type="file" accept=".pdf,.doc,.docx" onChange={handleFileUpload} />
                   ) : (
                     <a href={formData.attachment_url || '#'} target="_blank" rel="noreferrer" className="download-link" style={{ fontSize: '13px' }}>
-                      📄 {fileName || 'quotation.pdf'} (Download Document)
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{marginRight:4,verticalAlign:'middle'}}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                      {fileName || 'quotation.pdf'} (Download Document)
                     </a>
                   )}
                   {fileName && !isReadOnly && (
                     <span style={{ fontSize: '11px', color: 'var(--success)', marginTop: '4px', display: 'block' }}>
-                      ✓ Attached: {fileName}
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{marginRight:3,verticalAlign:'middle'}}><polyline points="20 6 9 17 4 12"/></svg>
+                      Attached: {fileName}
                     </span>
                   )}
                 </div>
@@ -355,11 +360,11 @@ export default function VendorRFQDetail({ rfq, vendor, existingQuotation, onBack
                 {!isReadOnly && (
                   <div className="decision-actions">
                     <button className="btn-secondary" onClick={() => handleSave(true)} disabled={submitting} style={{ width: '100%', justifyContent: 'center' }}>
-                      {submitting ? 'Saving…' : '💾 Save as Draft'}
+                      {submitting ? 'Saving…' : 'Save as Draft'}
                     </button>
                     {!isDeadlinePassed && (
                       <button className="btn-primary btn-approve" onClick={() => handleSave(false)} disabled={submitting}>
-                        {submitting ? 'Submitting…' : '📩 Submit Quotation'}
+                        {submitting ? 'Submitting…' : 'Submit Quotation'}
                       </button>
                     )}
                   </div>
