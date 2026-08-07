@@ -276,7 +276,7 @@ export default function VendorDashboard({ onLogout, currentUser }) {
                   }}
                 >
                   {vendors.map(v => (
-                    <option key={v.id} value={v.id} style={{ background: '#1e293b', color: '#fff' }}>
+                    <option key={v.id} value={v.id} style={{ background: 'var(--bg-surface)', color: 'var(--text-primary)' }}>
                       {v.name} ({v.category || 'Vendor'})
                     </option>
                   ))}
