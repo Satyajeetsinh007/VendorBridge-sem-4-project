@@ -77,7 +77,11 @@ export default function VendorInvoiceUpload({ po, vendor, onBack, onInvoiceSubmi
     }
   };
 
-  const handleSubmitInvoice = async () => {
+  const handleSubmitInvoice = async (e) => {
+    if (e && e.preventDefault) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     setSubmitting(true);
     try {
       const payload = {
@@ -107,8 +111,8 @@ export default function VendorInvoiceUpload({ po, vendor, onBack, onInvoiceSubmi
       let createdInv = null;
       try {
         createdInv = await api.createInvoice(payload);
-      } catch (e) {
-        console.log('Invoice DB create note:', e.message);
+      } catch (err) {
+        console.log('Invoice DB create note:', err.message);
       }
 
       // Update PO Status to 'invoiced'
@@ -508,11 +512,11 @@ export default function VendorInvoiceUpload({ po, vendor, onBack, onInvoiceSubmi
               </p>
             </div>
             <div style={{ display: 'flex', gap: '12px' }}>
-              <button className="btn-secondary" onClick={() => setShowPreviewModal(true)}>
+              <button type="button" className="btn-secondary" onClick={() => setShowPreviewModal(true)}>
                 Preview PDF
               </button>
-              <button className="btn-primary" style={{ background: '#22c55e', borderColor: '#22c55e' }} onClick={() => setShowSubmitModal(true)}>
-                Submit Invoice
+              <button type="button" className="btn-primary" style={{ background: '#22c55e', borderColor: '#22c55e' }} onClick={(e) => handleSubmitInvoice(e)} disabled={submitting}>
+                {submitting ? 'Submitting…' : '✓ Submit Invoice'}
               </button>
             </div>
           </div>

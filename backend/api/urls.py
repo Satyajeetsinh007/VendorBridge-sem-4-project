@@ -3,7 +3,7 @@ from rest_framework.routers import DefaultRouter
 from .views import (
     DepartmentViewSet, UserViewSet, RFQViewSet,
     ApprovalViewSet, VendorViewSet, QuotationViewSet, PurchaseOrderViewSet,
-    InvoiceViewSet, seed_data,
+    InvoiceViewSet, seed_data, random_forest_recommendations,
     # Auth
     signup_user, signup_vendor, login_user,
     # Admin
@@ -24,6 +24,8 @@ router.register('invoices', InvoiceViewSet, basename='invoice')
 urlpatterns = [
     path('', include(router.urls)),
     path('seed/', seed_data, name='seed_data'),
+    path('rf-recommendations/', random_forest_recommendations, name='rf_recommendations_global'),
+    path('rfqs/<uuid:rfq_id>/rf-recommendations/', random_forest_recommendations, name='rf_recommendations'),
 
     # Auth
     path('auth/signup/user/', signup_user, name='signup_user'),

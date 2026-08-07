@@ -288,4 +288,13 @@ export const api = {
     if (!res.ok) throw new Error('Failed to update invoice');
     return res.json();
   },
+
+  getRandomForestRecommendations: async (rfqId = null) => {
+    const url = rfqId 
+      ? `${API_BASE_URL}/rfqs/${rfqId}/rf-recommendations/`
+      : `${API_BASE_URL}/rf-recommendations/`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('Failed to fetch Random Forest recommendations');
+    return res.json();
+  },
 };

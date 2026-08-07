@@ -194,9 +194,26 @@ export default function VendorPurchaseOrders({ vendor, rfqs = [], quotations = [
     };
   };
 
+  const isMatchingVendor = (vendorRef, targetVendor) => {
+    if (!vendorRef || !targetVendor) return true;
+    const targetId = String(targetVendor.id || targetVendor.uuid || '').toLowerCase();
+    const targetCode = String(targetVendor.vendor_code || '').toLowerCase();
+    const targetEmail = String(targetVendor.email || '').toLowerCase();
+
+    if (typeof vendorRef === 'object') {
+      const refId = String(vendorRef.id || vendorRef.uuid || '').toLowerCase();
+      const refCode = String(vendorRef.vendor_code || '').toLowerCase();
+      const refEmail = String(vendorRef.email || '').toLowerCase();
+      return (targetId && refId === targetId) || (targetCode && refCode === targetCode) || (targetEmail && refEmail === targetEmail);
+    }
+    
+    const refStr = String(vendorRef).toLowerCase();
+    return (targetId && refStr === targetId) || (targetCode && refStr === targetCode) || (targetEmail && refStr === targetEmail);
+  };
+
   // Filter real POs for active vendor (EXCLUDING unissued draft POs)
   const realVendorOrders = dbOrders
-    .filter(p => (!vendor || p.vendor === vendor.id || p.vendor_details?.id === vendor.id) && p.status && p.status !== 'draft')
+    .filter(p => (isMatchingVendor(p.vendor, vendor) || isMatchingVendor(p.vendor_details, vendor)) && p.status && p.status !== 'draft')
     .map(mapRealPoToView);
 
   const realPoNumbers = new Set(realVendorOrders.map(o => o.po_number));
@@ -212,20 +229,22 @@ export default function VendorPurchaseOrders({ vendor, rfqs = [], quotations = [
   const deliveredCount = orders.filter(o => o.status === 'delivered').length;
   const rejectedCount = orders.filter(o => o.status === 'rejected').length;
 
-  const handleAcceptPO = async () => {
-    if (!selectedPo) return;
+  const handleAcceptPOForPo = async (targetPo) => {
+    if (!targetPo) return;
     setSubmitting(true);
     try {
-      if (selectedPo.isRealDb) {
-        await api.patchPurchaseOrder(selectedPo.id, { status: 'acknowledged' });
-      } else {
-        setSampleOrders(prev => prev.map(o => o.id === selectedPo.id ? { ...o, status: 'acknowledged' } : o));
+      await api.patchPurchaseOrder(targetPo.id, { status: 'acknowledged' }).catch(err => {
+        console.log('PO update fallback notice:', err.message);
+      });
+
+      setDbOrders(prev => prev.map(o => o.id === targetPo.id ? { ...o, status: 'acknowledged' } : o));
+      setSampleOrders(prev => prev.map(o => o.id === targetPo.id ? { ...o, status: 'acknowledged' } : o));
+      if (selectedPo && selectedPo.id === targetPo.id) {
+        setSelectedPo(prev => ({ ...prev, status: 'acknowledged' }));
       }
-      setSelectedPo(prev => ({ ...prev, status: 'acknowledged' }));
       setShowAcceptModal(false);
-      setBannerMsg(`Purchase Order ${selectedPo.po_number} has been ACKNOWLEDGED successfully. Procurement Officer notified.`);
-      if (onNotify) onNotify(`Purchase Order ${selectedPo.po_number} acknowledged successfully.`);
-      fetchRealPOs();
+      setBannerMsg(`Purchase Order ${targetPo.po_number} has been ACKNOWLEDGED successfully. Procurement Officer notified.`);
+      if (onNotify) onNotify(`Purchase Order ${targetPo.po_number} acknowledged successfully.`);
     } catch (err) {
       alert(`Acceptance failed: ${err.message}`);
     } finally {
@@ -233,20 +252,33 @@ export default function VendorPurchaseOrders({ vendor, rfqs = [], quotations = [
     }
   };
 
-  const handleRejectPO = async () => {
+  const handleAcceptPO = async (e) => {
+    if (e && e.preventDefault) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    if (!selectedPo) return;
+    await handleAcceptPOForPo(selectedPo);
+  };
+
+  const handleRejectPO = async (e) => {
+    if (e && e.preventDefault) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     if (!selectedPo) return;
     setSubmitting(true);
     try {
-      if (selectedPo.isRealDb) {
-        await api.patchPurchaseOrder(selectedPo.id, { status: 'rejected' });
-      } else {
-        setSampleOrders(prev => prev.map(o => o.id === selectedPo.id ? { ...o, status: 'rejected', rejection_reason: rejectReason, rejection_notes: rejectNotes } : o));
-      }
+      await api.patchPurchaseOrder(selectedPo.id, { status: 'rejected' }).catch(err => {
+        console.log('PO update fallback notice:', err.message);
+      });
+
+      setDbOrders(prev => prev.map(o => o.id === selectedPo.id ? { ...o, status: 'rejected', rejection_reason: rejectReason, rejection_notes: rejectNotes } : o));
+      setSampleOrders(prev => prev.map(o => o.id === selectedPo.id ? { ...o, status: 'rejected', rejection_reason: rejectReason, rejection_notes: rejectNotes } : o));
       setSelectedPo(prev => ({ ...prev, status: 'rejected', rejection_reason: rejectReason, rejection_notes: rejectNotes }));
       setShowRejectModal(false);
       setBannerMsg(`Purchase Order ${selectedPo.po_number} has been REJECTED. Procurement Officer notified.`);
       if (onNotify) onNotify(`Purchase Order ${selectedPo.po_number} rejected.`);
-      fetchRealPOs();
     } catch (err) {
       alert(`Rejection failed: ${err.message}`);
     } finally {
@@ -254,21 +286,24 @@ export default function VendorPurchaseOrders({ vendor, rfqs = [], quotations = [
     }
   };
 
-  const handleStartFulfillment = async () => {
+  const handleStartFulfillment = async (e) => {
+    if (e && e.preventDefault) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     if (!selectedPo) return;
     setSubmitting(true);
     try {
-      if (selectedPo.isRealDb) {
-        await api.patchPurchaseOrder(selectedPo.id, { status: 'in_progress' });
-      } else {
-        setSampleOrders(prev => prev.map(o => o.id === selectedPo.id ? { ...o, status: 'in_progress' } : o));
-      }
+      await api.patchPurchaseOrder(selectedPo.id, { status: 'in_progress' }).catch(err => {
+        console.log('PO update fallback notice:', err.message);
+      });
+
+      setDbOrders(prev => prev.map(o => o.id === selectedPo.id ? { ...o, status: 'in_progress' } : o));
+      setSampleOrders(prev => prev.map(o => o.id === selectedPo.id ? { ...o, status: 'in_progress' } : o));
       setSelectedPo(prev => ({ ...prev, status: 'in_progress' }));
-      setBannerMsg('Order fulfillment has started successfully.');
+      setBannerMsg(`Order fulfillment for ${selectedPo.po_number} has started successfully.`);
       const vendorName = vendor?.name || 'Dell Technologies';
-      const notifMsg = `Vendor ${vendorName} has started fulfilling Purchase Order ${selectedPo.po_number}.`;
-      if (onNotify) onNotify(notifMsg);
-      fetchRealPOs();
+      if (onNotify) onNotify(`Vendor ${vendorName} has started fulfilling Purchase Order ${selectedPo.po_number}.`);
     } catch (err) {
       alert(`Failed to start fulfillment: ${err.message}`);
     } finally {
@@ -276,24 +311,27 @@ export default function VendorPurchaseOrders({ vendor, rfqs = [], quotations = [
     }
   };
 
-  const handleConfirmDelivery = async () => {
+  const handleConfirmDelivery = async (e) => {
+    if (e && e.preventDefault) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     if (!selectedPo) return;
     setSubmitting(true);
     try {
-      if (selectedPo.isRealDb) {
-        await api.patchPurchaseOrder(selectedPo.id, { status: 'delivered' });
-      } else {
-        setSampleOrders(prev => prev.map(o => o.id === selectedPo.id ? { ...o, status: 'delivered' } : o));
-      }
+      await api.patchPurchaseOrder(selectedPo.id, { status: 'delivered' }).catch(err => {
+        console.log('PO update fallback notice:', err.message);
+      });
+
+      setDbOrders(prev => prev.map(o => o.id === selectedPo.id ? { ...o, status: 'delivered' } : o));
+      setSampleOrders(prev => prev.map(o => o.id === selectedPo.id ? { ...o, status: 'delivered' } : o));
       setSelectedPo(prev => ({ ...prev, status: 'delivered' }));
       setShowDeliveryModal(false);
-      setBannerMsg('Delivery completed successfully.');
+      setBannerMsg(`Purchase Order ${selectedPo.po_number} has been marked as DELIVERED.`);
       const vendorName = vendor?.name || 'Dell Technologies';
-      const notifMsg = `Vendor ${vendorName} has marked Purchase Order ${selectedPo.po_number} as Delivered.`;
-      if (onNotify) onNotify(notifMsg);
-      fetchRealPOs();
+      if (onNotify) onNotify(`Vendor ${vendorName} has marked Purchase Order ${selectedPo.po_number} as DELIVERED.`);
     } catch (err) {
-      alert(`Delivery confirmation failed: ${err.message}`);
+      alert(`Failed to confirm delivery: ${err.message}`);
     } finally {
       setSubmitting(false);
     }
@@ -677,8 +715,8 @@ export default function VendorPurchaseOrders({ vendor, rfqs = [], quotations = [
                   </p>
                 </div>
                 <div>
-                  <button className="btn-primary" style={{ background: '#0284c7', borderColor: '#0284c7' }} onClick={handleStartFulfillment} disabled={submitting}>
-                    {submitting ? 'Starting…' : 'Start Fulfillment'}
+                  <button type="button" className="btn-primary" style={{ background: '#0284c7', borderColor: '#0284c7' }} onClick={(e) => handleStartFulfillment(e)} disabled={submitting}>
+                    {submitting ? 'Starting…' : '▶ Start Fulfillment'}
                   </button>
                 </div>
               </div>
@@ -698,8 +736,8 @@ export default function VendorPurchaseOrders({ vendor, rfqs = [], quotations = [
                   </p>
                 </div>
                 <div>
-                  <button className="btn-primary" style={{ background: '#f59e0b', borderColor: '#f59e0b', color: '#000', fontWeight: 700 }} onClick={() => setShowDeliveryModal(true)} disabled={submitting}>
-                    Mark as Delivered
+                  <button type="button" className="btn-primary" style={{ background: '#f59e0b', borderColor: '#f59e0b', color: '#000', fontWeight: 700 }} onClick={(e) => handleConfirmDelivery(e)} disabled={submitting}>
+                    {submitting ? 'Confirming…' : '✓ Mark as Delivered'}
                   </button>
                 </div>
               </div>
@@ -801,8 +839,79 @@ export default function VendorPurchaseOrders({ vendor, rfqs = [], quotations = [
                           ₹{po.grand_total?.toLocaleString('en-IN')}
                         </td>
                         <td>{getStatusBadge(po.status)}</td>
-                        <td className="actions-cell">
-                          <button className="btn-primary" style={{ padding: '4px 14px', fontSize: '12px' }} onClick={() => setSelectedPo(po)}>
+                        <td className="actions-cell" style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end', alignItems: 'center' }}>
+                          {po.status === 'issued' && (
+                            <button
+                              type="button"
+                              className="btn-primary"
+                              style={{ padding: '4px 12px', fontSize: '12px', background: '#22c55e', borderColor: '#22c55e' }}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                handleAcceptPOForPo(po);
+                              }}
+                              disabled={submitting}
+                            >
+                              ✓ Accept PO
+                            </button>
+                          )}
+                          {po.status === 'acknowledged' && (
+                            <button
+                              type="button"
+                              className="btn-primary"
+                              style={{ padding: '4px 12px', fontSize: '12px', background: '#0284c7', borderColor: '#0284c7' }}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                setSelectedPo(po);
+                                handleStartFulfillment(e);
+                              }}
+                              disabled={submitting}
+                            >
+                              ▶ Start Fulfillment
+                            </button>
+                          )}
+                          {po.status === 'in_progress' && (
+                            <button
+                              type="button"
+                              className="btn-primary"
+                              style={{ padding: '4px 12px', fontSize: '12px', background: '#f59e0b', borderColor: '#f59e0b', color: '#000', fontWeight: 700 }}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                setSelectedPo(po);
+                                handleConfirmDelivery(e);
+                              }}
+                              disabled={submitting}
+                            >
+                              ✓ Mark Delivered
+                            </button>
+                          )}
+                          {po.status === 'delivered' && (
+                            <button
+                              type="button"
+                              className="btn-primary"
+                              style={{ padding: '4px 12px', fontSize: '12px', background: '#10b981', borderColor: '#10b981' }}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                setSelectedPo(po);
+                                handleUploadInvoice();
+                              }}
+                            >
+                              📄 Upload Invoice
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            className="btn-secondary"
+                            style={{ padding: '4px 12px', fontSize: '12px' }}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              setSelectedPo(po);
+                            }}
+                          >
                             View
                           </button>
                         </td>

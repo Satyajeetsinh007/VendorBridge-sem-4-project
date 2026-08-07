@@ -461,10 +461,16 @@ export default function VendorDashboard({ onLogout, currentUser }) {
                                     <td>
                                       <button
                                         className={isRejected || isCompleted || isClosed || isSubmitted || isSelected ? "btn-secondary" : "btn-primary"}
-                                        style={{ padding: '4px 12px', fontSize: '12px', ...(isRejected ? { borderColor: 'rgba(239, 68, 68, 0.4)', color: '#f87171' } : isSelected && !isPoReceived ? { borderColor: 'rgba(59, 130, 246, 0.4)', color: '#60a5fa' } : {}) }}
-                                        onClick={() => openRfqDetail(rfq)}
+                                        style={{ padding: '4px 12px', fontSize: '12px', ...(isRejected ? { borderColor: 'rgba(239, 68, 68, 0.4)', color: '#f87171' } : isSelected && isPoReceived ? { borderColor: '#10b981', color: '#10b981', fontWeight: 600 } : isSelected ? { borderColor: 'rgba(59, 130, 246, 0.4)', color: '#60a5fa' } : {}) }}
+                                        onClick={() => {
+                                          if (isPoReceived) {
+                                            setCurrentView('purchase-orders');
+                                          } else {
+                                            openRfqDetail(rfq);
+                                          }
+                                        }}
                                       >
-                                        {isRejected ? 'View (Rejected)' : isSelected ? (isPoReceived ? 'View (PO Received)' : 'View (Waiting for PO)') : isCompleted ? 'View (Completed)' : isClosed ? 'View (Closed)' : isSubmitted ? 'View Quote' : 'Send Quote'}
+                                        {isRejected ? 'View (Rejected)' : isSelected ? (isPoReceived ? '✓ View PO & Accept' : 'View (Waiting for PO)') : isCompleted ? 'View (Completed)' : isClosed ? 'View (Closed)' : isSubmitted ? 'View Quote' : 'Send Quote'}
                                       </button>
                                     </td>
                                   </tr>
