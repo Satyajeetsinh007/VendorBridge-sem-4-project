@@ -26,17 +26,19 @@ export default function PurchaseOrderDetail({ po, rfq, quotation, vendor, curren
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [successBanner, setSuccessBanner] = useState('');
 
+  // Company address from Buyer Information
+  const buyerCompanyAddress = 'Tech Park One, Tower B, Level 6, Cyber City, Cyberabad, PB 560103';
+
   // Delivery details state (expected_delivery_date locked from RFQ creation)
   const rfqDeliveryDate = rfq?.required_by_date || rfq?.deadline || po?.expected_delivery_date || new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0];
 
   const [deliveryData, setDeliveryData] = useState({
-    delivery_address: po?.delivery_address || `${rfq?.department_details?.name || 'Central Warehouse'}, VendorBridge Corporate HQ, Sector 62, Noida, UP - 201309`,
-    delivery_contact_person: po?.delivery_contact_person || (currentUser?.name ? `${currentUser.name} (Procurement Lead)` : 'Procurement Officer'),
-    delivery_phone: po?.delivery_phone || '+91 98112 34567',
+    delivery_address: po?.delivery_address || buyerCompanyAddress,
+    delivery_contact_person: po?.delivery_contact_person || (currentUser?.name ? `${currentUser.name} (Procurement Lead)` : 'Alex Mercer (Senior Officer)'),
+    delivery_phone: po?.delivery_phone || '+91 98765 43210',
     expected_delivery_date: rfqDeliveryDate,
     delivery_instructions: po?.delivery_instructions || 'Deliver between 9:00 AM and 5:00 PM on working days. Requires Gate Pass & Quality Inspection on unloading.',
     procurement_notes: po?.procurement_notes || 'All equipment must be packaged in original tamper-evident anti-static boxes. Serial numbers must be printed on the invoice.',
-    discount_amount: po?.discount_amount || 0,
   });
 
   const isIssued = !isOwn || (poStatus && poStatus !== 'draft');
@@ -52,12 +54,11 @@ export default function PurchaseOrderDetail({ po, rfq, quotation, vendor, curren
   const qty = rfq?.quantity || quotation?.quantity || 1;
   const unitPrice = parseFloat(quotation?.unit_price) || (po?.total_value ? parseFloat(po.total_value) / (qty || 1) : 0);
   const subtotal = unitPrice * qty;
-  const discount = parseFloat(deliveryData.discount_amount || 0);
   const taxType = quotation?.tax_type || 'GST_9_9';
   const cgst = taxType === 'GST_9_9' ? subtotal * 0.09 : 0;
   const sgst = taxType === 'GST_9_9' ? subtotal * 0.09 : 0;
   const igst = taxType === 'IGST_18' ? subtotal * 0.18 : 0;
-  const grandTotal = subtotal + cgst + sgst + igst - discount;
+  const grandTotal = subtotal + cgst + sgst + igst;
 
   const handleSaveDraft = async () => {
     setSaving(true);
@@ -68,7 +69,7 @@ export default function PurchaseOrderDetail({ po, rfq, quotation, vendor, curren
         cgst_amount: cgst,
         sgst_amount: sgst,
         igst_amount: igst,
-        discount_amount: discount,
+        discount_amount: 0,
         total_value: grandTotal,
         status: 'draft',
       };
@@ -97,7 +98,7 @@ export default function PurchaseOrderDetail({ po, rfq, quotation, vendor, curren
         cgst_amount: cgst,
         sgst_amount: sgst,
         igst_amount: igst,
-        discount_amount: discount,
+        discount_amount: 0,
         total_value: grandTotal,
         status: 'issued',
         issued_at: new Date().toISOString(),
@@ -144,7 +145,7 @@ export default function PurchaseOrderDetail({ po, rfq, quotation, vendor, curren
         <button className="btn-secondary" onClick={onBack}>← Back to Dashboard</button>
         <div style={{ display: 'flex', gap: '10px' }}>
           <button className="btn-secondary" onClick={() => setShowPreviewModal(true)}>
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{marginRight:5,verticalAlign:'middle'}}><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 5, verticalAlign: 'middle' }}><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>
             Preview Purchase Order
           </button>
           <button className="btn-secondary" onClick={() => alert(`Downloading ${poNumberDisplay}.pdf ...`)}>
@@ -246,7 +247,7 @@ export default function PurchaseOrderDetail({ po, rfq, quotation, vendor, curren
             <div className="info-row"><span className="info-label">Contact Person</span><span className="info-val">{vendor?.contact_person || 'Rajesh Kumar (Enterprise Manager)'}</span></div>
             <div className="info-row"><span className="info-label">Email & Phone</span><span className="info-val">{vendor?.email || 'sales@dell.com'} · {vendor?.phone || '+91 98765 12345'}</span></div>
             <div className="info-row"><span className="info-label">GST Number</span><span className="info-val mono-text">{vendor?.gst_number || '27AAACD4567E1Z9'}</span></div>
-            <div className="info-row"><span className="info-label">Address & Rating</span><span className="info-val">{vendor?.address || 'Dell India Pvt Ltd, Inner Ring Rd, Bangalore'} · <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" stroke="none" style={{color:'#f59e0b',marginRight:2,verticalAlign:'middle'}}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>{vendor?.rating || '4.85'} / 5</span></div>
+            <div className="info-row"><span className="info-label">Address & Rating</span><span className="info-val">{vendor?.address || 'Dell India Pvt Ltd, Inner Ring Rd, Bangalore'} · <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" stroke="none" style={{ color: '#f59e0b', marginRight: 2, verticalAlign: 'middle' }}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" /></svg>{vendor?.rating || '4.85'} / 5</span></div>
           </div>
         </div>
       </div>
@@ -263,10 +264,12 @@ export default function PurchaseOrderDetail({ po, rfq, quotation, vendor, curren
               <tr>
                 <th>Item Name</th>
                 <th>Description & Specs</th>
-                <th className="num-cell">Quantity</th>
+                <th className="num-cell">Qty</th>
                 <th>Unit</th>
                 <th className="num-cell">Unit Price (₹)</th>
+                <th className="num-cell">Subtotal (₹)</th>
                 <th className="num-cell">Tax Rate</th>
+                <th className="num-cell">GST (₹)</th>
                 <th className="num-cell">Line Total (₹)</th>
               </tr>
             </thead>
@@ -281,9 +284,13 @@ export default function PurchaseOrderDetail({ po, rfq, quotation, vendor, curren
                 <td className="num-cell" style={{ fontWeight: 600 }}>{qty}</td>
                 <td>Units</td>
                 <td className="num-cell">₹{unitPrice.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                <td className="num-cell">₹{subtotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
                 <td className="num-cell">{taxType === 'IGST_18' ? '18% IGST' : '18% (9% CGST + 9% SGST)'}</td>
-                <td className="num-cell" style={{ fontWeight: 700, color: 'var(--text-primary)' }}>
-                  ₹{(unitPrice * qty).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                <td className="num-cell" style={{ color: 'var(--text-secondary)' }}>
+                  + ₹{(cgst + sgst + igst).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                </td>
+                <td className="num-cell" style={{ fontWeight: 700, color: 'var(--accent)', fontSize: '13.5px' }}>
+                  ₹{grandTotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                 </td>
               </tr>
               <tr>
@@ -292,7 +299,9 @@ export default function PurchaseOrderDetail({ po, rfq, quotation, vendor, curren
                 <td className="num-cell" style={{ fontWeight: 600 }}>1</td>
                 <td>Lot</td>
                 <td className="num-cell">Included</td>
+                <td className="num-cell">₹0.00</td>
                 <td className="num-cell">0%</td>
+                <td className="num-cell" style={{ color: 'var(--text-muted)' }}>₹0.00</td>
                 <td className="num-cell" style={{ fontWeight: 700, color: 'var(--text-muted)' }}>Included</td>
               </tr>
             </tbody>
@@ -343,32 +352,19 @@ export default function PurchaseOrderDetail({ po, rfq, quotation, vendor, curren
               </div>
             </div>
 
-            <div className="field-row">
-              <div className="field">
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                  <label style={{ margin: 0 }}>Expected Delivery Date *</label>
-                  <span style={{ fontSize: '11px', color: 'var(--accent)', fontWeight: 600 }}>🔒 Set from RFQ (Uneditable)</span>
-                </div>
-                <input
-                  type="date"
-                  name="expected_delivery_date"
-                  value={deliveryData.expected_delivery_date || rfqDeliveryDate}
-                  disabled={true}
-                  readOnly={true}
-                  style={{ background: 'var(--bg-base)', opacity: 0.85, cursor: 'not-allowed' }}
-                />
+            <div className="field">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                <label style={{ margin: 0 }}>Expected Delivery Date *</label>
+                <span style={{ fontSize: '11px', color: 'var(--accent)', fontWeight: 600 }}>🔒 Set from RFQ (Uneditable)</span>
               </div>
-              <div className="field">
-                <label>Discount Amount (₹)</label>
-                <input
-                  type="number"
-                  name="discount_amount"
-                  min="0"
-                  value={deliveryData.discount_amount}
-                  onChange={handleChange}
-                  disabled={isIssued}
-                />
-              </div>
+              <input
+                type="date"
+                name="expected_delivery_date"
+                value={deliveryData.expected_delivery_date || rfqDeliveryDate}
+                disabled={true}
+                readOnly={true}
+                style={{ background: 'var(--bg-base)', opacity: 0.85, cursor: 'not-allowed' }}
+              />
             </div>
 
             <div className="field">
@@ -414,13 +410,6 @@ export default function PurchaseOrderDetail({ po, rfq, quotation, vendor, curren
               <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)' }}>
                 <span>IGST (18%)</span>
                 <span className="mono-text">+ ₹ {igst.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
-              </div>
-            )}
-
-            {discount > 0 && (
-              <div style={{ display: 'flex', justifyContent: 'space-between', color: '#34d399' }}>
-                <span>Special Discount</span>
-                <span className="mono-text">- ₹ {discount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
               </div>
             )}
 
@@ -502,7 +491,7 @@ export default function PurchaseOrderDetail({ po, rfq, quotation, vendor, curren
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             <a href="#" onClick={(e) => { e.preventDefault(); alert('Downloading Technical Terms & SLA...'); }} className="download-link" style={{ fontSize: '12.5px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>
               Technical Terms & SLA Agreement.pdf
             </a>
           </div>
@@ -512,7 +501,7 @@ export default function PurchaseOrderDetail({ po, rfq, quotation, vendor, curren
       {/* ── Rejection Alert Banner if Rejected by Finance ── */}
       {(poStatus === 'rejected_by_finance' || poStatus === 'rejected') && (
         <div className="state-banner error" style={{ marginBottom: '20px', padding: '16px 20px', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: 'var(--radius-sm)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <strong style={{ fontSize: '15px', color: '#f87171', display: 'inline-flex', alignItems: 'center', gap: '4px' }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{color:'#f87171'}}><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> Invoice Rejected by Finance Department</strong><br />
+          <strong style={{ fontSize: '15px', color: '#f87171', display: 'inline-flex', alignItems: 'center', gap: '4px' }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: '#f87171' }}><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" /></svg> Invoice Rejected by Finance Department</strong><br />
           <span style={{ fontSize: '13.5px', color: 'var(--text-primary)', marginTop: '4px', display: 'block' }}>
             Finance Rejection Remarks: <strong>{po?.procurement_notes || deliveryData?.procurement_notes || 'Invoice details / documentation did not match requirements.'}</strong>
           </span>
@@ -561,9 +550,9 @@ export default function PurchaseOrderDetail({ po, rfq, quotation, vendor, curren
                 marginBottom: '8px'
               }}>
                 {item.rejected ? (
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" style={{color:'#fff'}}><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" style={{ color: '#fff' }}><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
                 ) : item.done ? (
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" style={{color:'#fff'}}><polyline points="20 6 9 17 4 12"/></svg>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" style={{ color: '#fff' }}><polyline points="20 6 9 17 4 12" /></svg>
                 ) : item.step}
               </div>
               <span style={{ fontSize: '12px', fontWeight: item.current || item.rejected ? 700 : 600, color: item.rejected ? '#f87171' : item.current ? 'var(--accent)' : 'var(--text-primary)', textAlign: 'center' }}>
@@ -586,7 +575,7 @@ export default function PurchaseOrderDetail({ po, rfq, quotation, vendor, curren
                 <h2 className="modal-title" style={{ color: '#0f172a' }}>Purchase Order Preview ({poNumberDisplay})</h2>
                 <p className="modal-subtitle" style={{ color: '#64748b' }}>Official Document View for Issue & Printing</p>
               </div>
-              <button className="modal-close" style={{ color: '#64748b' }} onClick={() => setShowPreviewModal(false)}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+              <button className="modal-close" style={{ color: '#64748b' }} onClick={() => setShowPreviewModal(false)}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg></button>
             </div>
 
             <div className="modal-body" style={{ maxHeight: '75vh', overflowY: 'auto', padding: '30px', color: '#0f172a', fontFamily: 'Inter, sans-serif' }}>
@@ -658,7 +647,6 @@ export default function PurchaseOrderDetail({ po, rfq, quotation, vendor, curren
                   ) : (
                     <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748b' }}><span>IGST (18%):</span><span>₹{igst.toLocaleString('en-IN')}</span></div>
                   )}
-                  {discount > 0 && <div style={{ display: 'flex', justifyContent: 'space-between', color: '#16a34a' }}><span>Discount:</span><span>- ₹{discount.toLocaleString('en-IN')}</span></div>}
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 800, fontSize: '15px', borderTop: '2px solid #0f172a', paddingTop: '6px', color: '#2563eb' }}>
                     <span>Grand Total:</span><span>₹{grandTotal.toLocaleString('en-IN')}</span>
                   </div>

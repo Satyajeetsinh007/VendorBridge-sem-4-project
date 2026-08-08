@@ -147,12 +147,33 @@ export default function VendorPurchaseOrders({ vendor, rfqs = [], quotations = [
   const mapRealPoToView = (rawPo) => {
     const rfqObj = rawPo.rfq_details || rfqs.find(r => r.id === rawPo.rfq) || {};
     const quotObj = rawPo.quotation_details || quotations.find(q => q.id === rawPo.quotation) || {};
-    const qty = rfqObj.quantity || 10;
-    const unitPrice = parseFloat(quotObj.unit_price || (parseFloat(rawPo.subtotal) / qty) || 12500);
-    const subtotal = parseFloat(rawPo.subtotal || unitPrice * qty);
-    const totalVal = parseFloat(rawPo.total_value || subtotal * 1.18);
-    const cgst = parseFloat(rawPo.cgst_amount || quotObj.cgst_amount || subtotal * 0.09);
-    const sgst = parseFloat(rawPo.sgst_amount || quotObj.sgst_amount || subtotal * 0.09);
+    const qty = rfqObj.quantity || quotObj.quantity || 10;
+    
+    // Unit price and subtotal
+    const rawSubtotal = parseFloat(rawPo.subtotal) || 0;
+    const unitPrice = parseFloat(quotObj.unit_price) || (rawSubtotal > 0 ? rawSubtotal / qty : 12500);
+    const subtotal = rawSubtotal > 0 ? rawSubtotal : unitPrice * qty;
+
+    const taxType = quotObj.tax_type || (parseFloat(rawPo.igst_amount) > 0 ? 'IGST_18' : 'GST_9_9');
+
+    let cgst = parseFloat(rawPo.cgst_amount) || parseFloat(quotObj.cgst_amount) || 0;
+    let sgst = parseFloat(rawPo.sgst_amount) || parseFloat(quotObj.sgst_amount) || 0;
+    let igst = parseFloat(rawPo.igst_amount) || parseFloat(quotObj.igst_amount) || 0;
+
+    if (taxType === 'GST_9_9') {
+      if (cgst === 0) cgst = Math.round(subtotal * 0.09 * 100) / 100;
+      if (sgst === 0) sgst = Math.round(subtotal * 0.09 * 100) / 100;
+      igst = 0;
+    } else if (taxType === 'IGST_18') {
+      if (igst === 0) igst = Math.round(subtotal * 0.18 * 100) / 100;
+      cgst = 0;
+      sgst = 0;
+    }
+
+    let totalVal = parseFloat(rawPo.total_value) || 0;
+    if (totalVal === 0 || Math.abs(totalVal - subtotal) < 1) {
+      totalVal = subtotal + cgst + sgst + igst;
+    }
 
     return {
       id: rawPo.id,
@@ -165,17 +186,19 @@ export default function VendorPurchaseOrders({ vendor, rfqs = [], quotations = [
       subtotal: subtotal,
       cgst_amount: cgst,
       sgst_amount: sgst,
-      igst_amount: parseFloat(rawPo.igst_amount || 0),
+      igst_amount: igst,
       grand_total: totalVal,
+      line_total: subtotal + cgst + sgst + igst,
       status: rawPo.status || 'issued',
-      item_name: rfqObj.title || 'Primary Equipment',
-      description: rfqObj.description || 'Enterprise equipment & specifications',
+      item_name: rfqObj.title || 'High Performance Laptops & Equipment',
+      description: rfqObj.description || 'Intel i7 13th Gen, 16GB DDR5 RAM, 512GB NVMe SSD, 15.6" FHD Display',
       quantity: qty,
       unit_price: unitPrice,
-      tax_rate: quotObj.tax_type === 'IGST_18' ? '18% IGST' : '18% (9% CGST + 9% SGST)',
-      delivery_address: rawPo.delivery_address || 'VendorBridge Tech Park, Gate #3, Central Warehouse, Sector 62, Noida, UP - 201309',
-      delivery_contact_person: rawPo.delivery_contact_person || 'Rajesh Sharma (Logistics Lead)',
-      delivery_phone: rawPo.delivery_phone || '+91 98112 34567',
+      tax_type: taxType,
+      tax_rate: taxType === 'IGST_18' ? '18% IGST' : '18% (9% CGST + 9% SGST)',
+      delivery_address: rawPo.delivery_address || 'Tech Park One, Tower B, Level 6, Cyber City, Cyberabad, PB 560103',
+      delivery_contact_person: rawPo.delivery_contact_person || 'Alex Mercer (Procurement Lead)',
+      delivery_phone: rawPo.delivery_phone || '+91 98765 43210',
       delivery_instructions: rawPo.delivery_instructions || 'Deliver between 9:00 AM and 5:00 PM on working days.',
       payment_terms: quotObj.payment_terms || rawPo.payment_terms || 'Net 30 Days',
       payment_due_days: rawPo.payment_due_days || 30,
@@ -186,7 +209,7 @@ export default function VendorPurchaseOrders({ vendor, rfqs = [], quotations = [
       officer_name: 'Alex Mercer (Senior Procurement Officer)',
       officer_email: 'procurement@vendorbridge.com',
       officer_phone: '+91 98765 43210',
-      buyer_address: 'Tech Park One, Tower B, Level 6, Cyber City, Bangalore - 560103',
+      buyer_address: 'Tech Park One, Tower B, Level 6, Cyber City, Cyberabad, PB 560103',
       specs_file_url: rfqObj.specs_file_url || '#',
       quotation_file_url: quotObj.attachment_url || '#',
       rejection_reason: rawPo.procurement_notes || '',
@@ -233,15 +256,15 @@ export default function VendorPurchaseOrders({ vendor, rfqs = [], quotations = [
     if (!targetPo) return;
     setSubmitting(true);
     try {
-      await api.patchPurchaseOrder(targetPo.id, { status: 'acknowledged' }).catch(err => {
-        console.log('PO update fallback notice:', err.message);
-      });
+      if (targetPo.id) {
+        await api.patchPurchaseOrder(targetPo.id, { status: 'acknowledged' }).catch(err => {
+          console.log('PO update fallback notice:', err.message);
+        });
+      }
 
       setDbOrders(prev => prev.map(o => o.id === targetPo.id ? { ...o, status: 'acknowledged' } : o));
       setSampleOrders(prev => prev.map(o => o.id === targetPo.id ? { ...o, status: 'acknowledged' } : o));
-      if (selectedPo && selectedPo.id === targetPo.id) {
-        setSelectedPo(prev => ({ ...prev, status: 'acknowledged' }));
-      }
+      setSelectedPo(prev => (prev ? { ...prev, status: 'acknowledged' } : null));
       setShowAcceptModal(false);
       setBannerMsg(`Purchase Order ${targetPo.po_number} has been ACKNOWLEDGED successfully. Procurement Officer notified.`);
       if (onNotify) onNotify(`Purchase Order ${targetPo.po_number} acknowledged successfully.`);
@@ -378,6 +401,28 @@ export default function VendorPurchaseOrders({ vendor, rfqs = [], quotations = [
     );
   }
 
+  // Calculate real values for selectedPo detail view
+  const poQty = selectedPo?.quantity || 10;
+  const poUnitPrice = parseFloat(selectedPo?.unit_price) || (selectedPo?.subtotal ? parseFloat(selectedPo.subtotal) / poQty : 12500);
+  const poSubtotal = parseFloat(selectedPo?.subtotal) || (poUnitPrice * poQty);
+  const poTaxType = selectedPo?.tax_type || (parseFloat(selectedPo?.igst_amount) > 0 ? 'IGST_18' : 'GST_9_9');
+
+  let poCgst = parseFloat(selectedPo?.cgst_amount) || 0;
+  let poSgst = parseFloat(selectedPo?.sgst_amount) || 0;
+  let poIgst = parseFloat(selectedPo?.igst_amount) || 0;
+
+  if (poTaxType === 'IGST_18' || poIgst > 0) {
+    if (poIgst === 0) poIgst = Math.round(poSubtotal * 0.18 * 100) / 100;
+    poCgst = 0;
+    poSgst = 0;
+  } else {
+    if (poCgst === 0) poCgst = Math.round(poSubtotal * 0.09 * 100) / 100;
+    if (poSgst === 0) poSgst = Math.round(poSubtotal * 0.09 * 100) / 100;
+    poIgst = 0;
+  }
+
+  const poGrandTotal = parseFloat(selectedPo?.grand_total) || (poSubtotal + poCgst + poSgst + poIgst);
+
   return (
     <div className="qc-page" style={{ paddingBottom: '40px' }}>
       {/* ── DETAIL VIEW ── */}
@@ -388,6 +433,21 @@ export default function VendorPurchaseOrders({ vendor, rfqs = [], quotations = [
               ← Back to Purchase Orders
             </button>
             <div style={{ display: 'flex', gap: '10px' }}>
+              {selectedPo.status === 'issued' && (
+                <button
+                  type="button"
+                  className="btn-primary"
+                  style={{ background: '#22c55e', borderColor: '#22c55e', padding: '6px 14px', fontSize: '13px' }}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    handleAcceptPOForPo(selectedPo);
+                  }}
+                  disabled={submitting}
+                >
+                  {submitting ? 'Accepting…' : '✓ Accept PO'}
+                </button>
+              )}
               <button className="btn-secondary" onClick={() => alert(`Downloading official PDF for ${selectedPo.po_number}...`)}>
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{marginRight:5,verticalAlign:'middle'}}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
                 Download Purchase Order PDF
@@ -473,10 +533,12 @@ export default function VendorPurchaseOrders({ vendor, rfqs = [], quotations = [
                   <tr>
                     <th>Item Name</th>
                     <th>Description & Specs</th>
-                    <th className="num-cell">Quantity</th>
+                    <th className="num-cell">Qty</th>
                     <th>Unit</th>
                     <th className="num-cell">Unit Price (₹)</th>
-                    <th className="num-cell">Tax</th>
+                    <th className="num-cell">Subtotal (₹)</th>
+                    <th className="num-cell">Tax Rate</th>
+                    <th className="num-cell">GST (₹)</th>
                     <th className="num-cell">Line Total (₹)</th>
                   </tr>
                 </thead>
@@ -484,12 +546,16 @@ export default function VendorPurchaseOrders({ vendor, rfqs = [], quotations = [
                   <tr>
                     <td className="cell-primary">{selectedPo.item_name}</td>
                     <td><span className="cell-sub">{selectedPo.description}</span></td>
-                    <td className="num-cell" style={{ fontWeight: 600 }}>{selectedPo.quantity}</td>
+                    <td className="num-cell" style={{ fontWeight: 600 }}>{poQty}</td>
                     <td>Units</td>
-                    <td className="num-cell">₹{selectedPo.unit_price?.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
-                    <td className="num-cell">{selectedPo.tax_rate}</td>
-                    <td className="num-cell" style={{ fontWeight: 700, color: 'var(--text-primary)' }}>
-                      ₹{selectedPo.subtotal?.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                    <td className="num-cell">₹{poUnitPrice?.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                    <td className="num-cell">₹{poSubtotal?.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</td>
+                    <td className="num-cell">{poTaxType === 'IGST_18' ? '18% IGST' : '18% (9% CGST + 9% SGST)'}</td>
+                    <td className="num-cell" style={{ color: 'var(--text-secondary)' }}>
+                      + ₹{(poCgst + poSgst + poIgst).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                    </td>
+                    <td className="num-cell" style={{ fontWeight: 700, color: 'var(--accent)', fontSize: '13.5px' }}>
+                      ₹{poGrandTotal?.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                     </td>
                   </tr>
                 </tbody>
@@ -520,22 +586,31 @@ export default function VendorPurchaseOrders({ vendor, rfqs = [], quotations = [
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '13.5px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)' }}>
-                  <span>Subtotal</span>
-                  <span className="mono-text" style={{ color: 'var(--text-primary)', fontWeight: 600 }}>₹ {selectedPo.subtotal?.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                  <span>Subtotal ({poQty} units)</span>
+                  <span className="mono-text" style={{ color: 'var(--text-primary)', fontWeight: 600 }}>₹ {poSubtotal?.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)' }}>
-                  <span>CGST (9%)</span>
-                  <span className="mono-text">+ ₹ {selectedPo.cgst_amount?.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)' }}>
-                  <span>SGST (9%)</span>
-                  <span className="mono-text">+ ₹ {selectedPo.sgst_amount?.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
-                </div>
+                {poTaxType === 'IGST_18' || poIgst > 0 ? (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)' }}>
+                    <span>IGST (18%)</span>
+                    <span className="mono-text">+ ₹ {poIgst?.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                  </div>
+                ) : (
+                  <>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)' }}>
+                      <span>CGST (9%)</span>
+                      <span className="mono-text">+ ₹ {poCgst?.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-secondary)' }}>
+                      <span>SGST (9%)</span>
+                      <span className="mono-text">+ ₹ {poSgst?.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>
+                    </div>
+                  </>
+                )}
                 <div style={{ height: '1px', background: 'var(--border-subtle)', margin: '4px 0' }} />
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '16px', fontWeight: 800 }}>
                   <span>Grand Total</span>
                   <span className="mono-text" style={{ color: 'var(--accent)', fontSize: '18px' }}>
-                    ₹ {selectedPo.grand_total?.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                    ₹ {poGrandTotal?.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
                   </span>
                 </div>
               </div>
@@ -691,11 +766,30 @@ export default function VendorPurchaseOrders({ vendor, rfqs = [], quotations = [
                   </p>
                 </div>
                 <div style={{ display: 'flex', gap: '12px' }}>
-                  <button className="btn-secondary" style={{ borderColor: '#ef4444', color: '#f87171' }} onClick={() => setShowRejectModal(true)}>
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    style={{ borderColor: '#ef4444', color: '#f87171' }}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setShowRejectModal(true);
+                    }}
+                  >
                     Reject Purchase Order
                   </button>
-                  <button className="btn-primary" style={{ background: '#22c55e', borderColor: '#22c55e' }} onClick={() => setShowAcceptModal(true)}>
-                    Accept Purchase Order
+                  <button
+                    type="button"
+                    className="btn-primary"
+                    style={{ background: '#22c55e', borderColor: '#22c55e' }}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleAcceptPOForPo(selectedPo);
+                    }}
+                    disabled={submitting}
+                  >
+                    {submitting ? 'Accepting…' : '✓ Accept Purchase Order'}
                   </button>
                 </div>
               </div>
@@ -939,9 +1033,9 @@ export default function VendorPurchaseOrders({ vendor, rfqs = [], quotations = [
               </p>
             </div>
             <div className="modal-foot">
-              <button className="btn-secondary" onClick={() => setShowAcceptModal(false)}>Cancel</button>
-              <button className="btn-primary" style={{ background: '#22c55e', borderColor: '#22c55e' }} onClick={handleAcceptPO} disabled={submitting}>
-                {submitting ? 'Accepting…' : 'Accept Purchase Order'}
+              <button type="button" className="btn-secondary" onClick={() => setShowAcceptModal(false)}>Cancel</button>
+              <button type="button" className="btn-primary" style={{ background: '#22c55e', borderColor: '#22c55e' }} onClick={() => handleAcceptPOForPo(selectedPo)} disabled={submitting}>
+                {submitting ? 'Accepting…' : '✓ Accept Purchase Order'}
               </button>
             </div>
           </div>

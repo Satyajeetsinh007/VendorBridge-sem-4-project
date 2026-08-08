@@ -648,11 +648,37 @@ export default function ProcurementDashboard({ onLogout, currentUser, onToggleRo
                                 </td>
                                 <td className="actions-cell">
                                   {isOwn ? (
-                                    <button className="btn-action btn-submit" style={(po.status === 'rejected_by_finance' || po.status === 'rejected') ? { background: '#ef4444', borderColor: '#ef4444' } : undefined} onClick={() => setActivePOInfo({ po, rfq: rfqObj, quotation: quotObj, vendor: vendorObj })}>
+                                    <button
+                                      type="button"
+                                      className="btn-action btn-submit"
+                                      style={(po.status === 'rejected_by_finance' || po.status === 'rejected') ? { background: '#ef4444', borderColor: '#ef4444' } : undefined}
+                                      onClick={(e) => {
+                                        if (e && e.preventDefault) { e.preventDefault(); e.stopPropagation(); }
+                                        const finalRfq = rfqObj || (typeof po.rfq === 'object' ? po.rfq : rfqs.find(r => getRfqIdStr(r) === getRfqIdStr(po.rfq))) || {};
+                                        const finalVendor = vendorObj || (typeof po.vendor === 'object' ? po.vendor : vendors.find(v => getRfqIdStr(v) === getRfqIdStr(po.vendor))) || {};
+                                        const finalQuot = quotObj || (typeof po.quotation === 'object' ? po.quotation : quotations.find(q => getRfqIdStr(q) === getRfqIdStr(po.quotation))) || {};
+                                        setComparisonRfq(null);
+                                        setActivePOInfo({ po, rfq: finalRfq, quotation: finalQuot, vendor: finalVendor });
+                                        window.scrollTo({ top: 0, behavior: 'instant' });
+                                      }}
+                                    >
                                       {(po.status === 'rejected_by_finance' || po.status === 'rejected') ? 'View Rejected PO' : (po.status === 'paid' || po.status === 'completed' || po.status === 'closed') ? 'View Paid & Completed PO' : po.status === 'invoiced' ? 'View Invoiced PO' : po.status === 'delivered' ? 'View Delivered PO' : (po.status === 'issued' || po.status === 'acknowledged' || po.status === 'in_progress') ? 'View PO' : 'Review & Issue PO'}
                                     </button>
                                   ) : (
-                                    <button className="btn-secondary" style={{ padding: '4px 12px', fontSize: '12px' }} onClick={() => setActivePOInfo({ po, rfq: rfqObj, quotation: quotObj, vendor: vendorObj })}>
+                                    <button
+                                      type="button"
+                                      className="btn-secondary"
+                                      style={{ padding: '4px 12px', fontSize: '12px' }}
+                                      onClick={(e) => {
+                                        if (e && e.preventDefault) { e.preventDefault(); e.stopPropagation(); }
+                                        const finalRfq = rfqObj || (typeof po.rfq === 'object' ? po.rfq : rfqs.find(r => getRfqIdStr(r) === getRfqIdStr(po.rfq))) || {};
+                                        const finalVendor = vendorObj || (typeof po.vendor === 'object' ? po.vendor : vendors.find(v => getRfqIdStr(v) === getRfqIdStr(po.vendor))) || {};
+                                        const finalQuot = quotObj || (typeof po.quotation === 'object' ? po.quotation : quotations.find(q => getRfqIdStr(q) === getRfqIdStr(po.quotation))) || {};
+                                        setComparisonRfq(null);
+                                        setActivePOInfo({ po, rfq: finalRfq, quotation: finalQuot, vendor: finalVendor });
+                                        window.scrollTo({ top: 0, behavior: 'instant' });
+                                      }}
+                                    >
                                       View PO (View Only)
                                     </button>
                                   )}
