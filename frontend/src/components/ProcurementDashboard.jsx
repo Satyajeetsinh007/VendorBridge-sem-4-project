@@ -83,6 +83,14 @@ export default function ProcurementDashboard({ onLogout, currentUser, onToggleRo
   const [quotations, setQuotations] = useState([]);
   const [vendors, setVendors] = useState([]);
   const [currentView, setCurrentView] = useState('dashboard');
+  const [notificationsList, setNotificationsList] = useState([
+    { id: 1, text: 'Manager Jane Doe approved RFQ proposal (RFQ-2026-9041)', time: '15m ago', priority: 'low' },
+    { id: 2, text: 'Vendor Dell Technologies submitted a new quotation for RFQ-2026-3841', time: '1h ago', priority: 'medium' },
+    { id: 3, text: 'Finance team rejected Invoice INV-2026-0045 (Lenovo)', time: '4h ago', priority: 'high' },
+    { id: 4, text: 'Vendor HP Inc. acknowledged Purchase Order PO-2026-0034', time: '1d ago', priority: 'low' },
+    { id: 5, text: 'Manager Jane Doe rejected vendor selection for RFQ-2026-1182', time: '2d ago', priority: 'high' },
+  ]);
+  const [hasUnreadNotifs, setHasUnreadNotifs] = useState(true);
 
   const fetchData = async () => {
     setLoading(true);
@@ -132,6 +140,21 @@ export default function ProcurementDashboard({ onLogout, currentUser, onToggleRo
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'instant' });
   }, [currentView, activePOInfo, comparisonRfq]);
+
+  useEffect(() => {
+    const handleNewNotif = (e) => {
+      const { text, priority, role } = e.detail;
+      if (role === 'procurement_officer') {
+        setNotificationsList(prev => [
+          { id: Date.now(), text, time: 'Just now', priority },
+          ...prev
+        ]);
+        setHasUnreadNotifs(true);
+      }
+    };
+    window.addEventListener('vendorbridge-notification', handleNewNotif);
+    return () => window.removeEventListener('vendorbridge-notification', handleNewNotif);
+  }, []);
 
   // Helper to get officer's department ID
   const getOfficerDepartmentId = () => {
@@ -457,7 +480,8 @@ export default function ProcurementDashboard({ onLogout, currentUser, onToggleRo
                currentView === 'quotations' ? 'Quotations' :
                currentView === 'purchase-orders' ? 'Purchase Order Management' :
                currentView === 'analytics' ? 'Procurement Analytics' :
-               currentView === 'settings' ? 'Settings & Preferences' : 'RFQ Dashboard'}
+               currentView === 'settings' ? 'Settings & Preferences' :
+               currentView === 'notifications' ? 'Procurement Notifications' : 'RFQ Dashboard'}
             </h1>
             <span className="breadcrumb">
               Procurement &nbsp;/&nbsp; {
@@ -467,7 +491,8 @@ export default function ProcurementDashboard({ onLogout, currentUser, onToggleRo
                 currentView === 'quotations' ? 'Vendor Quotations' :
                 currentView === 'purchase-orders' ? 'Issued & Draft Orders' :
                 currentView === 'analytics' ? 'Reports & Metrics' :
-                currentView === 'settings' ? 'Configuration' : 'Requests for Quotation'
+                currentView === 'settings' ? 'Configuration' :
+                currentView === 'notifications' ? 'Operational Alerts' : 'Requests for Quotation'
               }
             </span>
           </div>
@@ -478,9 +503,9 @@ export default function ProcurementDashboard({ onLogout, currentUser, onToggleRo
               </button>
             )}
             <div className="topbar-divider" />
-            <button className="icon-btn" title="Notifications">
+            <button className="icon-btn" title="Notifications" onClick={() => { setActivePOInfo(null); setComparisonRfq(null); setCurrentView('notifications'); setHasUnreadNotifs(false); }}>
               <Icons.Bell />
-              <span className="notif-dot" />
+              {hasUnreadNotifs && <span className="notif-dot" />}
             </button>
           </div>
         </header>
@@ -844,6 +869,27 @@ export default function ProcurementDashboard({ onLogout, currentUser, onToggleRo
                   </div>
                   <button type="submit" className="btn-primary" style={{ alignSelf: 'flex-start' }}>Save Settings</button>
                 </form>
+              </div>
+            </div>
+          ) : currentView === 'notifications' ? (
+            /* ── Notifications View ── */
+            <div className="table-card" style={{ padding: '24px' }}>
+              <span className="table-title" style={{ marginBottom: '20px', display: 'block' }}>Procurement Activity &amp; Notifications</span>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                {notificationsList.map(n => (
+                  <div key={n.id} className={`notification-item ${n.priority}`} style={{ display: 'flex', gap: '16px', alignItems: 'flex-start', padding: '14px', borderRadius: 'var(--radius-sm)', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border-subtle)' }}>
+                    <div style={{ background: 'rgba(255,255,255,0.06)', width: '40px', height: '40px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Icons.Bell />
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                        <strong style={{ fontSize: '14px', color: 'var(--text-primary)' }}>{n.text}</strong>
+                        <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{n.time}</span>
+                      </div>
+                      <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: 0 }}>Priority: <span style={{ textTransform: 'uppercase', color: n.priority === 'high' ? 'var(--danger)' : n.priority === 'medium' ? 'var(--warning)' : 'var(--accent)' }}>{n.priority}</span></p>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           ) : currentView === 'dashboard' ? (

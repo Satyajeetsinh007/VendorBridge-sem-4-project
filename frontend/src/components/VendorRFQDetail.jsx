@@ -94,6 +94,13 @@ export default function VendorRFQDetail({ rfq, vendor, existingQuotation, onBack
 
       if (!asDraft) {
         await api.patchRFQ(rfq.id, { status: 'under_review' });
+        window.dispatchEvent(new CustomEvent('vendorbridge-notification', {
+          detail: {
+            text: `Vendor ${vendor?.name || 'Partner'} submitted a new quotation for ${rfq.rfq_number || 'RFQ'}`,
+            priority: 'medium',
+            role: 'procurement_officer'
+          }
+        }));
       }
 
       onSubmitted();

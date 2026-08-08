@@ -4,6 +4,33 @@ import { api } from '../services/api';
 export default function PurchaseOrderDetail({ po, rfq, quotation, vendor, currentUser, onBack, onUpdated }) {
   const [poStatus, setPoStatus] = useState(po?.status || 'draft');
 
+  const handleDownloadDoc = (fileName, customContent = null) => {
+    let content = customContent;
+    let mimeType = 'text/plain';
+    
+    if (fileName.endsWith('.pdf')) {
+      if (!content) {
+        content = `%PDF-1.4\n%...\n1 0 obj\n<<\n/Type /Catalog\n/Pages 2 0 R\n>>\nendobj\n...\n%%EOF\n\nGenerated Document: ${fileName}\n\nDownloaded from VendorBridge.`;
+      }
+      mimeType = 'application/pdf';
+    } else {
+      if (!content) {
+        content = `Specification Details for ${fileName}\nLogged in VendorBridge database.`;
+      }
+      mimeType = 'text/plain';
+    }
+    
+    const blob = new Blob([content], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   useEffect(() => {
     if (po?.status) {
       setPoStatus(po.status);
@@ -102,6 +129,13 @@ export default function PurchaseOrderDetail({ po, rfq, quotation, vendor, curren
         await api.patchPurchaseOrder(po.id, payload);
       }
       setPoStatus('issued');
+      window.dispatchEvent(new CustomEvent('vendorbridge-notification', {
+        detail: {
+          text: `New Purchase Order received (${poNumberDisplay})`,
+          priority: 'high',
+          role: 'vendor'
+        }
+      }));
       setSuccessBanner(`Purchase Order PO-2026-${po?.po_number ? po.po_number.split('-').pop() : '0042'} has been successfully ISSUED to ${vendor?.name || 'Vendor'}. In-app notification sent.`);
       if (onUpdated) onUpdated();
     } catch (err) {
@@ -143,7 +177,7 @@ export default function PurchaseOrderDetail({ po, rfq, quotation, vendor, curren
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{marginRight:5,verticalAlign:'middle'}}><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
             Preview Purchase Order
           </button>
-          <button className="btn-secondary" onClick={() => alert(`Downloading ${poNumberDisplay}.pdf ...`)}>
+          <button className="btn-secondary" onClick={() => handleDownloadDoc(`${poNumberDisplay}.pdf`, `%PDF-1.4\n%\nPO Number: ${poNumberDisplay}\nRFQ Ref: ${rfq?.rfq_number || 'N/A'}\nVendor: ${vendor?.name || 'N/A'}\nTotal Value: INR ₹${grandTotal.toLocaleString('en-IN')}\nStatus: ${poStatus.toUpperCase()}`)}>
             📥 Download PDF
           </button>
           {!isIssued && (
@@ -501,7 +535,7 @@ export default function PurchaseOrderDetail({ po, rfq, quotation, vendor, curren
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
               Selected Vendor Quotation.pdf
             </a>
-            <a href="#" onClick={(e) => { e.preventDefault(); alert('Downloading Technical Terms & SLA...'); }} className="download-link" style={{ fontSize: '12.5px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+            <a href="#" onClick={(e) => { e.preventDefault(); handleDownloadDoc('Technical_Terms_and_SLA.pdf', `%PDF-1.4\n%\nDocument: Technical Terms & Service Level Agreement (SLA)\nSubject: RFQ ${rfq?.rfq_number || 'N/A'} - ${rfq?.title || 'Upgrade Project'}\nVendor Partner: ${vendor?.name || 'N/A'}\n\nStandard 24/7 technical assistance SLA coverage.`); }} className="download-link" style={{ fontSize: '12.5px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
               Technical Terms & SLA Agreement.pdf
             </a>

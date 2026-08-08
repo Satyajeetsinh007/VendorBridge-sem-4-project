@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 
 export default function RFQReviewPage({ rfq, onBack, onDecision, manager }) {
-  const [remarks, setRemarks] = useState('');
+  const [remarks, setRemarks] = useState(rfq.manager_remarks || '');
   const [submitting, setSubmitting] = useState(false);
+  const isDecided = rfq.status !== 'pending_approval';
 
   // Mock items and technical specifications for the RFQ to show large tables as requested
   const mockItems = [
@@ -19,6 +20,13 @@ export default function RFQReviewPage({ rfq, onBack, onDecision, manager }) {
     setSubmitting(true);
     try {
       await onDecision(rfq.id, status, remarks);
+      window.dispatchEvent(new CustomEvent('vendorbridge-notification', {
+        detail: {
+          text: `Manager Jane Doe ${status} RFQ proposal (${rfq.rfq_number || 'RFQ'})`,
+          priority: status === 'rejected' ? 'high' : 'medium',
+          role: 'procurement_officer'
+        }
+      }));
     } catch (err) {
       alert(err.message);
     } finally {
@@ -110,7 +118,6 @@ export default function RFQReviewPage({ rfq, onBack, onDecision, manager }) {
                   <th>Item Name</th>
                   <th>Quantity</th>
                   <th>Detailed Specification</th>
-                  <th>Technical Docs</th>
                 </tr>
               </thead>
               <tbody>
@@ -119,11 +126,6 @@ export default function RFQReviewPage({ rfq, onBack, onDecision, manager }) {
                     <td className="cell-primary">{item.name}</td>
                     <td className="num-cell">{item.qty} units</td>
                     <td><span className="cell-sub">{item.spec}</span></td>
-                    <td>
-                      <a href="#" className="download-link" onClick={(e) => { e.preventDefault(); alert(`Downloading ${item.doc}...`); }}>
-                        💾 {item.doc}
-                      </a>
-                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -142,13 +144,14 @@ export default function RFQReviewPage({ rfq, onBack, onDecision, manager }) {
                 Review the items and justification. Approve to publish this RFQ immediately for selected vendor bidding. Reject to return to the Procurement Officer for review.
               </p>
 
-              <div className="field">
+               <div className="field">
                 <label>Review Notes / Remarks *</label>
                 <textarea
                   placeholder="e.g. Approved for release. Standard terms apply. / Rejected: please check technical specifications and modify quantity..."
                   rows="6"
                   value={remarks}
                   onChange={(e) => setRemarks(e.target.value)}
+                  disabled={submitting || isDecided}
                 />
               </div>
 
@@ -156,18 +159,24 @@ export default function RFQReviewPage({ rfq, onBack, onDecision, manager }) {
                 <button
                   className="btn-primary btn-approve"
                   onClick={() => handleSubmit('approved')}
-                  disabled={submitting}
+                  disabled={submitting || isDecided}
                 >
                   Approve & Release RFQ
                 </button>
                 <button
-                  className="btn-action btn-reject"
+                  className="btn-secondary btn-reject"
                   onClick={() => handleSubmit('rejected')}
-                  disabled={submitting}
+                  disabled={submitting || isDecided}
                 >
                   Reject Proposal
                 </button>
               </div>
+              
+              {isDecided && (
+                <div style={{ marginTop: '16px', padding: '12px 14px', background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border-subtle)', borderRadius: 'var(--radius-sm)', fontSize: '0.82rem', color: 'var(--text-secondary)', textAlign: 'center' }}>
+                  This RFQ has already been resolved with status: <strong style={{ textTransform: 'uppercase', color: rfq.status === 'open' || rfq.status === 'approved' || rfq.status === 'completed' ? 'var(--success)' : 'var(--danger)' }}>{rfq.status}</strong>.
+                </div>
+              )}
             </div>
           </div>
         </div>

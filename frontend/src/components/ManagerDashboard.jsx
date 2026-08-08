@@ -56,6 +56,7 @@ export default function ManagerDashboard({ onLogout, currentUser }) {
   // Navigation / Views: 'dashboard', 'pending', 'history', 'notifications', 'profile', 'review'
   const [currentView, setCurrentView] = useState('dashboard');
   const [selectedRfqForReview, setSelectedRfqForReview] = useState(null);
+  const [hasUnreadNotifs, setHasUnreadNotifs] = useState(true);
   
   // Search
   const [searchQuery, setSearchQuery] = useState('');
@@ -68,12 +69,27 @@ export default function ManagerDashboard({ onLogout, currentUser }) {
     }
   }, [currentUser]);
 
-  const mockNotifications = [
+  const [notificationsList, setNotificationsList] = useState([
     { id: 1, text: 'New RFQ awaiting approval: RFQ-2026-9041', time: '10m ago', priority: 'high' },
     { id: 2, text: 'High priority RFQ submitted for Logistics department', time: '45m ago', priority: 'high' },
     { id: 3, text: 'Officer Alex Mercer resubmitted a rejected RFQ proposal', time: '2h ago', priority: 'medium' },
     { id: 4, text: 'Approval cycle completed for Engineering switches', time: '5h ago', priority: 'low' }
-  ];
+  ]);
+
+  useEffect(() => {
+    const handleNewNotif = (e) => {
+      const { text, priority, role } = e.detail;
+      if (role === 'manager') {
+        setNotificationsList(prev => [
+          { id: Date.now(), text, time: 'Just now', priority },
+          ...prev
+        ]);
+        setHasUnreadNotifs(true);
+      }
+    };
+    window.addEventListener('vendorbridge-notification', handleNewNotif);
+    return () => window.removeEventListener('vendorbridge-notification', handleNewNotif);
+  }, []);
 
   const fetchData = async () => {
     setLoading(true);
@@ -237,7 +253,13 @@ export default function ManagerDashboard({ onLogout, currentUser }) {
               key={link.label} 
               href="#" 
               className={`nav-link ${currentView === link.view ? 'active' : ''}`}
-              onClick={(e) => { e.preventDefault(); setCurrentView(link.view); }}
+              onClick={(e) => {
+                e.preventDefault();
+                setCurrentView(link.view);
+                if (link.view === 'notifications') {
+                  setHasUnreadNotifs(false);
+                }
+              }}
             >
               {link.icon}
               <span>{link.label}</span>
@@ -297,9 +319,9 @@ export default function ManagerDashboard({ onLogout, currentUser }) {
           </div>
           
           <div className="topbar-right">
-            <button className="icon-btn" title="Notifications">
+            <button className="icon-btn" title="Notifications" onClick={() => { setSelectedRfqForReview(null); setCurrentView('notifications'); setHasUnreadNotifs(false); }}>
               <Icons.Bell />
-              <span className="notif-dot" style={{ display: pendingRfqs.length > 0 ? 'block' : 'none' }} />
+              <span className="notif-dot" style={{ display: hasUnreadNotifs && pendingRfqs.length > 0 ? 'block' : 'none' }} />
             </button>
           </div>
         </header>
@@ -422,7 +444,7 @@ export default function ManagerDashboard({ onLogout, currentUser }) {
                           <span className="table-title">Notifications Hub</span>
                         </div>
                         <div className="notifications-list" style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                          {mockNotifications.map(n => (
+                          {notificationsList.map(n => (
                             <div key={n.id} className={`notification-item ${n.priority}`} style={{ padding: '10px', borderRadius: '8px', border: '1px solid var(--border-subtle)', background: 'rgba(255,255,255,0.01)' }}>
                               <p style={{ fontSize: '12.5px', color: 'var(--text-secondary)' }}>{n.text}</p>
                               <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{n.time}</span>
@@ -559,7 +581,7 @@ export default function ManagerDashboard({ onLogout, currentUser }) {
                     <span className="table-title">System & Flow Notifications</span>
                   </div>
                   <div className="notifications-list" style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                    {mockNotifications.map(n => (
+                    {notificationsList.map(n => (
                       <div key={n.id} className={`notification-item ${n.priority}`} style={{ padding: '16px', borderRadius: '10px', border: '1px solid var(--border-subtle)', background: 'rgba(255,255,255,0.01)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <div>
                           <p style={{ fontSize: '13.5px', fontWeight: '500', color: 'var(--text-primary)', marginBottom: '4px' }}>{n.text}</p>
