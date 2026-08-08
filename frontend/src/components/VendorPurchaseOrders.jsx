@@ -161,7 +161,7 @@ export default function VendorPurchaseOrders({ vendor, rfqs = [], quotations = [
       rfq_number: rfqObj.rfq_number || 'RFQ-2026-8215',
       rfq_title: rfqObj.title || 'Equipment Procurement',
       issue_date: rawPo.issued_at ? new Date(rawPo.issued_at).toISOString().split('T')[0] : (rawPo.created_at ? new Date(rawPo.created_at).toISOString().split('T')[0] : '2026-08-05'),
-      expected_delivery_date: rawPo.expected_delivery_date || '2026-08-19',
+      expected_delivery_date: rfqObj.required_by_date || rfqObj.deadline || rawPo.expected_delivery_date || '2026-08-19',
       subtotal: subtotal,
       cgst_amount: cgst,
       sgst_amount: sgst,

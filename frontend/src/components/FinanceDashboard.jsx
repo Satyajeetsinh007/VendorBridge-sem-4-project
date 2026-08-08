@@ -766,8 +766,9 @@ export default function FinanceDashboard({ onLogout, currentUser, onToggleRole }
                         <label>Payment Date <span className="req">*</span></label>
                         <input
                           type="date"
+                          min={new Date().toISOString().split('T')[0]}
                           required
-                          value={paymentData.payment_date}
+                          value={paymentData.payment_date || new Date().toISOString().split('T')[0]}
                           onChange={e => setPaymentData(prev => ({ ...prev, payment_date: e.target.value }))}
                           disabled={selectedInvoice.status === 'paid'}
                         />

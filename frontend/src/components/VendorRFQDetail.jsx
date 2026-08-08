@@ -19,29 +19,15 @@ export default function VendorRFQDetail({ rfq, vendor, existingQuotation, onBack
     delivery_days: existingQuotation?.delivery_days || '',
     payment_terms: existingQuotation?.payment_terms || 'Net 30',
     warranty: existingQuotation?.warranty || '2 Years',
-    valid_until: existingQuotation?.valid_until || defaultValidUntil,
     tax_type: existingQuotation?.tax_type || 'GST_9_9',
-    attachment_url: existingQuotation?.attachment_url || '',
+    attachment_url: '',
     notes: existingQuotation?.notes || '',
   });
-  const [fileName, setFileName] = useState(existingQuotation?.attachment_url ? 'quotation.pdf' : '');
   const [submitting, setSubmitting] = useState(false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
-  };
-
-  const handleFileUpload = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setFileName(file.name);
-      // Simulate file upload URL
-      setFormData(prev => ({
-        ...prev,
-        attachment_url: `https://vendorbridge.s3.amazonaws.com/quotations/${file.name}`,
-      }));
-    }
   };
 
   // Realistic Tax Calculations
@@ -333,35 +319,6 @@ export default function VendorRFQDetail({ rfq, vendor, existingQuotation, onBack
                       <option value="50-50">50% Advance + 50% on Delivery</option>
                     </select>
                   </div>
-                  <div className="field">
-                    <label>Quotation Valid Until *</label>
-                    <input
-                      type="date"
-                      name="valid_until"
-                      value={formData.valid_until}
-                      onChange={handleChange}
-                      disabled={isReadOnly}
-                    />
-                  </div>
-                </div>
-
-                {/* Quotation Document Upload */}
-                <div className="field">
-                  <label>Quotation Attachment (PDF)</label>
-                  {!isReadOnly ? (
-                    <input type="file" accept=".pdf,.doc,.docx" onChange={handleFileUpload} />
-                  ) : (
-                    <a href={formData.attachment_url || '#'} target="_blank" rel="noreferrer" className="download-link" style={{ fontSize: '13px' }}>
-                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{marginRight:4,verticalAlign:'middle'}}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                      {fileName || 'quotation.pdf'} (Download Document)
-                    </a>
-                  )}
-                  {fileName && !isReadOnly && (
-                    <span style={{ fontSize: '11px', color: 'var(--success)', marginTop: '4px', display: 'block' }}>
-                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{marginRight:3,verticalAlign:'middle'}}><polyline points="20 6 9 17 4 12"/></svg>
-                      Attached: {fileName}
-                    </span>
-                  )}
                 </div>
 
                 <div className="field">

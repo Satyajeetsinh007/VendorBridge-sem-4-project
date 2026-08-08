@@ -26,12 +26,14 @@ export default function PurchaseOrderDetail({ po, rfq, quotation, vendor, curren
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [successBanner, setSuccessBanner] = useState('');
 
-  // Delivery details state
+  // Delivery details state (expected_delivery_date locked from RFQ creation)
+  const rfqDeliveryDate = rfq?.required_by_date || rfq?.deadline || po?.expected_delivery_date || new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0];
+
   const [deliveryData, setDeliveryData] = useState({
     delivery_address: po?.delivery_address || `${rfq?.department_details?.name || 'Central Warehouse'}, VendorBridge Corporate HQ, Sector 62, Noida, UP - 201309`,
     delivery_contact_person: po?.delivery_contact_person || (currentUser?.name ? `${currentUser.name} (Procurement Lead)` : 'Procurement Officer'),
     delivery_phone: po?.delivery_phone || '+91 98112 34567',
-    expected_delivery_date: po?.expected_delivery_date || new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0],
+    expected_delivery_date: rfqDeliveryDate,
     delivery_instructions: po?.delivery_instructions || 'Deliver between 9:00 AM and 5:00 PM on working days. Requires Gate Pass & Quality Inspection on unloading.',
     procurement_notes: po?.procurement_notes || 'All equipment must be packaged in original tamper-evident anti-static boxes. Serial numbers must be printed on the invoice.',
     discount_amount: po?.discount_amount || 0,
@@ -41,6 +43,8 @@ export default function PurchaseOrderDetail({ po, rfq, quotation, vendor, curren
 
   const handleChange = (e) => {
     const { name, value } = e.target;
+    // Keep expected_delivery_date uneditable
+    if (name === 'expected_delivery_date') return;
     setDeliveryData(prev => ({ ...prev, [name]: value }));
   };
 
@@ -341,13 +345,17 @@ export default function PurchaseOrderDetail({ po, rfq, quotation, vendor, curren
 
             <div className="field-row">
               <div className="field">
-                <label>Expected Delivery Date *</label>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                  <label style={{ margin: 0 }}>Expected Delivery Date *</label>
+                  <span style={{ fontSize: '11px', color: 'var(--accent)', fontWeight: 600 }}>🔒 Set from RFQ (Uneditable)</span>
+                </div>
                 <input
                   type="date"
                   name="expected_delivery_date"
-                  value={deliveryData.expected_delivery_date}
-                  onChange={handleChange}
-                  disabled={isIssued}
+                  value={deliveryData.expected_delivery_date || rfqDeliveryDate}
+                  disabled={true}
+                  readOnly={true}
+                  style={{ background: 'var(--bg-base)', opacity: 0.85, cursor: 'not-allowed' }}
                 />
               </div>
               <div className="field">
@@ -493,14 +501,6 @@ export default function PurchaseOrderDetail({ po, rfq, quotation, vendor, curren
             <span className="table-title">Associated Documents</span>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            <a href={rfq?.specs_file_url || '#'} target="_blank" rel="noreferrer" className="download-link" style={{ fontSize: '12.5px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-              RFQ Specification Document.pdf
-            </a>
-            <a href={quotation?.attachment_url || '#'} target="_blank" rel="noreferrer" className="download-link" style={{ fontSize: '12.5px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-              Selected Vendor Quotation.pdf
-            </a>
             <a href="#" onClick={(e) => { e.preventDefault(); alert('Downloading Technical Terms & SLA...'); }} className="download-link" style={{ fontSize: '12.5px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
               Technical Terms & SLA Agreement.pdf

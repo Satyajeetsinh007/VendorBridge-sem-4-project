@@ -312,6 +312,8 @@ class PurchaseOrder(models.Model):
     pdf_url = models.CharField(max_length=500, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
     def save(self, *args, **kwargs):
+        if self.rfq and not self.expected_delivery_date:
+            self.expected_delivery_date = self.rfq.required_by_date or self.rfq.deadline
         super().save(*args, **kwargs)
         if self.rfq:
             if self.rfq.status != 'completed':

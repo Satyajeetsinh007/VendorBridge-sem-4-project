@@ -346,7 +346,7 @@ class QuotationViewSet(viewsets.ModelViewSet):
 
 
 class PurchaseOrderViewSet(viewsets.ModelViewSet):
-    queryset = PurchaseOrder.objects.all().order_by('-generated_at')
+    queryset = PurchaseOrder.objects.all().order_by('-created_at', '-id')
     serializer_class = PurchaseOrderSerializer
 
 

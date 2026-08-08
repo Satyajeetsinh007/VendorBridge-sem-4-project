@@ -62,11 +62,15 @@ export default function ProcurementDashboard({ onLogout, currentUser, onToggleRo
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [ownershipFilter, setOwnershipFilter] = useState('ALL'); // 'ALL' | 'MY'
+  const todayStr = new Date().toISOString().split('T')[0];
+  const defaultDeadline = new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0];
+  const defaultRequiredBy = new Date(Date.now() + 28 * 86400000).toISOString().split('T')[0];
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     title: '', description: '', department: '', priority: 'medium',
-    quantity: 100, deadline: '', required_by_date: '', specs_file_url: '',
+    quantity: 100, deadline: defaultDeadline, required_by_date: defaultRequiredBy, specs_file_url: '',
     status: 'draft', created_by: currentUser?.id || '',
   });
 
@@ -106,7 +110,12 @@ export default function ProcurementDashboard({ onLogout, currentUser, onToggleRo
       setRfqs(rfqsData);
       setQuotations(quotationsData);
       setVendors(vendorsData);
-      setPurchaseOrders(posData);
+      const sortedPos = (posData || []).slice().sort((a, b) => {
+        const timeA = a.created_at ? new Date(a.created_at).getTime() : (a.issued_at ? new Date(a.issued_at).getTime() : 0);
+        const timeB = b.created_at ? new Date(b.created_at).getTime() : (b.issued_at ? new Date(b.issued_at).getTime() : 0);
+        return timeB - timeA || String(b.po_number || b.id).localeCompare(String(a.po_number || a.id));
+      });
+      setPurchaseOrders(sortedPos);
 
       // Auto-set department to officer's department
       const userInDb = usersData.find(u => u.id === currentUser?.id || u.email === currentUser?.email);
@@ -584,6 +593,12 @@ export default function ProcurementDashboard({ onLogout, currentUser, onToggleRo
                         </tr>
                       ) : (
                         purchaseOrders
+                          .slice()
+                          .sort((a, b) => {
+                            const timeA = a.created_at ? new Date(a.created_at).getTime() : (a.issued_at ? new Date(a.issued_at).getTime() : 0);
+                            const timeB = b.created_at ? new Date(b.created_at).getTime() : (b.issued_at ? new Date(b.issued_at).getTime() : 0);
+                            return timeB - timeA || String(b.po_number || b.id).localeCompare(String(a.po_number || a.id));
+                          })
                           .filter(po => {
                             const rfqObj = rfqs.find(r => getRfqIdStr(r) === getRfqIdStr(po.rfq || po.rfq_details)) || po.rfq_details;
                             const vendorObj = vendors.find(v => getRfqIdStr(v) === getRfqIdStr(po.vendor || po.vendor_details)) || po.vendor_details;
@@ -1239,33 +1254,23 @@ export default function ProcurementDashboard({ onLogout, currentUser, onToggleRo
                   <input
                     type="date"
                     name="deadline"
+                    min={todayStr}
                     required
-                    value={formData.deadline}
+                    value={formData.deadline || defaultDeadline}
                     onChange={handleInputChange}
                   />
                 </div>
               </div>
 
-              <div className="field-row">
-                <div className="field">
-                  <label>Required By Date</label>
-                  <input
-                    type="date"
-                    name="required_by_date"
-                    value={formData.required_by_date}
-                    onChange={handleInputChange}
-                  />
-                </div>
-                <div className="field">
-                  <label>Specs File URL</label>
-                  <input
-                    type="url"
-                    name="specs_file_url"
-                    placeholder="https://…"
-                    value={formData.specs_file_url}
-                    onChange={handleInputChange}
-                  />
-                </div>
+              <div className="field">
+                <label>Required By Date</label>
+                <input
+                  type="date"
+                  name="required_by_date"
+                  min={formData.deadline || todayStr}
+                  value={formData.required_by_date || defaultRequiredBy}
+                  onChange={handleInputChange}
+                />
               </div>
 
               <div className="field full">
@@ -1382,19 +1387,13 @@ export default function ProcurementDashboard({ onLogout, currentUser, onToggleRo
                   </div>
                   <div className="field">
                     <label>Deadline <span className="req">*</span></label>
-                    <input type="date" name="deadline" required value={editData.deadline} onChange={handleEditChange} />
+                    <input type="date" name="deadline" min={todayStr} required value={editData.deadline} onChange={handleEditChange} />
                   </div>
                 </div>
 
-                <div className="field-row">
-                  <div className="field">
-                    <label>Required By Date</label>
-                    <input type="date" name="required_by_date" value={editData.required_by_date} onChange={handleEditChange} />
-                  </div>
-                  <div className="field">
-                    <label>Specs URL</label>
-                    <input type="url" name="specs_file_url" placeholder="https://…" value={editData.specs_file_url} onChange={handleEditChange} />
-                  </div>
+                <div className="field">
+                  <label>Required By Date</label>
+                  <input type="date" name="required_by_date" min={editData.deadline || todayStr} value={editData.required_by_date} onChange={handleEditChange} />
                 </div>
 
                 <div className="field full">
