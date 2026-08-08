@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../services/api';
+import { calculateVendorRating } from '../utils/rating';
 
 export default function PurchaseOrderDetail({ po, rfq, quotation, vendor, currentUser, onBack, onUpdated }) {
   const [poStatus, setPoStatus] = useState(po?.status || 'draft');
@@ -247,7 +248,7 @@ export default function PurchaseOrderDetail({ po, rfq, quotation, vendor, curren
             <div className="info-row"><span className="info-label">Contact Person</span><span className="info-val">{vendor?.contact_person || 'Rajesh Kumar (Enterprise Manager)'}</span></div>
             <div className="info-row"><span className="info-label">Email & Phone</span><span className="info-val">{vendor?.email || 'sales@dell.com'} · {vendor?.phone || '+91 98765 12345'}</span></div>
             <div className="info-row"><span className="info-label">GST Number</span><span className="info-val mono-text">{vendor?.gst_number || '27AAACD4567E1Z9'}</span></div>
-            <div className="info-row"><span className="info-label">Address & Rating</span><span className="info-val">{vendor?.address || 'Dell India Pvt Ltd, Inner Ring Rd, Bangalore'} · <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" stroke="none" style={{ color: '#f59e0b', marginRight: 2, verticalAlign: 'middle' }}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" /></svg>{vendor?.rating || '4.85'} / 5</span></div>
+            <div className="info-row"><span className="info-label">Address & Rating</span><span className="info-val">{vendor?.address || 'Dell India Pvt Ltd, Inner Ring Rd, Bangalore'} · <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" stroke="none" style={{ color: '#f59e0b', marginRight: 2, verticalAlign: 'middle' }}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" /></svg>{calculateVendorRating(vendor)} / 5</span></div>
           </div>
         </div>
       </div>

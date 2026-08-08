@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../services/api';
+import { calculateVendorRating } from '../utils/rating';
 
 /* ── Real ML Feature Importance Constants ── */
 
@@ -119,15 +120,15 @@ export default function QuotationComparison({ rfq, quotations, vendors, purchase
     const biddedCount = vQuots.length;
     const wonPos = vPos.filter(p => p.status !== 'rejected_by_finance' && p.status !== 'rejected');
     const wonCount = wonPos.length || vQuots.filter(q => q.status === 'selected').length;
-    const completedCount = vPos.filter(p => p.status === 'paid' || p.status === 'completed').length;
+    const paidPos = vPos.filter(p => p.status === 'paid' || p.status === 'completed' || p.status === 'closed');
+    const completedCount = paidPos.length;
 
-    const totalBizVal = vPos
-      .filter(p => p.status !== 'rejected_by_finance' && p.status !== 'rejected')
-      .reduce((sum, p) => sum + (parseFloat(p.total_value) || 0), 0);
+    const totalBizVal = paidPos.reduce((sum, p) => sum + (parseFloat(p.total_value) || 0), 0);
 
     const winRate = biddedCount > 0 ? Math.min(100, Math.round(((wonCount / biddedCount) * 100))) : 0;
     const onTimeRate = completedCount > 0 ? 100 : (wonCount > 0 ? 95 : 90);
-    const ratingVal = parseFloat(vendor?.rating) || 4.5;
+    const dynamicVendorRating = calculateVendorRating(vendor, [], quotations, purchaseOrders);
+    const ratingVal = parseFloat(dynamicVendorRating) || 4.50;
 
     const ratingScore = (ratingVal / 5.0) * 100;
     const aiScore = Math.min(99, Math.max(50, Math.round(
@@ -571,7 +572,10 @@ export default function QuotationComparison({ rfq, quotations, vendors, purchase
                                 <div style={{ fontSize: '13px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                                     <span style={{ color: 'var(--text-secondary)' }}>Vendor Rating:</span>
-                                    <span style={{ fontWeight: 700, color: '#eab308', display: 'inline-flex', alignItems: 'center', gap: '4px' }}><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="none" style={{ color: '#eab308' }}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" /></svg> {q.vendor.rating} / 5.0</span>
+                                    <span style={{ fontWeight: 700, color: '#eab308', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                      <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="none" style={{ color: '#eab308' }}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" /></svg> 
+                                      {calculateVendorRating(q.vendor, [], quotations, purchaseOrders)} / 5.0
+                                    </span>
                                   </div>
                                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                                     <span style={{ color: 'var(--text-secondary)' }}>Quote Success Rate:</span>
@@ -660,7 +664,9 @@ export default function QuotationComparison({ rfq, quotations, vendors, purchase
                 <div className="qc-profile-logo">{initials(selectedVendorProfile.vendor.name)}</div>
                 <div>
                   <h3 style={{ color: '#fff', margin: 0, fontSize: '18px' }}>{selectedVendorProfile.vendor.name}</h3>
-                  <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '13px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>{selectedVendorProfile.vendor.category} · <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="none" style={{ color: '#fff' }}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" /></svg> {selectedVendorProfile.vendor.rating}</span>
+                  <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '13px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                    {selectedVendorProfile.vendor.category} · <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="none" style={{ color: '#fff' }}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" /></svg> {calculateVendorRating(selectedVendorProfile.vendor, [], quotations, purchaseOrders)}
+                  </span>
                 </div>
               </div>
 
@@ -674,7 +680,7 @@ export default function QuotationComparison({ rfq, quotations, vendors, purchase
               </div>
               <div className="field-row">
                 <div className="field"><label>GST Number</label><p style={{ fontSize: '13px' }} className="mono-text">{selectedVendorProfile.vendor.gst_number || '—'}</p></div>
-                <div className="field"><label>Rating</label><p style={{ fontSize: '13px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="none" style={{ color: '#f59e0b' }}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" /></svg> {selectedVendorProfile.vendor.rating}/5.00</p></div>
+                <div className="field"><label>Rating</label><p style={{ fontSize: '13px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="none" style={{ color: '#f59e0b' }}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" /></svg> {calculateVendorRating(selectedVendorProfile.vendor, [], quotations, purchaseOrders)}/5.00</p></div>
               </div>
               <div className="field full">
                 <label>Address</label>

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../services/api';
+import { calculateVendorRating } from '../utils/rating';
 
 export default function VendorProfile({ vendor, vendors, rfqs = [], quotations = [], purchaseOrders = [], onVendorSwitch }) {
   const [saving, setSaving] = useState(false);
@@ -46,11 +47,14 @@ export default function VendorProfile({ vendor, vendors, rfqs = [], quotations =
     ? Math.round(vendorQuotations.reduce((sum, q) => sum + (parseInt(q.delivery_days) || 0), 0) / vendorQuotations.length)
     : 14;
 
-  const totalBusinessVal = vendorPOs
-    .filter(p => p.status !== 'rejected_by_finance' && p.status !== 'rejected')
-    .reduce((sum, p) => sum + (parseFloat(p.total_value) || 0), 0);
+  // Total business value ONLY increases when payment has been disbursed / paid by a finance member
+  const paidPOs = vendorPOs.filter(p => p.status === 'paid' || p.status === 'completed' || p.status === 'closed');
+  const totalBusinessVal = paidPOs.reduce((sum, p) => sum + (parseFloat(p.total_value) || 0), 0);
 
   const totalBusinessValueFormatted = totalBusinessVal > 0 ? `₹${totalBusinessVal.toLocaleString('en-IN')}` : '₹0';
+
+  // Dynamic Rating based on all real metrics in real time
+  const dynamicRating = calculateVendorRating(vendor, rfqs, quotations, purchaseOrders);
 
   // Recent Procurement Activity Log (Real data!)
   const realActivity = vendorQuotations.map(q => {
@@ -141,8 +145,8 @@ export default function VendorProfile({ vendor, vendors, rfqs = [], quotations =
         </div>
         <div className="vendor-hero-right">
           <div className="vendor-rating-box">
-            <span className="rating-value"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none" style={{marginRight:4,verticalAlign:'middle',color:'#f59e0b'}}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>{vendor?.rating || '0.00'}</span>
-            <span className="rating-label">Overall Rating</span>
+            <span className="rating-value"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none" style={{marginRight:4,verticalAlign:'middle',color:'#f59e0b'}}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>{dynamicRating}</span>
+            <span className="rating-label">Overall Rating (Dynamic)</span>
           </div>
         </div>
       </div>
