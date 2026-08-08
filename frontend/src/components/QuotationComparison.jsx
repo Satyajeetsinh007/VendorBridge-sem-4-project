@@ -86,7 +86,6 @@ export default function QuotationComparison({ rfq, quotations, vendors, purchase
   const [selectionModal, setSelectionModal] = useState(null);
   const [selectionReason, setSelectionReason] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [showPredictionDetails, setShowPredictionDetails] = useState(false);
   const [expandedRows, setExpandedRows] = useState({});
   const [pythonRfData, setPythonRfData] = useState(null);
 
@@ -429,7 +428,7 @@ export default function QuotationComparison({ rfq, quotations, vendors, purchase
       {recommended && (
         <div className="qc-ai-card">
           <div className="qc-ai-left">
-            <div className="qc-ai-badge" style={{ display: 'inline-flex', alignItems: 'center', gap: '4.5px' }}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ verticalAlign: 'middle' }}><rect x="4" y="4" width="16" height="16" rx="2" ry="2" /><rect x="9" y="9" width="6" height="6" /><line x1="9" y1="1" x2="9" y2="4" /><line x1="15" y1="1" x2="15" y2="4" /><line x1="9" y1="20" x2="9" y2="23" /><line x1="15" y1="20" x2="15" y2="23" /><line x1="20" y1="9" x2="23" y2="9" /><line x1="20" y1="15" x2="23" y2="15" /><line x1="1" y1="9" x2="4" y2="9" /><line x1="1" y1="15" x2="4" y2="15" /></svg> AI RECOMMENDATION</div>
+            <div className="qc-ai-badge" style={{ display: 'inline-flex', alignItems: 'center', gap: '4.5px' }}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ verticalAlign: 'middle' }}><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg> COMPARISON RECOMMENDATION</div>
             <div className="qc-ai-vendor">
               <div className="qc-ai-logo" style={{ background: logoColors[recommended.vendor.vendor_code] || '#3b82f6' }}>
                 {initials(recommended.vendor.name)}
@@ -476,28 +475,13 @@ export default function QuotationComparison({ rfq, quotations, vendors, purchase
                   {recommended.ml.confidence}%
                 </div>
               </div>
-              <span className="qc-ai-metric-label">AI Confidence</span>
+              <span className="qc-ai-metric-label">Comparison Confidence</span>
             </div>
             <div className="qc-ai-meta">
               <div><span className="qc-meta-label">Model</span><span className="qc-meta-value">Random Forest</span></div>
-              <div><span className="qc-meta-label">AI Score</span><span className="qc-meta-value">{recommended.ml.aiScore}/100</span></div>
+              <div><span className="qc-meta-label">Match Score</span><span className="qc-meta-value">{recommended.ml.aiScore}/100</span></div>
               <div><span className="qc-meta-label">Features</span><span className="qc-meta-value">7 analyzed</span></div>
             </div>
-            <button className="btn-secondary" onClick={() => setShowPredictionDetails(!showPredictionDetails)} style={{ marginTop: '8px', fontSize: '12px' }}>
-              {showPredictionDetails ? 'Hide' : 'View'} Prediction Details
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Prediction Details Expanded */}
-      {showPredictionDetails && (
-        <div className="table-card" style={{ padding: '20px' }}>
-          <span className="table-title" style={{ marginBottom: '16px', display: 'block' }}>Feature Importance — Random Forest Model</span>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            {featureImportance.map((f, i) => (
-              <HBar key={i} label={f.feature} value={f.weight} max={40} color={f.color} suffix="%" />
-            ))}
           </div>
         </div>
       )}
@@ -522,7 +506,7 @@ export default function QuotationComparison({ rfq, quotations, vendors, purchase
                   <th>Unit Price</th>
                   <th>Grand Total</th>
                   <th>Delivery</th>
-                  <th className="th-divider">AI Score</th>
+                  <th className="th-divider">Match Score</th>
                   <th className="th-actions">Actions</th>
                 </tr>
               </thead>
@@ -693,7 +677,7 @@ export default function QuotationComparison({ rfq, quotations, vendors, purchase
                                     <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{q.ml.avgDeliveryDays} days</span>
                                   </div>
                                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                    <span style={{ color: 'var(--text-secondary)' }}>AI Confidence Level:</span>
+                                    <span style={{ color: 'var(--text-secondary)' }}>Comparison Confidence Level:</span>
                                     <span style={{ fontWeight: 600, color: 'var(--purple)' }}>{q.ml.confidence}%</span>
                                   </div>
                                 </div>
@@ -741,7 +725,7 @@ export default function QuotationComparison({ rfq, quotations, vendors, purchase
             color="#06b6d4" suffix="%"
           />
           <ComparisonBarChart
-            title="Python RF AI Score"
+            title="Python RF Match Score"
             dataPoints={enrichedQuotations.map(q => ({ label: q.vendor.name, value: q.ml.aiScore }))}
             color="#ec4899"
           />

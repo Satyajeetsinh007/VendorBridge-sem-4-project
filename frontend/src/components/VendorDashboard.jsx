@@ -65,6 +65,7 @@ export default function VendorDashboard({ onLogout, currentUser }) {
     { id: 4, text: 'Procurement Officer cancelled Purchase Order PO-2026-0028', time: '3d ago', priority: 'medium' },
     { id: 5, text: 'New RFQ invitation received — High-Performance Laptops', time: '4d ago', priority: 'medium' },
   ]);
+  const [hasUnreadNotifs, setHasUnreadNotifs] = useState(true);
 
   const [purchaseOrders, setPurchaseOrders] = useState([]);
 
@@ -104,6 +105,21 @@ export default function VendorDashboard({ onLogout, currentUser }) {
   };
 
   useEffect(() => { fetchData(); }, []);
+
+  useEffect(() => {
+    const handleNewNotif = (e) => {
+      const { text, priority, role } = e.detail;
+      if (role === 'vendor') {
+        setNotificationsList(prev => [
+          { id: Date.now(), text, time: 'Just now', priority },
+          ...prev
+        ]);
+        setHasUnreadNotifs(true);
+      }
+    };
+    window.addEventListener('vendorbridge-notification', handleNewNotif);
+    return () => window.removeEventListener('vendorbridge-notification', handleNewNotif);
+  }, []);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'instant' });
@@ -228,7 +244,14 @@ export default function VendorDashboard({ onLogout, currentUser }) {
           <span className="nav-section-label">Vendor Menu</span>
           {sidebarLinks.map(link => (
             <a key={link.label} href="#" className={`nav-link ${currentView === link.view ? 'active' : ''}`}
-              onClick={e => { e.preventDefault(); setCurrentView(link.view); setSelectedRfq(null); }}>
+              onClick={e => {
+                e.preventDefault();
+                setCurrentView(link.view);
+                setSelectedRfq(null);
+                if (link.view === 'notifications') {
+                  setHasUnreadNotifs(false);
+                }
+              }}>
               {link.icon}
               <span>{link.label}</span>
               {link.count > 0 && <span className="pill-count" style={{ marginLeft: 'auto', background: 'var(--accent)' }}>{link.count}</span>}
@@ -317,9 +340,9 @@ export default function VendorDashboard({ onLogout, currentUser }) {
               </div>
             )}
             <div className="topbar-divider" />
-            <button className="icon-btn" title="Notifications">
+            <button className="icon-btn" title="Notifications" onClick={() => { setSelectedRfq(null); setCurrentView('notifications'); setHasUnreadNotifs(false); }}>
               <Icons.Bell />
-              <span className="notif-dot" />
+              {hasUnreadNotifs && <span className="notif-dot" />}
             </button>
           </div>
         </header>

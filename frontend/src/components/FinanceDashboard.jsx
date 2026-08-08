@@ -150,6 +150,13 @@ export default function FinanceDashboard({ onLogout, currentUser, onToggleRole }
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [currentView, setCurrentView] = useState('dashboard');
+  const [hasUnreadNotifs, setHasUnreadNotifs] = useState(true);
+  const [notificationsList, setNotificationsList] = useState([
+    { id: 1, text: 'Vendor Dell Technologies submitted INV-2026-0089 for PO-2026-0042.', time: '10m ago', priority: 'medium' },
+    { id: 2, text: 'Invoice INV-2026-0042 (HP Inc.) verified and ready for payment disbursement.', time: '2h ago', priority: 'low' },
+    { id: 3, text: 'Disbursed ₹88,500 via NEFT to Lenovo Commercial for INV-2026-0012. UTR: UTR982347102938.', time: '1d ago', priority: 'low' },
+    { id: 4, text: 'Q3 GST reconciliation report generated successfully for Finance Lead approval.', time: '3d ago', priority: 'medium' }
+  ]);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [vendorFilter, setVendorFilter] = useState('ALL');
@@ -281,6 +288,21 @@ export default function FinanceDashboard({ onLogout, currentUser, onToggleRole }
     window.scrollTo({ top: 0, behavior: 'instant' });
   }, [currentView, selectedInvoice]);
 
+  useEffect(() => {
+    const handleNewNotif = (e) => {
+      const { text, priority, role } = e.detail;
+      if (role === 'finance') {
+        setNotificationsList(prev => [
+          { id: Date.now(), text, time: 'Just now', priority },
+          ...prev
+        ]);
+        setHasUnreadNotifs(true);
+      }
+    };
+    window.addEventListener('vendorbridge-notification', handleNewNotif);
+    return () => window.removeEventListener('vendorbridge-notification', handleNewNotif);
+  }, []);
+
   // Filtered Invoices
   const filteredInvoices = invoices.filter(inv => {
     const q = searchQuery.toLowerCase();
@@ -342,6 +364,13 @@ export default function FinanceDashboard({ onLogout, currentUser, onToggleRole }
       };
       setSelectedInvoice(updated);
       setInvoices(prev => prev.map(i => i.id === updated.id ? updated : i));
+      window.dispatchEvent(new CustomEvent('vendorbridge-notification', {
+        detail: {
+          text: `Invoice approved by Finance for PO ${selectedInvoice.purchase_order_details?.po_number || 'PO'}`,
+          priority: 'medium',
+          role: 'procurement_officer'
+        }
+      }));
       alert('Invoice approved successfully. You can now record the payment.');
     } catch (err) {
       alert(`Approval failed: ${err.message}`);
@@ -378,6 +407,20 @@ export default function FinanceDashboard({ onLogout, currentUser, onToggleRole }
       };
       setSelectedInvoice(updated);
       setInvoices(prev => prev.map(i => i.id === updated.id ? updated : i));
+      window.dispatchEvent(new CustomEvent('vendorbridge-notification', {
+        detail: {
+          text: `Invoice rejected by Finance for PO ${selectedInvoice.purchase_order_details?.po_number || 'PO'}`,
+          priority: 'high',
+          role: 'procurement_officer'
+        }
+      }));
+      window.dispatchEvent(new CustomEvent('vendorbridge-notification', {
+        detail: {
+          text: `Invoice ${selectedInvoice.invoice_number} rejected by Finance`,
+          priority: 'high',
+          role: 'vendor'
+        }
+      }));
       alert('Invoice rejected by Finance. Purchase Order status updated to REJECTED BY FINANCE across all portals.');
     } catch (err) {
       alert(`Rejection failed: ${err.message}`);
@@ -421,6 +464,20 @@ export default function FinanceDashboard({ onLogout, currentUser, onToggleRole }
       };
       setSelectedInvoice(updated);
       setInvoices(prev => prev.map(i => i.id === updated.id ? updated : i));
+      window.dispatchEvent(new CustomEvent('vendorbridge-notification', {
+        detail: {
+          text: `Payment disbursed for Purchase Order ${selectedInvoice.purchase_order_details?.po_number || 'PO'}`,
+          priority: 'medium',
+          role: 'vendor'
+        }
+      }));
+      window.dispatchEvent(new CustomEvent('vendorbridge-notification', {
+        detail: {
+          text: `Purchase Order ${selectedInvoice.purchase_order_details?.po_number || 'PO'} paid & completed`,
+          priority: 'low',
+          role: 'procurement_officer'
+        }
+      }));
       alert(`Payment of ₹${parseFloat(updated.amount).toLocaleString('en-IN')} marked as PAID!\nPurchase Order status updated to PAID & COMPLETED across all portals.\nNotifications sent to Vendor & Procurement Officer.`);
     } catch (err) {
       alert(`Payment processing failed: ${err.message}`);
@@ -467,6 +524,9 @@ export default function FinanceDashboard({ onLogout, currentUser, onToggleRole }
                 e.preventDefault();
                 setSelectedInvoice(null);
                 setCurrentView(link.view);
+                if (link.view === 'notifications') {
+                  setHasUnreadNotifs(false);
+                }
               }}
             >
               {link.icon}
@@ -543,9 +603,9 @@ export default function FinanceDashboard({ onLogout, currentUser, onToggleRole }
               </button>
             )}
             <div className="topbar-divider" />
-            <button className="icon-btn" title="Notifications" onClick={() => { setSelectedInvoice(null); setCurrentView('notifications'); }}>
+            <button className="icon-btn" title="Notifications" onClick={() => { setSelectedInvoice(null); setCurrentView('notifications'); setHasUnreadNotifs(false); }}>
               <Icons.Bell />
-              <span className="notif-dot" style={{ background: '#10b981' }} />
+              {hasUnreadNotifs && <span className="notif-dot" style={{ background: '#10b981' }} />}
             </button>
           </div>
         </header>
@@ -755,7 +815,7 @@ export default function FinanceDashboard({ onLogout, currentUser, onToggleRole }
                     <span className="table-title" style={{ fontSize: '16px', color: '#10b981' }}>
                        Record Corporate Payment &amp; Disburse Funds
                     </span>
-                    <span className="badge badge-status-approved" style={{ background: '#10b981' }}>
+                    <span className="badge" style={{ background: selectedInvoice.status === 'paid' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(245, 158, 11, 0.15)', color: selectedInvoice.status === 'paid' ? '#10b981' : '#f59e0b', border: `1px solid ${selectedInvoice.status === 'paid' ? 'rgba(16, 185, 129, 0.3)' : 'rgba(245, 158, 11, 0.3)'}`, fontWeight: '600' }}>
                       {selectedInvoice.status === 'paid' ? 'PAID & DISBURSED' : 'READY FOR PAYMENT'}
                     </span>
                   </div>
@@ -999,28 +1059,21 @@ export default function FinanceDashboard({ onLogout, currentUser, onToggleRole }
               </section>
             </div>
           ) : currentView === 'notifications' ? (
-            /* ════════════════════════════════════════
-               NOTIFICATIONS VIEW
-               ════════════════════════════════════════ */
+            /* ── Notifications View ── */
             <div className="table-card" style={{ padding: '24px' }}>
               <span className="table-title" style={{ marginBottom: '20px', display: 'block' }}>Finance Activity &amp; Notifications</span>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                {[
-                  { title: 'New Invoice Submitted', time: '10 mins ago', desc: 'Vendor Dell Technologies submitted INV-2026-0089 for PO-2026-0042.', icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>, color: '#60a5fa' },
-                  { title: 'Invoice Approved Successfully', time: '2 hours ago', desc: 'Invoice INV-2026-0042 (HP Inc.) verified and ready for payment disbursement.', icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4ade80" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>, color: '#4ade80' },
-                  { title: 'Payment Completed', time: '1 day ago', desc: 'Disbursed ₹88,500 via NEFT to Lenovo Commercial for INV-2026-0012. UTR: UTR982347102938.', icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>, color: '#10b981' },
-                  { title: 'Tax Audit Alert', time: '3 days ago', desc: 'Q3 GST reconciliation report generated successfully for Finance Lead approval.', icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>, color: '#fbbf24' },
-                ].map((item, idx) => (
-                  <div key={idx} style={{ display: 'flex', gap: '16px', alignItems: 'flex-start', padding: '14px', borderRadius: 'var(--radius-sm)', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border-subtle)' }}>
+                {notificationsList.map(n => (
+                  <div key={n.id} className={`notification-item ${n.priority}`} style={{ display: 'flex', gap: '16px', alignItems: 'flex-start', padding: '14px', borderRadius: 'var(--radius-sm)', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border-subtle)' }}>
                     <div style={{ background: 'rgba(255,255,255,0.06)', width: '40px', height: '40px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      {item.icon}
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
                     </div>
                     <div style={{ flex: 1 }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                        <strong style={{ fontSize: '14px', color: 'var(--text-primary)' }}>{item.title}</strong>
-                        <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{item.time}</span>
+                        <strong style={{ fontSize: '14px', color: 'var(--text-primary)' }}>{n.text}</strong>
+                        <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>{n.time}</span>
                       </div>
-                      <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: 0 }}>{item.desc}</p>
+                      <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: 0 }}>Priority: <span style={{ textTransform: 'uppercase', color: n.priority === 'high' ? 'var(--danger)' : n.priority === 'medium' ? 'var(--warning)' : 'var(--accent)' }}>{n.priority}</span></p>
                     </div>
                   </div>
                 ))}
@@ -1110,7 +1163,7 @@ export default function FinanceDashboard({ onLogout, currentUser, onToggleRole }
                 <div className="stat-card stat-green" style={{ background: 'rgba(16, 185, 129, 0.08)', borderColor: 'rgba(16, 185, 129, 0.25)' }}>
                   <div className="stat-header">
                     <span className="stat-label">Total Amount Paid</span>
-                    <div className="stat-icon-wrap" style={{ color: '#10b981' }}><Icons.DollarSign /></div>
+                    <div className="stat-icon-wrap" style={{ color: '#10b981', fontWeight: '800', fontSize: '15px' }}>₹</div>
                   </div>
                   <div className="stat-value" style={{ color: '#10b981', fontSize: '22px' }}>
                     ₹{totalAmountPaid.toLocaleString('en-IN')}

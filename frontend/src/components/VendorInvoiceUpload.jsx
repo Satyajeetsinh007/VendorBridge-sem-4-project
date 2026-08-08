@@ -122,6 +122,13 @@ export default function VendorInvoiceUpload({ po, vendor, onBack, onInvoiceSubmi
 
       setInvoiceStatus('pending_verification');
       setShowSubmitModal(false);
+      window.dispatchEvent(new CustomEvent('vendorbridge-notification', {
+        detail: {
+          text: `Vendor ${vendor?.name || 'Partner'} submitted Invoice ${invoiceNumber} for PO ${po?.po_number || 'PO'}`,
+          priority: 'medium',
+          role: 'finance'
+        }
+      }));
       const msg = `Invoice submitted successfully. Your invoice ${invoiceNumber} has been sent to the Finance Team for verification.`;
       setSuccessBanner(msg);
 
