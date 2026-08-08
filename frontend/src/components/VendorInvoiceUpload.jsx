@@ -298,7 +298,8 @@ export default function VendorInvoiceUpload({ po, vendor, onBack, onInvoiceSubmi
                 <input
                   type="date"
                   name="invoice_date"
-                  value={invoiceDetails.invoice_date}
+                  min={todayStr}
+                  value={invoiceDetails.invoice_date || todayStr}
                   onChange={handleChange}
                   disabled={isSubmitted}
                 />
@@ -311,7 +312,8 @@ export default function VendorInvoiceUpload({ po, vendor, onBack, onInvoiceSubmi
                 <input
                   type="date"
                   name="due_date"
-                  value={invoiceDetails.due_date}
+                  min={invoiceDetails.invoice_date || todayStr}
+                  value={invoiceDetails.due_date || dueDateStr}
                   onChange={handleChange}
                   disabled={isSubmitted}
                 />

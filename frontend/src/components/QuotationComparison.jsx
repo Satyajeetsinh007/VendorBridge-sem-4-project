@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../services/api';
+import { calculateVendorRating } from '../utils/rating';
 
 /* ── Real ML Feature Importance Constants ── */
 
@@ -118,15 +119,15 @@ export default function QuotationComparison({ rfq, quotations, vendors, purchase
     const biddedCount = vQuots.length;
     const wonPos = vPos.filter(p => p.status !== 'rejected_by_finance' && p.status !== 'rejected');
     const wonCount = wonPos.length || vQuots.filter(q => q.status === 'selected').length;
-    const completedCount = vPos.filter(p => p.status === 'paid' || p.status === 'completed').length;
+    const paidPos = vPos.filter(p => p.status === 'paid' || p.status === 'completed' || p.status === 'closed');
+    const completedCount = paidPos.length;
 
-    const totalBizVal = vPos
-      .filter(p => p.status !== 'rejected_by_finance' && p.status !== 'rejected')
-      .reduce((sum, p) => sum + (parseFloat(p.total_value) || 0), 0);
+    const totalBizVal = paidPos.reduce((sum, p) => sum + (parseFloat(p.total_value) || 0), 0);
 
     const winRate = biddedCount > 0 ? Math.min(100, Math.round(((wonCount / biddedCount) * 100))) : 0;
     const onTimeRate = completedCount > 0 ? 100 : (wonCount > 0 ? 95 : 90);
-    const ratingVal = parseFloat(vendor?.rating) || 4.5;
+    const dynamicVendorRating = calculateVendorRating(vendor, [], quotations, purchaseOrders);
+    const ratingVal = parseFloat(dynamicVendorRating) || 4.50;
 
     const ratingScore = (ratingVal / 5.0) * 100;
     const aiScore = Math.min(99, Math.max(50, Math.round(
@@ -156,103 +157,6 @@ export default function QuotationComparison({ rfq, quotations, vendors, purchase
       realQuotations: vQuots,
       realPurchaseOrders: vPos,
     };
-  };
-
-  const handleDownloadPDF = (e, q) => {
-    e.preventDefault();
-    const isMock = !q.attachment_url || q.attachment_url.includes('vendorbridge.s3.amazonaws.com') || q.attachment_url === '#';
-
-    if (isMock) {
-      const printWindow = window.open('', '_blank');
-      if (printWindow) {
-        const logoColor = logoColors[q.vendor.vendor_code] || '#3b82f6';
-        const unitP = parseFloat(q.unit_price) || 0;
-        const qty = rfq.quantity || 1;
-        const subT = parseFloat(q.subtotal) || (unitP * qty);
-        const cgstVal = parseFloat(q.cgst_amount) || (q.tax_type === 'GST_9_9' ? subT * 0.09 : 0);
-        const sgstVal = parseFloat(q.sgst_amount) || (q.tax_type === 'GST_9_9' ? subT * 0.09 : 0);
-        const igstVal = parseFloat(q.igst_amount) || (q.tax_type === 'IGST_18' ? subT * 0.18 : 0);
-        const grandT = parseFloat(q.total_price) || (subT + cgstVal + sgstVal + igstVal);
-
-        printWindow.document.write(`
-          <html>
-            <head>
-              <title>Quotation Specification - ${q.vendor.name}</title>
-              <style>
-                body { font-family: 'Outfit', -apple-system, sans-serif; padding: 40px; color: #0f172a; background: #ffffff; line-height: 1.5; }
-                .header { display: flex; justify-content: space-between; border-bottom: 2px solid #e2e8f0; padding-bottom: 20px; margin-bottom: 30px; }
-                .logo-box { background: ${logoColor}; color: #ffffff; padding: 12px 24px; border-radius: 8px; font-weight: bold; font-size: 20px; }
-                .details { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; margin-bottom: 40px; }
-                .details h4 { margin: 0 0 6px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; }
-                .details p { margin: 0; font-size: 14px; font-weight: 600; }
-                .table { width: 100%; border-collapse: collapse; margin-bottom: 30px; }
-                .table th, .table td { padding: 12px; border-bottom: 1px solid #e2e8f0; text-align: left; }
-                .table th { background: #f8fafc; font-size: 12px; text-transform: uppercase; color: #475569; }
-                .totals { margin-left: auto; width: 300px; display: flex; flex-direction: column; gap: 8px; font-size: 14px; }
-                .totals div { display: flex; justify-content: space-between; }
-                .totals .grand { font-weight: bold; font-size: 16px; border-top: 2px solid #0f172a; padding-top: 8px; margin-top: 4px; }
-                .badge { display: inline-block; padding: 4px 10px; border-radius: 99px; font-size: 11px; font-weight: bold; text-transform: uppercase; background: #e0f2fe; color: #2563eb; }
-                @media print {
-                  body { padding: 0; }
-                  button { display: none; }
-                }
-              </style>
-            </head>
-            <body>
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                <span class="badge">Official Quotation Proposal</span>
-                <button onclick="window.print()" style="padding: 8px 16px; background: #2563eb; color: #ffffff; border: none; border-radius: 99px; font-weight: bold; cursor: pointer;">Print Document</button>
-              </div>
-              <div class="header">
-                <div>
-                  <h1 style="margin: 0; font-size: 28px; font-weight: 800;">VendorBridge</h1>
-                  <p style="margin: 4px 0 0; color: #64748b; font-size: 13px;">RFQ: ${rfq.rfq_number} - ${rfq.title}</p>
-                </div>
-                <div class="logo-box">${q.vendor.name}</div>
-              </div>
-              <div class="details">
-                <div>
-                  <h4>Quoted By Vendor</h4>
-                  <p>${q.vendor.name}</p>
-                  <p style="font-weight: normal; color: #475569; font-size: 13px;">Code: ${q.vendor.vendor_code} | Rating: ${q.vendor.rating} / 5</p>
-                </div>
-                <div>
-                  <h4>Quotation Summary</h4>
-                  <p>Validity: ${q.valid_until || '20 Aug 2026'}</p>
-                  <p style="font-weight: normal; color: #475569; font-size: 13px;">Payment Terms: ${q.payment_terms || 'Net 30'}</p>
-                </div>
-              </div>
-              <table class="table">
-                <thead>
-                  <tr>
-                    <th>Item Description</th>
-                    <th style="text-align: right;">Quantity</th>
-                    <th style="text-align: right;">Quoted Unit Price (₹)</th>
-                    <th style="text-align: right;">Total Subtotal (₹)</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td>Specification requirements for RFQ request ${rfq.title}</td>
-                    <td style="text-align: right;">${qty}</td>
-                    <td style="text-align: right;">₹${unitP.toLocaleString('en-IN')}</td>
-                    <td style="text-align: right;">₹${subT.toLocaleString('en-IN')}</td>
-                  </tr>
-                </tbody>
-              </table>
-              <div class="totals">
-                <div><span>Subtotal:</span><span>₹${subT.toLocaleString('en-IN')}</span></div>
-                <div><span>Taxes (GST):</span><span>₹${(cgstVal + sgstVal + igstVal).toLocaleString('en-IN')}</span></div>
-                <div class="grand"><span>Grand Total:</span><span>₹${grandT.toLocaleString('en-IN')}</span></div>
-              </div>
-            </body>
-          </html>
-        `);
-        printWindow.document.close();
-      }
-    } else {
-      window.open(q.attachment_url, '_blank');
-    }
   };
 
   // Helper to check ownership
@@ -313,6 +217,13 @@ export default function QuotationComparison({ rfq, quotations, vendors, purchase
       }
       // Complete RFQ
       await api.patchRFQ(rfq.id, { status: 'completed' });
+      window.dispatchEvent(new CustomEvent('vendorbridge-notification', {
+        detail: {
+          text: `Congratulations! Your quotation for ${rfq.rfq_number || 'RFQ'} was selected. Purchase Order is in preparation.`,
+          priority: 'high',
+          role: 'vendor'
+        }
+      }));
 
       // Automatically generate Purchase Order in Backend
       let createdPo = null;
@@ -326,7 +237,7 @@ export default function QuotationComparison({ rfq, quotations, vendors, purchase
           delivery_address: 'VendorBridge Tech Park, Gate #3, Central Warehouse, Sector 62, Noida, UP - 201309',
           terms_and_conditions: 'Standard VendorBridge Enterprise Terms Apply',
           status: 'draft',
-          expected_delivery_date: new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0],
+          expected_delivery_date: rfq.required_by_date || rfq.deadline || new Date(Date.now() + 14 * 86400000).toISOString().split('T')[0],
         });
       } catch (e) { console.log('PO auto-gen note:', e.message); }
 
@@ -633,25 +544,15 @@ export default function QuotationComparison({ rfq, quotations, vendors, purchase
 
                               {/* Group 2: Quotation Terms & Contract */}
                               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                                <span style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Terms & Validity</span>
+                                <span style={{ fontSize: '9px', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Terms & Warranty</span>
                                 <div style={{ fontSize: '13px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                                     <span style={{ color: 'var(--text-secondary)' }}>Warranty Period:</span>
                                     <span style={{ fontWeight: 600, color: 'var(--success)' }}>{q.warranty || '2 Years'}</span>
                                   </div>
                                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                    <span style={{ color: 'var(--text-secondary)' }}>Validity Until:</span>
-                                    <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{q.valid_until || '20 Aug 2026'}</span>
-                                  </div>
-                                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                                     <span style={{ color: 'var(--text-secondary)' }}>Payment Terms:</span>
                                     <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{q.payment_terms || 'Net 30'}</span>
-                                  </div>
-                                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '2px' }}>
-                                    <span style={{ color: 'var(--text-secondary)' }}>Quotation Attachment:</span>
-                                    <a href="#" onClick={(e) => handleDownloadPDF(e, q)} className="badge badge-status-draft" style={{ background: 'rgba(37, 99, 235, 0.05)', color: 'var(--accent)', border: '1px solid rgba(37, 99, 235, 0.12)', textDecoration: 'none', padding: '3px 8px', fontSize: '11px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg> PDF Document
-                                    </a>
                                   </div>
                                 </div>
                               </div>
@@ -662,7 +563,10 @@ export default function QuotationComparison({ rfq, quotations, vendors, purchase
                                 <div style={{ fontSize: '13px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                                     <span style={{ color: 'var(--text-secondary)' }}>Vendor Rating:</span>
-                                    <span style={{ fontWeight: 700, color: '#eab308', display: 'inline-flex', alignItems: 'center', gap: '4px' }}><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="none" style={{ color: '#eab308' }}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" /></svg> {q.vendor.rating} / 5.0</span>
+                                    <span style={{ fontWeight: 700, color: '#eab308', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                      <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="none" style={{ color: '#eab308' }}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" /></svg> 
+                                      {calculateVendorRating(q.vendor, [], quotations, purchaseOrders)} / 5.0
+                                    </span>
                                   </div>
                                   <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                                     <span style={{ color: 'var(--text-secondary)' }}>Quote Success Rate:</span>
@@ -732,65 +636,6 @@ export default function QuotationComparison({ rfq, quotations, vendors, purchase
         </div>
       )}
 
-      {/* ═══════ FEATURE IMPORTANCE & TRAIN/TEST SPLIT MODEL CARD ═══════ */}
-      <div className="table-card" style={{ padding: '24px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-          <div>
-            <span className="table-title">🐍 {pythonRfData?.model_name || 'Python scikit-learn RandomForestClassifier'} — Train/Test Evaluation</span>
-            <p style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '4px 0 0' }}>
-              Python REST API Endpoint (`/api/rfqs/{targetRfqId}/rf-recommendations/`) using scikit-learn 80/20 Train-Test split
-            </p>
-          </div>
-          <span className="badge badge-status-open" style={{ background: 'rgba(16, 185, 129, 0.12)', color: '#10b981', border: '1px solid rgba(16, 185, 129, 0.3)' }}>
-            ✓ Python Django API Connected
-          </span>
-        </div>
-
-        {/* Model Performance Evaluation Metrics Bar */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '12px', marginBottom: '20px', padding: '14px 16px', background: 'var(--bg-base)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-subtle)' }}>
-          <div>
-            <span style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block' }}>Train Set (80%)</span>
-            <strong style={{ fontSize: '15px', color: 'var(--text-primary)' }}>{pythonRfData?.train_count || 40} samples</strong>
-          </div>
-          <div>
-            <span style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block' }}>Test Set (20%)</span>
-            <strong style={{ fontSize: '15px', color: 'var(--text-primary)' }}>{pythonRfData?.test_count || 10} samples</strong>
-          </div>
-          <div>
-            <span style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block' }}>Test Accuracy</span>
-            <strong style={{ fontSize: '15px', color: '#10b981' }}>{pythonRfData?.accuracy || 94}%</strong>
-          </div>
-          <div>
-            <span style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block' }}>Model Precision</span>
-            <strong style={{ fontSize: '15px', color: '#3b82f6' }}>{pythonRfData?.precision || 92}%</strong>
-          </div>
-          <div>
-            <span style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'block' }}>Model Recall</span>
-            <strong style={{ fontSize: '15px', color: '#8b5cf6' }}>{pythonRfData?.recall || 90}%</strong>
-          </div>
-        </div>
-
-        <span className="table-title" style={{ fontSize: '13px', marginBottom: '12px', display: 'block' }}>
-          Dynamic Gini Feature Importance (Computed from Python scikit-learn Node Splits)
-        </span>
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          {(pythonRfData?.importances || featureImportance).map((f, i) => (
-            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <span style={{ width: '170px', fontSize: '13px', color: 'var(--text-secondary)', flexShrink: 0 }}>{f.feature}</span>
-              <div style={{ flex: 1, height: '24px', background: 'rgba(15,23,42,0.04)', borderRadius: '6px', overflow: 'hidden', position: 'relative' }}>
-                <div style={{ width: `${Math.max(6, f.weight)}%`, height: '100%', background: `${f.color}30`, borderRadius: '6px', borderLeft: `3px solid ${f.color}`, display: 'flex', alignItems: 'center', paddingLeft: '8px' }}>
-                  <span style={{ fontSize: '11px', fontWeight: 700, color: f.color }}>{f.weight}%</span>
-                </div>
-              </div>
-              <span style={{ width: '60px', fontSize: '13px', fontWeight: 600, color: f.color, textAlign: 'right' }}>
-                {f.weight >= 20 ? 'High' : f.weight >= 10 ? 'Medium' : 'Low'}
-              </span>
-            </div>
-          ))}
-        </div>
-      </div>
-
       {/* ═══════ VENDOR PROFILE MODAL ═══════ */}
       {selectedVendorProfile && (
         <div className="modal-overlay" onClick={() => setSelectedVendorProfile(null)}>
@@ -810,7 +655,9 @@ export default function QuotationComparison({ rfq, quotations, vendors, purchase
                 <div className="qc-profile-logo">{initials(selectedVendorProfile.vendor.name)}</div>
                 <div>
                   <h3 style={{ color: '#fff', margin: 0, fontSize: '18px' }}>{selectedVendorProfile.vendor.name}</h3>
-                  <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '13px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>{selectedVendorProfile.vendor.category} · <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="none" style={{ color: '#fff' }}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" /></svg> {selectedVendorProfile.vendor.rating}</span>
+                  <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '13px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                    {selectedVendorProfile.vendor.category} · <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="none" style={{ color: '#fff' }}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" /></svg> {calculateVendorRating(selectedVendorProfile.vendor, [], quotations, purchaseOrders)}
+                  </span>
                 </div>
               </div>
 
@@ -824,7 +671,7 @@ export default function QuotationComparison({ rfq, quotations, vendors, purchase
               </div>
               <div className="field-row">
                 <div className="field"><label>GST Number</label><p style={{ fontSize: '13px' }} className="mono-text">{selectedVendorProfile.vendor.gst_number || '—'}</p></div>
-                <div className="field"><label>Rating</label><p style={{ fontSize: '13px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="none" style={{ color: '#f59e0b' }}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" /></svg> {selectedVendorProfile.vendor.rating}/5.00</p></div>
+                <div className="field"><label>Rating</label><p style={{ fontSize: '13px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="none" style={{ color: '#f59e0b' }}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" /></svg> {calculateVendorRating(selectedVendorProfile.vendor, [], quotations, purchaseOrders)}/5.00</p></div>
               </div>
               <div className="field full">
                 <label>Address</label>
@@ -835,15 +682,8 @@ export default function QuotationComparison({ rfq, quotations, vendors, purchase
               <div className="table-card" style={{ padding: '16px', marginTop: '14px', background: 'var(--bg-elevated)' }}>
                 <span className="table-title" style={{ marginBottom: '12px', display: 'block' }}>Quotation Financial & Tax Details</span>
                 <div className="field-row">
-                  <div className="field"><label>Warranty Period</label><p style={{ fontSize: '13px', fontWeight: 600, color: 'var(--accent)' }}>{selectedVendorProfile.warranty || selectedVendorProfile.notes || 'Standard Warranty'}</p></div>
-                  <div className="field"><label>Quotation Valid Until</label><p style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>{selectedVendorProfile.valid_until || (rfq.deadline ? new Date(new Date(rfq.deadline).getTime() + 15 * 86400000).toISOString().split('T')[0] : '—')}</p></div>
-                  <div className="field">
-                    <label>Quotation Attachment</label>
-                    <a href="#" onClick={(e) => handleDownloadPDF(e, selectedVendorProfile)} className="download-link" style={{ fontSize: '13px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>
-                      Download quotation.pdf
-                    </a>
-                  </div>
+                  <div className="field"><label>Warranty Period</label><p style={{ fontSize: '13px', fontWeight: 600, color: 'var(--success)' }}>{selectedVendorProfile.warranty || selectedVendorProfile.notes || 'Standard Warranty'}</p></div>
+                  <div className="field"><label>Payment Terms</label><p style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)' }}>{selectedVendorProfile.payment_terms || 'Net 30'}</p></div>
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '10px', marginTop: '10px', padding: '12px', background: 'var(--bg-base)', borderRadius: 'var(--radius-sm)' }}>
                   <div><span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Subtotal</span><p style={{ margin: 0, fontWeight: 600, fontSize: '13px' }}>₹{parseFloat(selectedVendorProfile.subtotal || selectedVendorProfile.unit_price * (rfq.quantity || 1)).toLocaleString('en-IN')}</p></div>

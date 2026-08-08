@@ -5,13 +5,6 @@ export default function RFQReviewPage({ rfq, onBack, onDecision, manager }) {
   const [submitting, setSubmitting] = useState(false);
   const isDecided = rfq.status !== 'pending_approval';
 
-  // Mock items and technical specifications for the RFQ to show large tables as requested
-  const mockItems = [
-    { name: 'Core Hardware Upgrade Unit', qty: rfq.quantity, spec: 'Intel Xeon 16-Core, 64GB RAM, 1TB NVMe Enterprise SSD', doc: 'hardware_specifications_v2.pdf' },
-    { name: 'Technical Support & Service SLA', qty: 1, spec: '24/7/365 On-site replacement coverage & diagnostics support', doc: 'sla_agreement_draft.pdf' },
-    { name: 'Peripheral Connectivity Accessories', qty: Math.ceil(rfq.quantity / 5), spec: 'Thunderbolt 4 Docking stations & dual DisplayPort setups', doc: 'wiring_schema_approved.png' }
-  ];
-
   const handleSubmit = async (status) => {
     if (status === 'rejected' && !remarks.trim()) {
       alert('Please provide a remark/reason for rejecting this request.');
@@ -84,6 +77,12 @@ export default function RFQReviewPage({ rfq, onBack, onDecision, manager }) {
                 <span className="info-val">{new Date(rfq.created_at).toLocaleDateString()}</span>
               </div>
               <div className="info-item">
+                <span className="info-label">Quantity</span>
+                <span className="info-val" style={{ fontWeight: 700, color: 'var(--accent, #6366f1)', fontSize: '15px' }}>
+                  {rfq.quantity ? `${rfq.quantity} units` : '100 units'}
+                </span>
+              </div>
+              <div className="info-item">
                 <span className="info-label">Response Deadline</span>
                 <span className="info-val">{rfq.deadline}</span>
               </div>
@@ -105,31 +104,6 @@ export default function RFQReviewPage({ rfq, onBack, onDecision, manager }) {
                 Delayed deployment will bottleneck engineering sprint schedules and IT support tickets. Approved budget code: {rfq.department_details?.code || 'ENG'}-2026-Q3.
               </p>
             </div>
-          </div>
-
-          {/* Requested Items Card */}
-          <div className="table-card items-card">
-            <div className="table-header-bar">
-              <span className="table-title">Requested Line Items</span>
-            </div>
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Item Name</th>
-                  <th>Quantity</th>
-                  <th>Detailed Specification</th>
-                </tr>
-              </thead>
-              <tbody>
-                {mockItems.map((item, idx) => (
-                  <tr key={idx}>
-                    <td className="cell-primary">{item.name}</td>
-                    <td className="num-cell">{item.qty} units</td>
-                    <td><span className="cell-sub">{item.spec}</span></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
           </div>
         </div>
 

@@ -49,11 +49,11 @@ export const api = {
     return handleResponse(res);
   },
 
-  login: async (email, password) => {
+  login: async (email, password, accountType = null) => {
     const res = await fetch(`${API_BASE_URL}/auth/login/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ email, password, account_type: accountType, portal_type: accountType }),
     });
     return handleResponse(res);
   },
