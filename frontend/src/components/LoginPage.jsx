@@ -92,9 +92,18 @@ export default function LoginPage({ onLogin, onNavigateSignup }) {
     setError(''); setErrorCode(''); setRejectionReason('');
     setLoading(true);
     try {
-      // 800ms premium processing delay for view transition
-      await new Promise(resolve => setTimeout(resolve, 800));
-      const userData = await api.login(form.email, form.password);
+      // 600ms processing delay for smooth transition
+      await new Promise(resolve => setTimeout(resolve, 600));
+      const userData = await api.login(form.email, form.password, accountType);
+
+      // Strict portal isolation verification
+      if (accountType === 'user' && userData.type !== 'user') {
+        throw new Error('Invalid email or password.');
+      }
+      if (accountType === 'vendor' && userData.type !== 'vendor') {
+        throw new Error('Invalid email or password.');
+      }
+
       localStorage.setItem('vb_user', JSON.stringify(userData));
       onLogin(userData);
     } catch (err) {
@@ -103,7 +112,7 @@ export default function LoginPage({ onLogin, onNavigateSignup }) {
         setError(err.message);
         if (err.reason) setRejectionReason(err.reason);
       } else {
-        setError(err.message || 'Invalid email or password.');
+        setError('Invalid email or password.');
       }
     } finally {
       setLoading(false);

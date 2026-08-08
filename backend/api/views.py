@@ -147,16 +147,25 @@ def login_user(request):
     """
     Login. Blocks login if verification_status != 'approved'.
     Admin users (is_admin=True) always pass through.
-    Returns specific error codes: 'pending' or 'rejected'.
+    Enforces portal separation without leaking role information.
     """
     email = request.data.get('email', '').strip().lower()
     password = request.data.get('password', '').strip()
+    portal_type = request.data.get('account_type') or request.data.get('portal_type') or request.data.get('type')
+    if portal_type:
+        portal_type = str(portal_type).strip().lower()
 
     if not email or not password:
         return Response({'error': 'Email and password are required.'}, status=status.HTTP_400_BAD_REQUEST)
 
-    try:
-        user = User.objects.get(email=email)
+    user_match = User.objects.filter(email=email).first()
+    vendor_match = Vendor.objects.filter(email=email).first()
+
+    # 1. Internal User login
+    if portal_type == 'user' or (not portal_type and user_match):
+        if not user_match:
+            return Response({'error': 'Invalid email or password.'}, status=status.HTTP_401_UNAUTHORIZED)
+        user = user_match
         if user.password != password:
             return Response({'error': 'Invalid email or password.'}, status=status.HTTP_401_UNAUTHORIZED)
         if not user.is_admin:
@@ -174,11 +183,12 @@ def login_user(request):
             'department': str(user.department.id) if user.department else None,
             'department_name': user.department.name if user.department else None,
         }, status=status.HTTP_200_OK)
-    except User.DoesNotExist:
-        pass
 
-    try:
-        vendor = Vendor.objects.get(email=email)
+    # 2. Vendor login
+    if portal_type == 'vendor' or (not portal_type and vendor_match):
+        if not vendor_match:
+            return Response({'error': 'Invalid email or password.'}, status=status.HTTP_401_UNAUTHORIZED)
+        vendor = vendor_match
         if vendor.password != password:
             return Response({'error': 'Invalid email or password.'}, status=status.HTTP_401_UNAUTHORIZED)
         if vendor.verification_status == 'pending':
@@ -193,8 +203,6 @@ def login_user(request):
             'type': 'vendor', 'id': str(vendor.id), 'vendor_code': vendor.vendor_code,
             'name': vendor.name, 'email': vendor.email, 'role': 'vendor', 'is_admin': False,
         }, status=status.HTTP_200_OK)
-    except Vendor.DoesNotExist:
-        pass
 
     return Response({'error': 'Invalid email or password.'}, status=status.HTTP_401_UNAUTHORIZED)
 
