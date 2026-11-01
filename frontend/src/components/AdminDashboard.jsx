@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { api } from '../services/api';
 import './AdminDashboard.css';
 
@@ -16,8 +17,23 @@ const Icons = {
 };
 
 export default function AdminDashboard({ onLogout, currentUser }) {
-  const [tab, setTab] = useState('pending'); // 'pending' | 'all'
   const [subTab, setSubTab] = useState('users'); // 'users' | 'vendors'
+  
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const getTabFromPath = () => {
+    const sub = location.pathname.replace(/^\/admin\/?/, '').split('/')[0];
+    if (sub === 'accounts' || sub === 'all') return 'all';
+    return 'pending';
+  };
+
+  const tab = getTabFromPath();
+
+  const setTab = (newTab) => {
+    if (newTab === 'all' || newTab === 'accounts') navigate('/admin/accounts');
+    else navigate('/admin');
+  };
   const [pendingUsers, setPendingUsers] = useState([]);
   const [pendingVendors, setPendingVendors] = useState([]);
   const [allUsers, setAllUsers] = useState([]);

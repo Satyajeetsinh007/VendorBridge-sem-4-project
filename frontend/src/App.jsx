@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom'
 import LoginPage from './components/LoginPage'
 import SignupPage from './components/SignupPage'
 import ProcurementDashboard from './components/ProcurementDashboard'
@@ -7,10 +8,33 @@ import VendorDashboard from './components/VendorDashboard'
 import AdminDashboard from './components/AdminDashboard'
 import FinanceDashboard from './components/FinanceDashboard'
 
+/* ── Helper: redirect to the correct dashboard based on user role ── */
+function getDashboardPath(user) {
+  if (!user) return '/login'
+  if (user.is_admin) return '/admin'
+  switch (user.role) {
+    case 'procurement_officer': return '/procurement'
+    case 'manager': return '/manager'
+    case 'vendor': return '/vendor'
+    case 'finance': return '/finance'
+    default: return '/login'
+  }
+}
+
+/* ── Protected Route wrapper ── */
+function ProtectedRoute({ user, allowedRoles, children }) {
+  if (!user) return <Navigate to="/login" replace />
+  if (allowedRoles && !allowedRoles.includes(user.role) && !user.is_admin) {
+    return <Navigate to={getDashboardPath(user)} replace />
+  }
+  return children
+}
+
 function App() {
-  const [page, setPage] = useState('login') // 'login' | 'signup'
   const [user, setUser] = useState(null)
-  const [fadeState, setFadeState] = useState('none') // 'none' | 'fade-out' | 'fade-in'
+  const [isRestoring, setIsRestoring] = useState(true)
+  const navigate = useNavigate()
+  const location = useLocation()
 
   // Restore session from localStorage on app load
   useEffect(() => {
@@ -22,112 +46,111 @@ function App() {
         localStorage.removeItem('vb_user')
       }
     }
+    setIsRestoring(false)
   }, [])
 
   const handleLogin = (userData) => {
-    setFadeState('fade-out')
-    setTimeout(() => {
-      localStorage.setItem('vb_user', JSON.stringify(userData))
-      setUser(userData)
-      window.scrollTo(0, 0)
-      
-      setFadeState('fade-in')
-      setTimeout(() => {
-        setFadeState('none')
-      }, 250)
-    }, 250)
+    localStorage.setItem('vb_user', JSON.stringify(userData))
+    setUser(userData)
+    window.scrollTo(0, 0)
+    const dashPath = getDashboardPath(userData)
+    navigate(dashPath, { replace: true })
   }
 
   const handleLogout = () => {
-    setFadeState('fade-out')
-    setTimeout(() => {
-      localStorage.removeItem('vb_user')
-      setUser(null)
-      setPage('login')
-      window.scrollTo(0, 0)
-      
-      setFadeState('fade-in')
-      setTimeout(() => {
-        setFadeState('none')
-      }, 250)
-    }, 250)
+    localStorage.removeItem('vb_user')
+    setUser(null)
+    window.scrollTo(0, 0)
+    navigate('/login', { replace: true })
   }
 
-  const renderContent = () => {
-    // ── Not logged in → show auth pages ──
-    if (!user) {
-      if (page === 'signup') {
-        return (
-          <SignupPage
-            onNavigateLogin={() => {
-              setFadeState('fade-out')
-              setTimeout(() => {
-                setPage('login')
-                window.scrollTo(0, 0)
-                setFadeState('fade-in')
-                setTimeout(() => setFadeState('none'), 250)
-              }, 250)
-            }}
-          />
-        )
-      }
-      return (
-        <LoginPage
-          onLogin={handleLogin}
-          onNavigateSignup={() => {
-            setFadeState('fade-out')
-            setTimeout(() => {
-              setPage('signup')
-              window.scrollTo(0, 0)
-              setFadeState('fade-in')
-              setTimeout(() => setFadeState('none'), 250)
-            }, 250)
-          }}
-        />
-      )
-    }
-
-    // ── Logged in → check if admin first ──
-    if (user.is_admin) {
-      return <AdminDashboard onLogout={handleLogout} currentUser={user} />
-    }
-
-    // ── Logged in → route by role ──
-    const role = user.role
-
-    if (role === 'procurement_officer') {
-      return <ProcurementDashboard onLogout={handleLogout} currentUser={user} />
-    }
-    if (role === 'manager') {
-      return <ManagerDashboard onLogout={handleLogout} currentUser={user} />
-    }
-    if (role === 'vendor') {
-      return <VendorDashboard onLogout={handleLogout} currentUser={user} />
-    }
-    if (role === 'finance') {
-      return <FinanceDashboard onLogout={handleLogout} currentUser={user} />
-    }
-
-    // Fallback — unknown role
-    return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', flexDirection: 'column', gap: 16 }}>
-        <p style={{ color: 'var(--text-secondary)' }}>Unknown role: <strong>{role}</strong></p>
-        <button onClick={handleLogout} style={{ padding: '8px 16px', borderRadius: 8, background: 'var(--bg-elevated)', border: '1px solid var(--border-default)', color: 'var(--text-primary)', cursor: 'pointer' }}>
-          Sign out
-        </button>
-      </div>
-    )
-  }
+  // Wait for session restore before rendering routes
+  if (isRestoring) return null
 
   return (
-    <>
-      {fadeState !== 'none' && (
-        <div className={`fade-overlay ${fadeState}`} />
-      )}
-      {renderContent()}
-    </>
+    <Routes>
+      {/* Auth routes */}
+      <Route
+        path="/login"
+        element={
+          user
+            ? <Navigate to={getDashboardPath(user)} replace />
+            : <LoginPage onLogin={handleLogin} />
+        }
+      />
+      <Route
+        path="/signup"
+        element={
+          user
+            ? <Navigate to={getDashboardPath(user)} replace />
+            : <SignupPage />
+        }
+      />
+
+      {/* Admin dashboard */}
+      <Route
+        path="/admin/*"
+        element={
+          <ProtectedRoute user={user} allowedRoles={['manager']}>
+            <AdminDashboard onLogout={handleLogout} currentUser={user} />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Procurement dashboard */}
+      <Route
+        path="/procurement/*"
+        element={
+          <ProtectedRoute user={user} allowedRoles={['procurement_officer']}>
+            <ProcurementDashboard onLogout={handleLogout} currentUser={user} />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Manager dashboard */}
+      <Route
+        path="/manager/*"
+        element={
+          <ProtectedRoute user={user} allowedRoles={['manager']}>
+            <ManagerDashboard onLogout={handleLogout} currentUser={user} />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Vendor dashboard */}
+      <Route
+        path="/vendor/*"
+        element={
+          <ProtectedRoute user={user} allowedRoles={['vendor']}>
+            <VendorDashboard onLogout={handleLogout} currentUser={user} />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Finance dashboard */}
+      <Route
+        path="/finance/*"
+        element={
+          <ProtectedRoute user={user} allowedRoles={['finance']}>
+            <FinanceDashboard onLogout={handleLogout} currentUser={user} />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Root redirect */}
+      <Route
+        path="/"
+        element={
+          user
+            ? <Navigate to={getDashboardPath(user)} replace />
+            : <Navigate to="/login" replace />
+        }
+      />
+
+      {/* Catch-all: redirect to root */}
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
   )
 }
 
 export default App
-

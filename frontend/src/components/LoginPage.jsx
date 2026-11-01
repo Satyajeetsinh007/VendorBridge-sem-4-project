@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
 import './AuthPages.css';
 
@@ -73,7 +74,8 @@ const DOTS = [
   { size: 4, top: '50%', left: '48%', delay: '4s',   dur: '6s'  },
 ];
 
-export default function LoginPage({ onLogin, onNavigateSignup }) {
+export default function LoginPage({ onLogin }) {
+  const navigate = useNavigate();
   const [accountType, setAccountType] = useState('user'); // 'user' | 'vendor'
   const [form, setForm] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
@@ -200,7 +202,7 @@ export default function LoginPage({ onLogin, onNavigateSignup }) {
             <div>
               <div className="auth-banner__title">Account Rejected</div>
               {rejectionReason && <div className="auth-banner__reason">Reason: {rejectionReason}</div>}
-              <button className="auth-reapply-link" type="button" onClick={onNavigateSignup}>
+              <button className="auth-reapply-link" type="button" onClick={() => navigate('/signup')}>
                 Re-apply with updated information →
               </button>
             </div>
@@ -279,7 +281,7 @@ export default function LoginPage({ onLogin, onNavigateSignup }) {
         {/* Footer */}
         <div className="auth-footer">
           New to VendorBridge?{' '}
-          <button id="goto-signup-btn" className="auth-toggle-link" onClick={onNavigateSignup}>
+          <button id="goto-signup-btn" className="auth-toggle-link" onClick={() => navigate('/signup')}>
             Sign Up
           </button>
         </div>

@@ -157,24 +157,24 @@ class RFQ(models.Model):
         return f"{self.rfq_number} - {self.title}"
 
 
-class RFQVendor(models.Model):
-    class StatusChoices(models.TextChoices):
-        INVITED = 'invited', 'Invited'
-        RESPONDED = 'responded', 'Responded'
-        DECLINED = 'declined', 'Declined'
+# class RFQVendor(models.Model):
+#     class StatusChoices(models.TextChoices):
+#         INVITED = 'invited', 'Invited'
+#         RESPONDED = 'responded', 'Responded'
+#         DECLINED = 'declined', 'Declined'
 
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    rfq = models.ForeignKey(RFQ, on_delete=models.CASCADE, related_name='invited_vendors')
-    vendor = models.ForeignKey(Vendor, on_delete=models.CASCADE, related_name='rfq_invitations')
-    status = models.CharField(max_length=20, choices=StatusChoices.choices, default=StatusChoices.INVITED)
-    invited_at = models.DateTimeField(auto_now_add=True)
+#     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+#     rfq = models.ForeignKey(RFQ, on_delete=models.CASCADE, related_name='invited_vendors')
+#     vendor = models.ForeignKey(Vendor, on_delete=models.CASCADE, related_name='rfq_invitations')
+#     status = models.CharField(max_length=20, choices=StatusChoices.choices, default=StatusChoices.INVITED)
+#     invited_at = models.DateTimeField(auto_now_add=True)
 
 
 class Quotation(models.Model):
     class StatusChoices(models.TextChoices):
         DRAFT = 'draft', 'Draft'
         SUBMITTED = 'submitted', 'Submitted'
-        UNDER_REVIEW = 'under_review', 'Under Review'
+        # UNDER_REVIEW = 'under_review', 'Under Review'
         SELECTED = 'selected', 'Selected'
         REJECTED = 'rejected', 'Rejected'
 
@@ -217,20 +217,20 @@ class Quotation(models.Model):
 # 3. SELECTION & APPROVAL
 # ==========================================
 
-class VendorSelection(models.Model):
-    class StatusChoices(models.TextChoices):
-        PENDING_APPROVAL = 'pending_approval', 'Pending Approval'
-        APPROVED = 'approved', 'Approved'
-        REJECTED = 'rejected', 'Rejected'
+# class VendorSelection(models.Model):
+#     class StatusChoices(models.TextChoices):
+#         PENDING_APPROVAL = 'pending_approval', 'Pending Approval'
+#         APPROVED = 'approved', 'Approved'
+#         REJECTED = 'rejected', 'Rejected'
 
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    rfq = models.ForeignKey(RFQ, on_delete=models.CASCADE, related_name='vendor_selections')
-    quotation = models.ForeignKey(Quotation, on_delete=models.CASCADE, related_name='vendor_selections')
-    vendor = models.ForeignKey(Vendor, on_delete=models.CASCADE, related_name='selections')
-    selection_reason = models.TextField()
-    selected_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='selections')
-    status = models.CharField(max_length=20, choices=StatusChoices.choices, default=StatusChoices.PENDING_APPROVAL)
-    selected_at = models.DateTimeField(auto_now_add=True)
+#     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+#     rfq = models.ForeignKey(RFQ, on_delete=models.CASCADE, related_name='vendor_selections')
+#     quotation = models.ForeignKey(Quotation, on_delete=models.CASCADE, related_name='vendor_selections')
+#     vendor = models.ForeignKey(Vendor, on_delete=models.CASCADE, related_name='selections')
+#     selection_reason = models.TextField()
+#     selected_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='selections')
+#     status = models.CharField(max_length=20, choices=StatusChoices.choices, default=StatusChoices.PENDING_APPROVAL)
+#     selected_at = models.DateTimeField(auto_now_add=True)
 
 
 class Approval(models.Model):
@@ -246,7 +246,7 @@ class Approval(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     approval_number = models.CharField(max_length=20)
     approval_type = models.CharField(max_length=30, choices=ApprovalTypeChoices.choices)
-    reference_id = models.UUIDField()
+    reference_id = models.UUIDField() #doubt................................
     reference_type = models.CharField(max_length=50)
     approver = models.ForeignKey(User, on_delete=models.CASCADE, related_name='approvals')
     status = models.CharField(max_length=20, choices=StatusChoices.choices, default=StatusChoices.PENDING)

@@ -151,7 +151,7 @@ export const api = {
     const res = await fetch(`${API_BASE_URL}/rfqs/${rfqId}/`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status }),
+      body: JSON.stringify({ status }), // shorthand for JSON.stringify({ status: status })
     });
     if (!res.ok) throw new Error('Failed to update RFQ status');
     return res.json();
@@ -290,7 +290,7 @@ export const api = {
   },
 
   getRandomForestRecommendations: async (rfqId = null) => {
-    const url = rfqId 
+    const url = rfqId
       ? `${API_BASE_URL}/rfqs/${rfqId}/rf-recommendations/`
       : `${API_BASE_URL}/rf-recommendations/`;
     const res = await fetch(url);

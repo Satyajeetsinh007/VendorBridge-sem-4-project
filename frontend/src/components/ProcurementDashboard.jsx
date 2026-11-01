@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { api } from '../services/api';
 import QuotationComparison from './QuotationComparison';
 import PurchaseOrderDetail from './PurchaseOrderDetail';
@@ -7,49 +8,49 @@ import './ProcurementDashboard.css';
 /* ── SVG Icon Components ── */
 const Icons = {
   Search: () => (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8" /><path d="m21 21-4.3-4.3" /></svg>
   ),
   Plus: () => (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M12 5v14M5 12h14" /></svg>
   ),
   FileText: () => (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10,9 9,9 8,9"/></svg>
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14,2 14,8 20,8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /><polyline points="10,9 9,9 8,9" /></svg>
   ),
   Inbox: () => (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="22,12 16,12 14,15 10,15 8,12 2,12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></svg>
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="22,12 16,12 14,15 10,15 8,12 2,12" /><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z" /></svg>
   ),
   Clock: () => (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/></svg>
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><polyline points="12,6 12,12 16,14" /></svg>
   ),
   CheckCircle: () => (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22,4 12,14.01 9,11.01"/></svg>
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><polyline points="22,4 12,14.01 9,11.01" /></svg>
   ),
   ArrowUp: () => (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><path d="M12 19V5M5 12l7-7 7 7" /></svg>
   ),
   Send: () => (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22,2 15,22 11,13 2,9"/></svg>
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13" /><polygon points="22,2 15,22 11,13 2,9" /></svg>
   ),
   X: () => (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 6 6 18M6 6l12 12" /></svg>
   ),
   ChevronDown: () => (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="m6 9 6 6 6-6"/></svg>
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="m6 9 6 6 6-6" /></svg>
   ),
   Database: () => (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3" /><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3" /><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" /></svg>
   ),
   BarChart: () => (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><line x1="18" y1="20" x2="18" y2="10" /><line x1="12" y1="20" x2="12" y2="4" /><line x1="6" y1="20" x2="6" y2="14" /></svg>
   ),
   Home: () => (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg>
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /><polyline points="9,22 9,12 15,12 15,22" /></svg>
   ),
   Settings: () => (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><circle cx="12" cy="12" r="3" /><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" /></svg>
   ),
   Bell: () => (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" /></svg>
   ),
 };
 
@@ -68,6 +69,7 @@ export default function ProcurementDashboard({ onLogout, currentUser, onToggleRo
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [budget, setBudget] = useState(50000);
   const [formData, setFormData] = useState({
     title: '', description: '', department: '', priority: 'medium',
     quantity: 100, deadline: defaultDeadline, required_by_date: defaultRequiredBy, specs_file_url: '',
@@ -86,7 +88,29 @@ export default function ProcurementDashboard({ onLogout, currentUser, onToggleRo
   const [comparisonRfq, setComparisonRfq] = useState(null);
   const [quotations, setQuotations] = useState([]);
   const [vendors, setVendors] = useState([]);
-  const [currentView, setCurrentView] = useState('dashboard');
+
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const getViewFromPath = () => {
+    const sub = location.pathname.replace(/^\/procurement\/?/, '').split('/')[0];
+    if (sub === 'rfqs' || sub === 'rfq-management') return 'rfq-management';
+    if (sub === 'quotations') return 'quotations';
+    if (sub === 'purchase-orders') return 'purchase-orders';
+    if (sub === 'analytics') return 'analytics';
+    if (sub === 'settings') return 'settings';
+    return 'dashboard';
+  };
+
+  const currentView = getViewFromPath();
+
+  const setCurrentView = (view) => {
+    setComparisonRfq(null);
+    setActivePOInfo(null);
+    if (view === 'dashboard') navigate('/procurement');
+    else if (view === 'rfq-management') navigate('/procurement/rfqs');
+    else navigate(`/procurement/${view}`);
+  };
 
   const fetchData = async () => {
     setLoading(true);
@@ -101,7 +125,7 @@ export default function ProcurementDashboard({ onLogout, currentUser, onToggleRo
         api.getPurchaseOrders().catch(() => []),
       ]);
       if (deptsData.length === 0 || usersData.length === 0) {
-        await api.seedData().catch(() => {});
+        await api.seedData().catch(() => { });
         deptsData = await api.getDepartments().catch(() => []);
         usersData = await api.getUsers().catch(() => []);
       }
@@ -164,11 +188,20 @@ export default function ProcurementDashboard({ onLogout, currentUser, onToggleRo
 
   const handleOpenCreateModal = () => {
     const officerDeptId = getOfficerDepartmentId();
-    setFormData(prev => ({
-      ...prev,
-      department: officerDeptId || departments[0]?.id || '',
-      created_by: currentUser?.id || users[0]?.id || '',
-    }));
+    const userInDb = users.find(u => u.id === currentUser?.id || u.email === currentUser?.email);
+    setFormData({
+      title: '',
+      description: '',
+      department: officerDeptId || (departments[0] ? departments[0].id : ''),
+      priority: 'medium',
+      quantity: 100,
+      deadline: defaultDeadline,
+      required_by_date: defaultRequiredBy,
+      specs_file_url: '',
+      status: 'draft',
+      created_by: currentUser?.id || userInDb?.id || (users[0] ? users[0].id : ''),
+    });
+    setBudget(50000);
     setIsModalOpen(true);
   };
 
@@ -221,17 +254,38 @@ export default function ProcurementDashboard({ onLogout, currentUser, onToggleRo
     e.preventDefault();
     setSubmitting(true);
     try {
-      await api.createRFQ(formData);
-      setIsModalOpen(false);
       const officerDeptId = getOfficerDepartmentId();
+      const userInDb = users.find(u => u.id === currentUser?.id || u.email === currentUser?.email);
+      const creatorId = currentUser?.id || userInDb?.id || (users[0] ? users[0].id : '');
+
+      const payload = {
+        title: (formData.title || '').trim(),
+        description: (formData.description || '').trim(),
+        department: formData.department || officerDeptId || (departments[0] ? departments[0].id : null),
+        priority: formData.priority || 'medium',
+        quantity: parseInt(formData.quantity, 10) || 1,
+        deadline: formData.deadline || defaultDeadline,
+        status: formData.status || 'draft',
+        created_by: creatorId,
+      };
+
+      if (formData.required_by_date && formData.required_by_date.trim()) {
+        payload.required_by_date = formData.required_by_date.trim();
+      }
+      if (formData.specs_file_url && formData.specs_file_url.trim()) {
+        payload.specs_file_url = formData.specs_file_url.trim();
+      }
+
+      await api.createRFQ(payload);
+      setIsModalOpen(false);
       setFormData({
-        title: '', description: '', department: officerDeptId || departments[0]?.id || '',
-        priority: 'medium', quantity: 100, deadline: '', required_by_date: '',
-        specs_file_url: '', status: 'draft', created_by: currentUser?.id || users[0]?.id || '',
+        title: '', description: '', department: officerDeptId || (departments[0] ? departments[0].id : ''),
+        priority: 'medium', quantity: 100, deadline: defaultDeadline, required_by_date: defaultRequiredBy,
+        specs_file_url: '', status: 'draft', created_by: creatorId,
       });
       await fetchData();
     } catch (err) {
-      alert(`Error: ${err.message}`);
+      alert(`Error creating RFQ: ${err.message}`);
     } finally {
       setSubmitting(false);
     }
@@ -326,7 +380,7 @@ export default function ProcurementDashboard({ onLogout, currentUser, onToggleRo
     const q = searchQuery.toLowerCase();
     const creatorName = rfq.created_by_details?.name || rfq.created_by_name || '';
     const deptName = rfq.department_details?.name || rfq.department_details?.code || '';
-    
+
     const matchesSearch = !q ||
       rfq.title?.toLowerCase().includes(q) ||
       rfq.rfq_number?.toLowerCase().includes(q) ||
@@ -382,12 +436,12 @@ export default function ProcurementDashboard({ onLogout, currentUser, onToggleRo
       {/* ── Sidebar ── */}
       <aside className="sidebar">
         <div className="sidebar-brand">
-          <img 
-            src="/logo.png" 
-            className="brand-logo" 
-            alt="VB" 
+          <img
+            src="/logo.png"
+            className="brand-logo"
+            alt="VB"
             onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
-            style={{ objectFit: 'contain', padding: '2px', background: 'transparent' }} 
+            style={{ objectFit: 'contain', padding: '2px', background: 'transparent' }}
           />
           <div className="brand-logo" style={{ display: 'none' }}>VB</div>
           <div className="brand-text">
@@ -461,22 +515,22 @@ export default function ProcurementDashboard({ onLogout, currentUser, onToggleRo
           <div className="topbar-left">
             <h1 className="topbar-title">
               {activePOInfo ? 'Purchase Order Details' :
-               comparisonRfq ? 'Quotation Comparison' :
-               currentView === 'rfq-management' ? 'RFQ Management' :
-               currentView === 'quotations' ? 'Quotations' :
-               currentView === 'purchase-orders' ? 'Purchase Order Management' :
-               currentView === 'analytics' ? 'Procurement Analytics' :
-               currentView === 'settings' ? 'Settings & Preferences' : 'RFQ Dashboard'}
+                comparisonRfq ? 'Quotation Comparison' :
+                  currentView === 'rfq-management' ? 'RFQ Management' :
+                    currentView === 'quotations' ? 'Quotations' :
+                      currentView === 'purchase-orders' ? 'Purchase Order Management' :
+                        currentView === 'analytics' ? 'Procurement Analytics' :
+                          currentView === 'settings' ? 'Settings & Preferences' : 'RFQ Dashboard'}
             </h1>
             <span className="breadcrumb">
               Procurement &nbsp;/&nbsp; {
                 activePOInfo ? (activePOInfo.po?.po_number || 'Purchase Order') :
-                comparisonRfq ? comparisonRfq.rfq_number :
-                currentView === 'rfq-management' ? 'Management & Lifecycle' :
-                currentView === 'quotations' ? 'Vendor Quotations' :
-                currentView === 'purchase-orders' ? 'Issued & Draft Orders' :
-                currentView === 'analytics' ? 'Reports & Metrics' :
-                currentView === 'settings' ? 'Configuration' : 'Requests for Quotation'
+                  comparisonRfq ? comparisonRfq.rfq_number :
+                    currentView === 'rfq-management' ? 'Management & Lifecycle' :
+                      currentView === 'quotations' ? 'Vendor Quotations' :
+                        currentView === 'purchase-orders' ? 'Issued & Draft Orders' :
+                          currentView === 'analytics' ? 'Reports & Metrics' :
+                            currentView === 'settings' ? 'Configuration' : 'Requests for Quotation'
               }
             </span>
           </div>
@@ -1068,7 +1122,7 @@ export default function ProcurementDashboard({ onLogout, currentUser, onToggleRo
               )}
               {error && (
                 <div className="state-banner error">
-                  <span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{marginRight:6,verticalAlign:'middle'}}><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>{error}</span>
+                  <span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 6, verticalAlign: 'middle' }}><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" /></svg>{error}</span>
                   <button className="btn-ghost" onClick={fetchData}>Retry</button>
                 </div>
               )}
@@ -1162,11 +1216,11 @@ export default function ProcurementDashboard({ onLogout, currentUser, onToggleRo
                                         </button>
                                       )}
                                       {rfq.status === 'open' && !hasQuotations(rfq.id) && (
-                                        <span style={{ color: 'var(--success)', fontWeight: '600', fontSize: '12px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Approved & Live</span>
+                                        <span style={{ color: 'var(--success)', fontWeight: '600', fontSize: '12px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>Approved & Live</span>
                                       )}
                                       {rfq.status === 'completed' && (
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                          <span style={{ color: '#34d399', fontWeight: '600', fontSize: '12px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Completed</span>
+                                          <span style={{ color: '#34d399', fontWeight: '600', fontSize: '12px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>Completed</span>
                                           <button className="btn-action btn-submit" style={{ padding: '3px 8px', fontSize: '11px' }} onClick={() => {
                                             const matchedPo = purchaseOrders.find(p => getRfqIdStr(p.rfq || p.rfq_details) === getRfqIdStr(rfq));
                                             const matchedQuot = quotations.find(q => getRfqIdStr(q.rfq || q.rfq_details) === getRfqIdStr(rfq) && q.status === 'selected') || quotations.find(q => getRfqIdStr(q.rfq || q.rfq_details) === getRfqIdStr(rfq));
@@ -1190,7 +1244,7 @@ export default function ProcurementDashboard({ onLogout, currentUser, onToggleRo
                                         </div>
                                       )}
                                       {rfq.status === 'closed' && (
-                                        <span style={{ color: 'var(--text-muted)', fontWeight: '600', fontSize: '12px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Closed</span>
+                                        <span style={{ color: 'var(--text-muted)', fontWeight: '600', fontSize: '12px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>Closed</span>
                                       )}
                                       {rfq.status === 'rejected' && (
                                         <button className="btn-action btn-publish" onClick={() => openRfqDetail(rfq)}>
@@ -1308,6 +1362,23 @@ export default function ProcurementDashboard({ onLogout, currentUser, onToggleRo
                   required
                   value={formData.description}
                   onChange={handleInputChange}
+                />
+              </div>
+              <div className="field full" style={{ marginTop: '4px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                  <label style={{ margin: 0 }}>Estimated Budget Allocation</label>
+                  <span style={{ fontSize: '13px', fontWeight: 700, color: 'var(--accent)' }}>
+                    ₹{budget.toLocaleString("en-IN")}
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min="5000"
+                  max="1000000"
+                  step="5000"
+                  value={budget}
+                  onChange={(e) => setBudget(Number(e.target.value))}
+                  style={{ width: '100%', cursor: 'pointer', accentColor: 'var(--accent)' }}
                 />
               </div>
 

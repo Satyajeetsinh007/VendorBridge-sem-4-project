@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { api } from '../services/api';
 import VendorRFQDetail from './VendorRFQDetail';
 import VendorQuotations from './VendorQuotations';
@@ -53,10 +54,32 @@ export default function VendorDashboard({ onLogout, currentUser }) {
   const [vendors, setVendors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [currentView, setCurrentView] = useState('dashboard');
   const [selectedRfq, setSelectedRfq] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [currentVendor, setCurrentVendor] = useState(null);
+
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const getViewFromPath = () => {
+    const sub = location.pathname.replace(/^\/vendor\/?/, '').split('/')[0];
+    if (sub === 'open-rfqs') return 'open-rfqs';
+    if (sub === 'quotations') return 'quotations';
+    if (sub === 'purchase-orders') return 'purchase-orders';
+    if (sub === 'history') return 'history';
+    if (sub === 'notifications') return 'notifications';
+    if (sub === 'profile') return 'profile';
+    if (sub === 'rfq-detail') return 'rfq-detail';
+    return 'dashboard';
+  };
+
+  const currentView = getViewFromPath();
+
+  const setCurrentView = (view) => {
+    if (view !== 'rfq-detail') setSelectedRfq(null);
+    if (view === 'dashboard') navigate('/vendor');
+    else navigate(`/vendor/${view}`);
+  };
 
   const [notificationsList, setNotificationsList] = useState([
     { id: 1, text: 'New Purchase Order received (PO-2026-0042)', time: '10m ago', priority: 'high' },

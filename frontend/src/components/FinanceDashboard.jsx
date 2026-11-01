@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { api } from '../services/api';
 import './ProcurementDashboard.css';
 
@@ -149,7 +150,26 @@ export default function FinanceDashboard({ onLogout, currentUser, onToggleRole }
   const [rfqs, setRfqs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [currentView, setCurrentView] = useState('dashboard');
+  
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const getViewFromPath = () => {
+    const sub = location.pathname.replace(/^\/finance\/?/, '').split('/')[0];
+    if (sub === 'pending-invoices') return 'pending-invoices';
+    if (sub === 'payment-history') return 'payment-history';
+    if (sub === 'notifications') return 'notifications';
+    if (sub === 'profile') return 'profile';
+    return 'dashboard';
+  };
+
+  const currentView = getViewFromPath();
+
+  const setCurrentView = (view) => {
+    setSelectedInvoice(null);
+    if (view === 'dashboard') navigate('/finance');
+    else navigate(`/finance/${view}`);
+  };
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [vendorFilter, setVendorFilter] = useState('ALL');

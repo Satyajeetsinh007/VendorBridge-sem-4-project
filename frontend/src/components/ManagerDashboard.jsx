@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { api } from '../services/api';
 import RFQReviewPage from './RFQReviewPage';
 import ApprovalHistory from './ApprovalHistory';
@@ -54,8 +55,28 @@ export default function ManagerDashboard({ onLogout, currentUser }) {
   const [error, setError] = useState(null);
   
   // Navigation / Views: 'dashboard', 'pending', 'history', 'notifications', 'profile', 'review'
-  const [currentView, setCurrentView] = useState('dashboard');
   const [selectedRfqForReview, setSelectedRfqForReview] = useState(null);
+  
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const getViewFromPath = () => {
+    const sub = location.pathname.replace(/^\/manager\/?/, '').split('/')[0];
+    if (sub === 'pending') return 'pending';
+    if (sub === 'history') return 'history';
+    if (sub === 'notifications') return 'notifications';
+    if (sub === 'profile') return 'profile';
+    if (sub === 'review') return 'review';
+    return 'dashboard';
+  };
+
+  const currentView = getViewFromPath();
+
+  const setCurrentView = (view) => {
+    if (view !== 'review') setSelectedRfqForReview(null);
+    if (view === 'dashboard') navigate('/manager');
+    else navigate(`/manager/${view}`);
+  };
   
   // Search
   const [searchQuery, setSearchQuery] = useState('');

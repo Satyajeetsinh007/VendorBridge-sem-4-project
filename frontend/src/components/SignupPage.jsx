@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
 import './AuthPages.css';
 
@@ -81,7 +82,8 @@ function PwInput({ id, name, placeholder, value, onChange, show, onToggle }) {
   );
 }
 
-export default function SignupPage({ onNavigateLogin }) {
+export default function SignupPage() {
+  const navigate = useNavigate();
   const [accountType, setAccountType] = useState('user');
   const [departments, setDepartments]  = useState([]);
   const [loadingDepts, setLoadingDepts] = useState(false);
@@ -183,12 +185,12 @@ export default function SignupPage({ onNavigateLogin }) {
             </div>
           </div>
 
-          <button className="auth-submit-btn" onClick={onNavigateLogin} style={{marginTop:8}}>
+          <button className="auth-submit-btn" onClick={() => navigate('/login')} style={{marginTop:8}}>
             Return to Sign In
           </button>
 
           <div className="auth-footer" style={{marginTop:12}}>
-            <button className="auth-back-btn" onClick={onNavigateLogin}>
+            <button className="auth-back-btn" onClick={() => navigate('/login')}>
               <Ico.Back /> Return to home
             </button>
           </div>
@@ -428,10 +430,10 @@ export default function SignupPage({ onNavigateLogin }) {
         {/* Footer */}
         <div className="auth-footer">
           Have an account?{' '}
-          <button id="goto-login-btn" className="auth-toggle-link" onClick={onNavigateLogin}>Sign In</button>
+          <button id="goto-login-btn" className="auth-toggle-link" onClick={() => navigate('/login')}>Sign In</button>
         </div>
 
-        <button className="auth-back-btn" onClick={onNavigateLogin}>
+        <button className="auth-back-btn" onClick={() => navigate('/login')}>
           <Ico.Back /> Return to home
         </button>
 
